@@ -1,3 +1,3 @@
 # faros-client
 
-Axios based implementation of the Faros API client
+Faros API client for JavaScript/TypeScript
