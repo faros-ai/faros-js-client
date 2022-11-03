@@ -1,2 +1,3 @@
 # faros-client
-Axios based implementation of the Faros client
+
+Axios based implementation of the Faros API client
