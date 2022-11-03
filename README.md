@@ -1,3 +1,1 @@
-# faros-client
-
-Faros API client for JavaScript/TypeScript
+# Faros API client for JavaScript/TypeScript
