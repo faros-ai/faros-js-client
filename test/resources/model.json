@@ -1,0 +1,53 @@
+{
+  "diff": {
+    "newModels": [
+      "Example"
+    ],
+    "newFields": {
+      "Example": [
+        "field1",
+        "field2"
+      ]
+    }
+  },
+  "models": [
+    {
+      "name": "Example",
+      "keySchema": {
+        "name": "Example__Key",
+        "type": "record",
+        "fields": [
+          {
+            "name": "field1",
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        ]
+      },
+      "dataSchema": {
+        "name": "Example",
+        "type": "record",
+        "fields": [
+          {
+            "name": "field1",
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          {
+            "name": "field2",
+            "type": [
+              "null",
+              "int"
+            ],
+            "default": null
+          }
+        ]
+      }
+    }
+  ],
+  "sdl": "type Example @model(key: [\"field1\"]) {\n  field1: String\n  field2: Int\n}\n"
+}

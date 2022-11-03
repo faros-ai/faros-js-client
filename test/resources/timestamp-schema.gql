@@ -1,0 +1,14 @@
+scalar Timestamp
+scalar ID
+
+type ims_Incident {
+  uid: ID!
+  timestampObj: ims_TimestampObject
+  createdAt: Timestamp
+  createdAtNonNull: Timestamp!
+  array: [ims_TimestampObject!]
+}
+
+type ims_TimestampObject {
+  createdAt: Timestamp!
+}
