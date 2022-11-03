@@ -5,7 +5,7 @@
   "author": "Faros AI, Inc.",
   "homepage": "https://www.faros.ai",
   "license": "Apache-2.0",
-  "repository": "https://github.com/faros-ai/faros-client",
+  "repository": "https://github.com/faros-ai/faros-js-client",
   "scripts": {
     "bump": "npm version --no-git-tag-version --preid=rc",
     "build": "tsc -p src",
@@ -68,8 +68,7 @@
     "preset": "ts-jest",
     "testEnvironment": "node",
     "testPathIgnorePatterns": [
-      ".d.ts",
-      ".js"
+      ".d.ts"
     ],
     "testTimeout": 5000
   },
