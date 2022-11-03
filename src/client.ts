@@ -103,8 +103,9 @@ export class FarosClient {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   async gql(graph: string, query: string, variables?: any): Promise<any> {
     try {
-      const {data} = await this.rawGql(graph, query, variables);
-      return data;
+      const req = variables ? {query, variables} : {query};
+      const {data} = await this.api.post(`/graphs/${graph}/graphql`, req);
+      return data.data;
     } catch (err: any) {
       throw wrapApiError(err, `unable to query graph: ${graph}`);
     }
