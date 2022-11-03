@@ -1,2 +1,3 @@
-# faros-client
-Axios based implementation of the Faros client
+# Faros API client for JavaScript/TypeScript
+
+[![CI](https://github.com/faros-ai/faros-client/actions/workflows/ci.yml/badge.svg)](https://github.com/faros-ai/faros-client/actions/workflows/ci.yml)
