@@ -1,7 +1,7 @@
 {
-  "name": "faros-client",
+  "name": "faros-js-client",
   "version": "0.1.0",
-  "description": "Axios based implementation of the Faros client",
+  "description": "Faros API client for JavaScript/TypeScript",
   "author": "Faros AI, Inc.",
   "homepage": "https://www.faros.ai",
   "license": "Apache-2.0",
