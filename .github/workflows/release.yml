@@ -5,8 +5,8 @@ on:
     types: [created]
 
 jobs:
-  publish-packages:
-    name: Publish packages
+  publish-package:
+    name: Publish package
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
