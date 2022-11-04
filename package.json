@@ -1,13 +1,12 @@
 {
   "name": "faros-js-client",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Faros API client for JavaScript/TypeScript",
   "author": "Faros AI, Inc.",
   "homepage": "https://www.faros.ai",
   "license": "Apache-2.0",
   "repository": "https://github.com/faros-ai/faros-js-client",
   "scripts": {
-    "bump": "npm version --no-git-tag-version --preid=rc",
     "build": "tsc -p src",
     "clean": "rm -rf lib node_modules out",
     "fix": "npm run lint -- --fix && npm run pretty",
