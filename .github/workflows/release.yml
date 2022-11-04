@@ -39,7 +39,7 @@ jobs:
 
       - name: Publish
         run: |
-          npm version ${{ env.TAG_VERSION }} && \
+          npm version --no-commit-hooks --no-git-tag-version ${{ env.TAG_VERSION }} && \
           npm publish --access public --tag latest
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
