@@ -34,6 +34,9 @@ jobs:
       - name: Build
         run: npm ci
 
+      - name: Add git identity
+        run: git config --global user.email "no-reply@faros.ai"
+
       - name: Publish
         run: |
           npm version ${{ env.TAG_VERSION }} && \
