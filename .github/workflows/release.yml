@@ -9,6 +9,11 @@ jobs:
     name: Publish package
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    env:
+      FORCE_COLOR: true
+      HUSKY_SKIP_INSTALL: 1
+      HUSKY_SKIP_HOOKS: 1
+      HUSKY: 0
     steps:
       - name: Check out
         uses: actions/checkout@v3
