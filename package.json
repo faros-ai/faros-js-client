@@ -52,7 +52,7 @@
     "eslint-plugin-simple-import-sort": "^8.0.0",
     "husky": "^8.0.1",
     "jest": "^27.5.1",
-    "jest-mock": "^28.1.0",
+    "jest-mock": "^29.2.2",
     "nock": "^13.1.0",
     "pino-pretty": "^9.0.1",
     "prettier": "2.5.1",
