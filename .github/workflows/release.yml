@@ -32,7 +32,9 @@ jobs:
           echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
 
       - name: Build
-        run: npm ci
+        run: |
+          npm ci
+          npm run build
 
       - name: Publish
         run: |
