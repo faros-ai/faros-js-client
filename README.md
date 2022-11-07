@@ -2,8 +2,6 @@
 
 # Faros API client for JavaScript/TypeScript
 
-_JavaScript/TypeScript client for the [Faros](https://www.faros.ai) API_
-
 ## Installation
 ```bash
 $ npm i --save faros-js-client
