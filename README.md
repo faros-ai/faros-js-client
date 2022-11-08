@@ -27,7 +27,7 @@ const query = `{
   }
 }`;
 
-const data = await client.gql('graph1', query);
+const data = await client.gql('default', query);
 ```
 
 Please read the [Faros documentation][farosdocs] to learn more.
