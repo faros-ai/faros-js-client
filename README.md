@@ -13,21 +13,20 @@ Usage example:
 import {FarosClient} from 'faros-js-client';
 
 const faros = new FarosClient({
-    url: 'https://dev.api.faros.ai',
-    apiKey: 'xyz',
+    url: 'https://prod.api.faros.ai',
+    apiKey: '<your_faros_api_key>',
 });
 
-const exists = await faros.graphExists('graph1');
-
 const query = `{
-      tms {
-        tasks {
-          nodes {
-            uid
-          }
-        }
+  tms {
+    tasks(first: 10) {
+      nodes {
+        uid
       }
+    }
+  }
 }`;
+
 const data = await client.gql('graph1', query);
 ```
 
