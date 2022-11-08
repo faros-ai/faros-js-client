@@ -32,4 +32,4 @@ const data = await client.gql('graph1', query);
 
 Please read the [Faros documentation][farosdocs] to learn more.
 
-[farosdocs]: https://www.faros.ai/docs
+[farosdocs]: https://docs.faros.ai
