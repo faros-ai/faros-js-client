@@ -2,6 +2,12 @@
   "name": "faros-js-client",
   "version": "0.0.1",
   "description": "Faros API client for JavaScript/TypeScript",
+  "keywords": [
+    "api-client",
+    "javascript",
+    "typescript",
+    "faros"
+  ],
   "author": "Faros AI, Inc.",
   "homepage": "https://www.faros.ai",
   "license": "Apache-2.0",
