@@ -248,3 +248,4 @@ type cicd_Pipeline {
 }
 
 scalar jsonb
+
