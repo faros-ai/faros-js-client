@@ -11,7 +11,7 @@ jest.mock('axios-retry');
 
 const mockedAxios = mocked(axios, true);
 
-describe('faros', () => {
+describe('index', () => {
   async function loadQueryFile(name: string): Promise<string> {
     const query = await fs.readFile(
       path.join(__dirname, 'resources', 'queries', name),
