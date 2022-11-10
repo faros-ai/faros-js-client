@@ -1,0 +1,14 @@
+{
+  cicd {
+    builds {
+      nodes {
+        uid
+      }
+    }
+    deployments {
+      nodes {
+        uid
+      }
+    }
+  }
+}

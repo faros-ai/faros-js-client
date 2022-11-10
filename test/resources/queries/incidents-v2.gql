@@ -1,0 +1,10 @@
+{
+  ims_Incident(limit: 2){
+    incidentUid: uid
+    impactedApplications {
+      application {
+        applicationName: name
+      }
+    }
+  }
+}

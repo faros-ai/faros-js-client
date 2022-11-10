@@ -1,0 +1,34 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`graphql build incremental V1 1`] = `
+Object {
+  "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { builds (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid pipeline { pipelineId: id } } } } }",
+  "name": "cicd_Build",
+}
+`;
+
+exports[`graphql build incremental V2 1`] = `
+Object {
+  "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id createdAt endedAt name number origin pipeline { pipelineId: id } refreshedAt startedAt status statusCategory statusDetail uid url } }",
+  "name": "cicd_Build",
+}
+`;
+
+exports[`graphql flatten nodes V2 with lists within lists 1`] = `
+Array [
+  Object {
+    "author_identity_name": "roma",
+    "author_level": "ninja",
+    "author_uid": "Roma-Kyrnis",
+    "number": 37,
+    "repository_name": "airbyte-connectors",
+  },
+  Object {
+    "author_identity_name": "matthew",
+    "author_level": "master",
+    "author_uid": "tovbinm",
+    "number": 39,
+    "repository_name": "airbyte-connectors",
+  },
+]
+`;

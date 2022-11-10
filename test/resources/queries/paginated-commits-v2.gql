@@ -1,0 +1,16 @@
+query paginatedQuery($pageSize: Int, $cursor: String, $from: timestamptz, $to: timestamptz) {
+  vcs_Commit_connection(where: {refreshedAt: {_gte: $from, _lt: $to}}, first: $pageSize, after: $cursor) {
+    edges {
+      cursor
+      node {
+        id
+        author {
+          ownerId: id
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+    }
+  }
+}

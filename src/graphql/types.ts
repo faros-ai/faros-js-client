@@ -49,3 +49,8 @@ export interface Schema {
   sortedModelDependencies: ReadonlyArray<string>;
   tableNames: ReadonlyArray<string>;
 }
+
+export interface Query {
+  readonly name: string;
+  readonly gql: string;
+}
