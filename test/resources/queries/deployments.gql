@@ -1,0 +1,19 @@
+query basic($from: builtin_BigInt) {
+  cicd {
+    deployments(filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from}}) {
+      nodes {
+        deploymentUid: uid
+        application {
+          appName: name
+        }
+        changeset {
+          nodes {
+            commit {
+              sha
+            }
+          }
+        }
+      }
+    }
+  }
+}

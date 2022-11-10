@@ -29,6 +29,27 @@ export {
   ObjectRelationship,
   Reference,
   Schema,
+  Query,
 } from './graphql/types';
 export {HasuraSchemaLoader} from './graphql/hasura-schema-loader';
+export {
+  AnyRecord,
+  FlattenContext,
+  PaginatedQuery,
+  Reader,
+  RecordIterable,
+  buildIncrementalQueryV1,
+  buildIncrementalQueryV2,
+  createIncrementalReadersV1,
+  createIncrementalReadersV2,
+  createNonIncrementalReaders,
+  crossMerge,
+  flatten,
+  flattenIterable,
+  flattenV2,
+  paginatedQuery,
+  paginatedQueryV2,
+  queryNodesPaths,
+  readerFromQuery,
+} from './graphql/graphql';
 export {Utils} from './utils';

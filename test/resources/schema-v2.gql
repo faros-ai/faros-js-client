@@ -1,0 +1,251 @@
+schema {
+  query: query_root
+}
+
+"""whether this query should be cached (Hasura Cloud only)"""
+directive @cached(
+  """measured in seconds"""
+  ttl: Int! = 60
+
+  """refresh the cache entry"""
+  refresh: Boolean! = false
+) on QUERY
+
+type query_root {
+  """
+  fetch data from the table: "ims_Incident"
+  """
+  ims_Incident(
+    """limit the number of rows returned"""
+    limit: Int
+  ): [ims_Incident!]!
+
+  """
+  fetch data from the table: "vcs_Commit"
+  """
+  vcs_Commit(
+    """filter the rows returned"""
+    where: vcs_Commit_bool_exp
+  ): [vcs_Commit!]!
+
+  """
+  fetch data from the table: "vcs_PullRequest"
+  """
+  vcs_PullRequest(
+    """limit the number of rows returned"""
+    limit: Int
+
+    """filter the rows returned"""
+    where: vcs_PullRequest_bool_exp
+  ): [vcs_PullRequest!]!
+}
+
+type ims_Incident {
+
+  """An array relationship"""
+  impactedApplications(
+    """limit the number of rows returned"""
+    limit: Int
+  ): [ims_IncidentApplicationImpact!]!
+
+  uid: String!
+}
+
+type ims_IncidentApplicationImpact {
+  """An object relationship"""
+  application: compute_Application
+
+  """An object relationship"""
+  incident: ims_Incident
+}
+
+type compute_Application {
+  name: String
+}
+
+input vcs_Commit_bool_exp {
+  _and: [vcs_Commit_bool_exp!]
+  _not: vcs_Commit_bool_exp
+  _or: [vcs_Commit_bool_exp!]
+  refreshedAt: timestamptz_comparison_exp
+}
+
+input timestamptz_comparison_exp {
+  _eq: timestamptz
+  _gt: timestamptz
+  _gte: timestamptz
+  _in: [timestamptz!]
+  _is_null: Boolean
+  _lt: timestamptz
+  _lte: timestamptz
+  _neq: timestamptz
+  _nin: [timestamptz!]
+}
+
+type vcs_Commit {
+  """An object relationship"""
+  author: vcs_User
+
+
+  """generated"""
+  id: String!
+
+  refreshedAt: timestamptz!
+}
+
+scalar timestamptz
+
+input vcs_PullRequest_bool_exp {
+  _and: [vcs_PullRequest_bool_exp!]
+  _not: vcs_PullRequest_bool_exp
+  _or: [vcs_PullRequest_bool_exp!]
+  author: vcs_User_bool_exp
+}
+
+input vcs_User_bool_exp {
+  _and: [vcs_User_bool_exp!]
+  _not: vcs_User_bool_exp
+  _or: [vcs_User_bool_exp!]
+  uid: String_comparison_exp
+}
+
+input String_comparison_exp {
+  _eq: String
+  _gt: String
+  _gte: String
+
+  """does the column match the given case-insensitive pattern"""
+  _ilike: String
+  _in: [String!]
+
+  """
+  does the column match the given POSIX regular expression, case insensitive
+  """
+  _iregex: String
+  _is_null: Boolean
+
+  """does the column match the given pattern"""
+  _like: String
+  _lt: String
+  _lte: String
+  _neq: String
+
+  """does the column NOT match the given case-insensitive pattern"""
+  _nilike: String
+  _nin: [String!]
+
+  """
+  does the column NOT match the given POSIX regular expression, case insensitive
+  """
+  _niregex: String
+
+  """does the column NOT match the given pattern"""
+  _nlike: String
+
+  """
+  does the column NOT match the given POSIX regular expression, case sensitive
+  """
+  _nregex: String
+
+  """does the column NOT match the given SQL regular expression"""
+  _nsimilar: String
+
+  """
+  does the column match the given POSIX regular expression, case sensitive
+  """
+  _regex: String
+
+  """does the column match the given SQL regular expression"""
+  _similar: String
+}
+
+type vcs_PullRequest {
+  """An object relationship"""
+  author: vcs_User
+
+  number: Int
+
+  """An object relationship"""
+  repository: vcs_Repository
+}
+
+type vcs_User {
+  """generated"""
+  id: String!
+  uid: String!
+  identity(
+    """limit the number of rows returned"""
+    limit: Int
+  ): [vcs_UserIdentity!]!
+}
+
+type vcs_UserIdentity {
+  """generated"""
+  id: String!
+
+  """An object relationship"""
+  identity: identity_Identity
+
+  """An object relationship"""
+  vcsUser: vcs_User
+}
+
+type identity_Identity {
+  """An array relationship"""
+  employee(
+    """limit the number of rows returned"""
+    limit: Int
+
+  ): [org_Employee!]!
+  fullName: String
+}
+
+type org_Employee {
+  level: Int
+}
+
+type vcs_Repository {
+  name: String
+}
+
+type cicd_Build {
+  createdAt: timestamptz
+
+  endedAt: timestamptz
+
+  """generated"""
+  id: String!
+  name: String
+  number: Int
+  origin: String
+
+  """An object relationship"""
+  pipeline: cicd_Pipeline
+  refreshedAt: timestamptz!
+  startedAt: timestamptz
+
+  status(
+    """JSON select path"""
+    path: String
+  ): jsonb
+
+  """generated"""
+  statusCategory: String
+
+  """generated"""
+  statusDetail: String
+
+  uid: String!
+  url: String
+}
+
+"""
+columns and relationships of "cicd_Pipeline"
+"""
+type cicd_Pipeline {
+  """generated"""
+  id: String!
+}
+
+scalar jsonb
+

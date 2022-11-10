@@ -1,9 +1,11 @@
 import {AxiosInstance, AxiosRequestConfig} from 'axios';
 import * as gql from 'graphql';
+import {get as traverse} from 'lodash';
 import pino, {Logger} from 'pino';
 
 import {makeAxiosInstanceWithRetry} from './axios';
 import {wrapApiError} from './errors';
+import {paginatedQuery} from './graphql/graphql';
 import {Schema} from './graphql/types';
 import {
   Account,
@@ -123,6 +125,21 @@ export class FarosClient {
     }
   }
 
+  async gqlNoDirectives(
+    graph: string,
+    rawQuery: string,
+    variables?: unknown
+  ): Promise<any> {
+    const ast = gql.visit(gql.parse(rawQuery), {
+      // Strip directives from query. These are not supported.
+      Directive() {
+        return null;
+      },
+    });
+    const query = gql.print(ast);
+    return await this.gql(graph, query, variables);
+  }
+
   async gqlSchema(graph = 'default'): Promise<Schema> {
     try {
       const {data} = await this.api.get(`/graphs/${graph}/graphql/schema`);
@@ -199,5 +216,36 @@ export class FarosClient {
     } catch (err: any) {
       throw wrapApiError(err, `unable to update account: ${update.accountId}`);
     }
+  }
+
+  nodeIterable(
+    graph: string,
+    rawQuery: string,
+    pageSize = 100,
+    paginator = paginatedQuery,
+    args: Map<string, any> = new Map<string, any>()
+  ): AsyncIterable<any> {
+    const {query, edgesPath, pageInfoPath} = paginator(rawQuery);
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self = this;
+    return {
+      async *[Symbol.asyncIterator](): AsyncIterator<any> {
+        let cursor: string | undefined;
+        let hasNextPage = true;
+        while (hasNextPage) {
+          const data = await self.gqlNoDirectives(graph, query, {
+            pageSize,
+            cursor,
+            ...Object.fromEntries(args.entries()),
+          });
+          const edges = traverse(data, edgesPath) || [];
+          for (const edge of edges) {
+            yield edge.node;
+            cursor = edge.cursor;
+          }
+          hasNextPage = traverse(data, pageInfoPath)?.hasNextPage ?? false;
+        }
+      },
+    };
   }
 }

@@ -1,0 +1,8 @@
+query basic($from: timestamptz, $to: timestamptz) {
+  vcs_Commit(where: {refreshedAt: {_gte: $from, _lt: $to}}) {
+    id
+    author {
+      ownerId: id
+    }
+  }
+}

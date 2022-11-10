@@ -1,0 +1,69 @@
+{
+  tms {
+    tasks {
+      nodes {
+        projects {
+          nodes {
+            task {
+              projects {
+                nodes {
+                  task {
+                    projects {
+                      nodes {
+                        task {
+                          projects {
+                            nodes {
+                              task {
+                                projects {
+                                  nodes {
+                                    task {
+                                      projects {
+                                        nodes {
+                                          task {
+                                            projects {
+                                              nodes {
+                                                task {
+                                                  projects {
+                                                    nodes {
+                                                      task {
+                                                        projects {
+                                                          nodes {
+                                                            task {
+                                                              projects {
+                                                                nodes {
+                                                                  task {
+                                                                    uid
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

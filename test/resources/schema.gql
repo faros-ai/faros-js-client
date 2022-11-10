@@ -1,0 +1,590 @@
+type Query {
+  node(id: ID!): Node
+  cicd: cicd_Query
+  # compute: compute_Query
+  tms: tms_Query
+  # vcs: vcs_Query
+}
+
+type cicd_Query {
+  deployments(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """
+    A filter to be used in determining which values should be returned by the collection.
+    """
+    filter: cicd_DeploymentFilter
+  ): cicd_DeploymentConnection
+}
+
+"""A connection to a list of `cicd_Deployment` values."""
+type cicd_DeploymentConnection {
+  """A list of `cicd_Deployment` objects."""
+  nodes: [cicd_Deployment]!
+
+  """
+  A list of edges which contains the `cicd_Deployment` and cursor to aid in pagination.
+  """
+  edges: [cicd_DeploymentEdge!]!
+
+  """Information to aid in pagination."""
+  pageInfo: builtin_PageInfo!
+}
+
+"""A `cicd_Deployment` edge in the connection."""
+type cicd_DeploymentEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `cicd_Deployment` at the end of the edge."""
+  node: cicd_Deployment
+}
+
+"""
+A filter to be used against `cicd_Deployment` object types. All fields are combined with a logical ‘and.’
+"""
+input cicd_DeploymentFilter {
+  """Filter by the object’s `refreshedAtMillis` field."""
+  refreshedAtMillis: builtin_BigIntFilter
+}
+
+scalar builtin_BigInt
+
+"""
+A filter to be used against builtin_BigInt fields. All fields are combined with a logical ‘and.’
+"""
+input builtin_BigIntFilter {
+  """
+  Is null (if `true` is specified) or is not null (if `false` is specified).
+  """
+  isNull: Boolean
+
+  """Equal to the specified value."""
+  equalTo: builtin_BigInt
+
+  """Not equal to the specified value."""
+  notEqualTo: builtin_BigInt
+
+  """Included in the specified list."""
+  in: [builtin_BigInt!]
+
+  """Not included in the specified list."""
+  notIn: [builtin_BigInt!]
+
+  """Less than the specified value."""
+  lessThan: builtin_BigInt
+
+  """Less than or equal to the specified value."""
+  lessThanOrEqualTo: builtin_BigInt
+
+  """Greater than the specified value."""
+  greaterThan: builtin_BigInt
+
+  """Greater than or equal to the specified value."""
+  greaterThanOrEqualTo: builtin_BigInt
+}
+
+type builtin_PageInfo {
+  """When paginating forwards, are there more items?"""
+  hasNextPage: Boolean!
+
+  """When paginating backwards, are there more items?"""
+  hasPreviousPage: Boolean!
+}
+
+scalar Cursor
+
+interface Node {
+  id: ID!
+}
+
+"""Generic node metadata"""
+type NodeMetadata {
+  """The origin of the entry which created the node"""
+  origin: String
+
+  """The latest timestamp of the entries affecting this node"""
+  refreshedAt: String
+}
+
+type cicd_Deployment implements Node {
+  """A globally unique identifier for the node"""
+  id: ID!
+
+  """Generic node metadata"""
+  metadata: NodeMetadata!
+
+  """Deployment uid is unique within the source system, e.g CodeDeploy"""
+  uid: ID
+  url: String
+  requestedAt: Timestamp
+  startedAt: Timestamp
+  endedAt: Timestamp
+
+  """
+  Reads a single `compute_Application` that is related to this `cicd_Deployment`.
+  """
+  application: compute_Application
+
+  """Reads a single `cicd_Build` that is related to this `cicd_Deployment`."""
+  build: cicd_Build
+
+  """
+  Backwards reference generated from `cicd_DeploymentChangeset`'s `deployment` field
+  """
+  changeset(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """
+    A filter to be used in determining which values should be returned by the collection.
+    """
+    filter: cicd_DeploymentChangesetFilter
+  ): cicd_DeploymentChangesetConnection!
+}
+
+type cicd_DeploymentChangeset implements Node {
+  """A globally unique identifier for the node"""
+  id: ID!
+
+  """Generic node metadata"""
+  metadata: NodeMetadata!
+
+  """
+  Reads a single `cicd_Deployment` that is related to this `cicd_DeploymentChangeset`.
+  """
+  deployment: cicd_Deployment
+
+  """
+  Reads a single `vcs_Commit` that is related to this `cicd_DeploymentChangeset`.
+  """
+  commit: vcs_Commit
+}
+
+"""A connection to a list of `cicd_DeploymentChangeset` values."""
+type cicd_DeploymentChangesetConnection {
+  """A list of `cicd_DeploymentChangeset` objects."""
+  nodes: [cicd_DeploymentChangeset]!
+
+  """
+  A list of edges which contains the `cicd_DeploymentChangeset` and cursor to aid in pagination.
+  """
+  edges: [cicd_DeploymentChangesetEdge!]!
+
+  """Information to aid in pagination."""
+  pageInfo: builtin_PageInfo!
+}
+
+"""A `cicd_DeploymentChangeset` edge in the connection."""
+type cicd_DeploymentChangesetEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `cicd_DeploymentChangeset` at the end of the edge."""
+  node: cicd_DeploymentChangeset
+}
+
+"""
+A filter to be used against `cicd_DeploymentChangeset` object types. All fields are combined with a logical ‘and.’
+"""
+input cicd_DeploymentChangesetFilter {
+  """Filter by the object’s `refreshedAtMillis` field."""
+  refreshedAtMillis: builtin_BigIntFilter
+}
+
+type vcs_Commit implements Node {
+  """A globally unique identifier for the node"""
+  id: ID!
+
+  """Generic node metadata"""
+  metadata: NodeMetadata!
+  sha: String
+}
+
+type cicd_Build implements Node {
+  """A globally unique identifier for the node"""
+  id: ID!
+
+  """Generic node metadata"""
+  metadata: NodeMetadata!
+
+  """Build uid is unique within the context of the pipeline"""
+  uid: ID
+  pipeline: cicd_Pipeline
+}
+
+type cicd_Pipeline implements Node {
+  """A globally unique identifier for the node"""
+  id: ID!
+
+  """Generic node metadata"""
+  metadata: NodeMetadata!
+
+  """Pipeline uid is unique within the context of the organization"""
+  uid: ID
+}
+
+type compute_Application implements Node {
+  """A globally unique identifier for the node"""
+  id: ID!
+
+  """Generic node metadata"""
+  metadata: NodeMetadata!
+  name: String
+}
+
+scalar Timestamp
+
+type tms_Query {
+  tasks(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """
+    A filter to be used in determining which values should be returned by the collection.
+    """
+    filter: tms_TaskFilter
+  ): tms_TaskConnection
+}
+
+type tms_TaskConnection {
+  """A list of `tms_Task` objects."""
+  nodes: [tms_Task]!
+
+  """
+  A list of edges which contains the `tms_Task` and cursor to aid in pagination.
+  """
+  edges: [tms_TaskEdge!]!
+
+  """Information to aid in pagination."""
+  pageInfo: builtin_PageInfo!
+}
+
+type tms_TaskEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `tms_Task` at the end of the edge."""
+  node: tms_Task
+}
+
+input tms_TaskFilter {
+  """Filter by the object’s `refreshedAtMillis` field."""
+  refreshedAtMillis: builtin_BigIntFilter
+}
+
+type tms_Task implements Node {
+  """A globally unique identifier for the node"""
+  id: ID!
+
+  """Generic node metadata"""
+  metadata: NodeMetadata!
+  uid: ID
+
+  """Reads a single `tms_User` that is related to this `tms_Task`."""
+  creator: tms_User
+
+  """
+  Backwards reference generated from `tms_TaskProjectRelationship`'s `task` field
+  """
+  projects(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """
+    A filter to be used in determining which values should be returned by the collection.
+    """
+    filter: tms_TaskProjectRelationshipFilter
+  ): tms_TaskProjectRelationshipConnection!
+
+  """Backwards reference generated from `tms_TaskAssignment`'s `task` field"""
+  assignees(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """
+    A filter to be used in determining which values should be returned by the collection.
+    """
+    filter: tms_TaskAssignmentFilter
+  ): tms_TaskAssignmentConnection!
+}
+
+type tms_TaskProjectRelationship implements Node {
+  """A globally unique identifier for the node"""
+  id: ID!
+
+  """Generic node metadata"""
+  metadata: NodeMetadata!
+
+  """
+  Reads a single `tms_Task` that is related to this `tms_TaskProjectRelationship`.
+  """
+  task: tms_Task
+
+  """
+  Reads a single `tms_Project` that is related to this `tms_TaskProjectRelationship`.
+  """
+  project: tms_Project
+}
+
+"""A connection to a list of `tms_TaskProjectRelationship` values."""
+type tms_TaskProjectRelationshipConnection {
+  """A list of `tms_TaskProjectRelationship` objects."""
+  nodes: [tms_TaskProjectRelationship]!
+
+  """
+  A list of edges which contains the `tms_TaskProjectRelationship` and cursor to aid in pagination.
+  """
+  edges: [tms_TaskProjectRelationshipEdge!]!
+
+  """Information to aid in pagination."""
+  pageInfo: builtin_PageInfo!
+}
+
+"""A `tms_TaskProjectRelationship` edge in the connection."""
+type tms_TaskProjectRelationshipEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `tms_TaskProjectRelationship` at the end of the edge."""
+  node: tms_TaskProjectRelationship
+}
+
+"""
+A filter to be used against `tms_TaskProjectRelationship` object types. All fields are combined with a logical ‘and.’
+"""
+input tms_TaskProjectRelationshipFilter {
+  """Filter by the object’s `refreshedAtMillis` field."""
+  refreshedAtMillis: builtin_BigIntFilter
+}
+
+type tms_Project implements Node {
+  """A globally unique identifier for the node"""
+  id: ID!
+
+  """Generic node metadata"""
+  metadata: NodeMetadata!
+  uid: ID
+
+  """
+  Backwards reference generated from `tms_TaskBoardProjectRelationship`'s `project` field
+  """
+  boards(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """
+    A filter to be used in determining which values should be returned by the collection.
+    """
+    filter: tms_TaskBoardProjectRelationshipFilter
+  ): tms_TaskBoardProjectRelationshipConnection!
+}
+
+type tms_TaskBoardProjectRelationship implements Node {
+  """A globally unique identifier for the node"""
+  id: ID!
+
+  """Generic node metadata"""
+  metadata: NodeMetadata!
+
+  """
+  Reads a single `tms_TaskBoard` that is related to this `tms_TaskBoardProjectRelationship`.
+  """
+  board: tms_TaskBoard
+
+  """
+  Reads a single `tms_Project` that is related to this `tms_TaskBoardProjectRelationship`.
+  """
+  project: tms_Project
+}
+
+"""A connection to a list of `tms_TaskBoardProjectRelationship` values."""
+type tms_TaskBoardProjectRelationshipConnection {
+  """A list of `tms_TaskBoardProjectRelationship` objects."""
+  nodes: [tms_TaskBoardProjectRelationship]!
+
+  """
+  A list of edges which contains the `tms_TaskBoardProjectRelationship` and cursor to aid in pagination.
+  """
+  edges: [tms_TaskBoardProjectRelationshipEdge!]!
+
+  """Information to aid in pagination."""
+  pageInfo: builtin_PageInfo!
+}
+
+"""A `tms_TaskBoardProjectRelationship` edge in the connection."""
+type tms_TaskBoardProjectRelationshipEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `tms_TaskBoardProjectRelationship` at the end of the edge."""
+  node: tms_TaskBoardProjectRelationship
+}
+
+"""
+A filter to be used against `tms_TaskBoardProjectRelationship` object types. All fields are combined with a logical ‘and.’
+"""
+input tms_TaskBoardProjectRelationshipFilter {
+  """Filter by the object’s `refreshedAtMillis` field."""
+  refreshedAtMillis: builtin_BigIntFilter
+}
+
+type tms_TaskBoard implements Node {
+  """A globally unique identifier for the node"""
+  id: ID!
+
+  """Generic node metadata"""
+  metadata: NodeMetadata!
+  uid: String
+}
+
+type tms_User implements Node {
+  """A globally unique identifier for the node"""
+  id: ID!
+
+  """Generic node metadata"""
+  metadata: NodeMetadata!
+  uid: ID
+}
+
+type tms_TaskAssignment implements Node {
+  """A globally unique identifier for the node"""
+  id: ID!
+
+  """Generic node metadata"""
+  metadata: NodeMetadata!
+  assignedAt: Timestamp
+
+  """
+  Reads a single `tms_Task` that is related to this `tms_TaskAssignment`.
+  """
+  task: tms_Task
+
+  """
+  Reads a single `tms_User` that is related to this `tms_TaskAssignment`.
+  """
+  assignee: tms_User
+}
+
+"""A connection to a list of `tms_TaskAssignment` values."""
+type tms_TaskAssignmentConnection {
+  """A list of `tms_TaskAssignment` objects."""
+  nodes: [tms_TaskAssignment]!
+
+  """
+  A list of edges which contains the `tms_TaskAssignment` and cursor to aid in pagination.
+  """
+  edges: [tms_TaskAssignmentEdge!]!
+
+  """Information to aid in pagination."""
+  pageInfo: builtin_PageInfo!
+}
+
+"""A `tms_TaskAssignment` edge in the connection."""
+type tms_TaskAssignmentEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `tms_TaskAssignment` at the end of the edge."""
+  node: tms_TaskAssignment
+}
+
+"""
+A filter to be used against `tms_TaskAssignment` object types. All fields are combined with a logical ‘and.’
+"""
+input tms_TaskAssignmentFilter {
+  """Filter by the object’s `refreshedAtMillis` field."""
+  refreshedAtMillis: builtin_BigIntFilter
+}
+

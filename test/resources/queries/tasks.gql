@@ -1,0 +1,33 @@
+{
+  tms {
+    tasks {
+      nodes {
+        uid
+        creator {
+          creatorUid: uid
+        }
+        projects {
+          nodes {
+            project {
+              projectUid: uid
+              boards {
+                nodes {
+                  board {
+                    boardUid: uid
+                  }
+                }
+              }
+            }
+          }
+        }
+        assignees {
+          nodes {
+            assignee {
+              assigneeUid: uid
+            }
+          }
+        }
+      }
+    }
+  }
+}
