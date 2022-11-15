@@ -739,4 +739,22 @@ describe('graphql', () => {
     }`;
     expect(sut.toIncrementalV1(queryWithout_metadata)).toMatchSnapshot();
   });
+
+  test('convert to incremental V2', () => {
+    const query = `query MyQuery {
+      vcs_PullRequest {
+        number
+        title
+        refreshedAt
+      }
+    }`;
+    expect(sut.toIncrementalV2(query)).toMatchSnapshot();
+    const query_without_refreshed_at = `query MyQuery {
+      vcs_PullRequest {
+        number
+        title
+      }
+    }`;
+    expect(sut.toIncrementalV2(query_without_refreshed_at)).toMatchSnapshot();
+  });
 });

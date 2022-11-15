@@ -90,6 +90,26 @@ exports[`graphql convert to incremental V1 3`] = `
 }"
 `;
 
+exports[`graphql convert to incremental V2 1`] = `
+"query incrementalQuery($from: timestamptz!, $to: timestamptz!) {
+  vcs_PullRequest(where: {refreshedAt: {_gte: $from, _lt: $to}}) {
+    number
+    title
+    refreshedAt
+  }
+}"
+`;
+
+exports[`graphql convert to incremental V2 2`] = `
+"query incrementalQuery($from: timestamptz!, $to: timestamptz!) {
+  vcs_PullRequest(where: {refreshedAt: {_gte: $from, _lt: $to}}) {
+    number
+    title
+    refreshedAt
+  }
+}"
+`;
+
 exports[`graphql flatten nodes V2 with lists within lists 1`] = `
 Array [
   Object {

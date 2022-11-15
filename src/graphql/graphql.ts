@@ -1124,33 +1124,36 @@ export function createIncrementalReadersV2(
  * Adds "from" and "to" query variables.
  * Adds a filter "from" <= refreshedAt < "to" to the top level model.
  * Makes sure metadata { refreshedAt } is selected.
+ *
  * Example:
+ *  vcs {
+ *     pullRequests {
+ *       nodes {
+ *         title
+ *       }
+ *     }
+ *  }
+ *
+ * becomes:
+ *  query incrementalQuery($from: builtin_BigInt!, $to: builtin_BigInt!) {
  *   vcs {
- *      pullRequests {
- *        nodes {
- *          title
+ *     pullRequests(
+ *       filter: {
+ *        refreshedAtMillis: {
+ *          greaterThanOrEqualTo: $from,
+ *          lessThan: $to
  *        }
- *      }
- *    }
- *   becomes:
- *    query incrementalQuery($from: builtin_BigInt!, $to: builtin_BigInt!) {
- *      vcs {
- *        pullRequests(
- *          filter: {
- *            refreshedAtMillis: {
- *              greaterThanOrEqualTo: $from,
- *              lessThan: $to}
- *            }
- *        ) {
- *            nodes {
- *              metadata {
- *                refreshedAt
- *              }
- *              title
- *            }
- *          }
- *      }
- *    }
+ *       }
+ *     ) {
+ *       nodes {
+ *         title
+ *         metadata {
+ *           refreshedAt
+ *         }
+ *       }
+ *     }
+ *   }
+ *  }
  */
 export function toIncrementalV1(query: string): string {
   let hasMetadata = false,
@@ -1329,6 +1332,169 @@ export function toIncrementalV1(query: string): string {
             selectionSet: {
               kind: Kind.SELECTION_SET,
               selections: [...selections, newSelection],
+            },
+          };
+        }
+        return undefined;
+      },
+    },
+  });
+  return gql.print(ast);
+}
+
+/**
+ * Converts a V2 query into incremental:
+ * Adds "from" and "to" query variables.
+ * Adds a filter "from" <= refreshedAt < "to" to the top level model.
+ * Makes sure refreshedAt is selected.
+ *
+ * Example:
+ *  vcs_PullRequest {
+ *    title
+ *  }
+ *
+ * becomes:
+ *  query incrementalQuery($from: timestamptz!, $to: timestamptz!) {
+ *    vcs_PullRequest(where: {refreshedAt: {_gte: $from, _lt: $to}}) {
+ *      title
+ *      refreshedAt
+ *    }
+ *  }
+ */
+export function toIncrementalV2(query: string): string {
+  let hasRefreshedAt = false,
+    firstNodesSeen = false;
+  let fieldDepth = 0;
+
+  const ast = gql.visit(gql.parse(query), {
+    Document(node) {
+      if (node.definitions.length !== 1) {
+        throw invalidQuery(
+          'document should contain a single query operation definition'
+        );
+      }
+    },
+    OperationDefinition(node) {
+      if (node.operation !== 'query') {
+        throw invalidQuery('only query operations are supported');
+      }
+
+      // Add refreshedAt filter variables to query operation
+      return withVariableDefinitions(node, [
+        {
+          kind: Kind.VARIABLE_DEFINITION,
+          variable: {
+            kind: Kind.VARIABLE,
+            name: {kind: Kind.NAME, value: 'from'},
+          },
+          type: {
+            kind: Kind.NAMED_TYPE,
+            name: {kind: Kind.NAME, value: 'timestamptz!'},
+          },
+        },
+        {
+          kind: Kind.VARIABLE_DEFINITION,
+          variable: {
+            kind: Kind.VARIABLE,
+            name: {kind: Kind.NAME, value: 'to'},
+          },
+          type: {
+            kind: Kind.NAMED_TYPE,
+            name: {kind: Kind.NAME, value: 'timestamptz!'},
+          },
+        },
+      ]);
+    },
+    Field: {
+      enter(node) {
+        const name = node.alias?.value ?? node.name.value;
+
+        if (!firstNodesSeen) {
+          firstNodesSeen = true;
+          fieldDepth++;
+          return undefined;
+        }
+        if (!hasRefreshedAt) {
+          if (name === 'refreshedAt') {
+            hasRefreshedAt = true;
+            fieldDepth++;
+            return undefined;
+          }
+          return false;
+        }
+        return false;
+      },
+      leave(node) {
+        fieldDepth--;
+
+        // We're at the top level model
+        // Add the filter here and refreshedAt to selections if needed
+        if (fieldDepth === 0) {
+          const refreshedFilter = {
+            kind: 'Argument',
+            name: {
+              kind: 'Name',
+              value: 'where',
+            },
+            value: {
+              kind: 'ObjectValue',
+              fields: [
+                {
+                  kind: 'ObjectField',
+                  name: {
+                    kind: 'Name',
+                    value: 'refreshedAt',
+                  },
+                  value: {
+                    kind: 'ObjectValue',
+                    fields: [
+                      {
+                        kind: 'ObjectField',
+                        name: {
+                          kind: 'Name',
+                          value: '_gte',
+                        },
+                        value: {
+                          kind: 'Variable',
+                          name: {
+                            kind: 'Name',
+                            value: 'from',
+                          },
+                        },
+                      },
+                      {
+                        kind: 'ObjectField',
+                        name: {
+                          kind: 'Name',
+                          value: '_lt',
+                        },
+                        value: {
+                          kind: 'Variable',
+                          name: {
+                            kind: 'Name',
+                            value: 'to',
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          };
+          const selections = node.selectionSet?.selections || [];
+          const newSelection = {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'refreshedAt'},
+          };
+          return {
+            ...node,
+            arguments: [...(node.arguments || []), refreshedFilter],
+            selectionSet: {
+              kind: Kind.SELECTION_SET,
+              selections: hasRefreshedAt
+                ? selections
+                : [...selections, newSelection],
             },
           };
         }
