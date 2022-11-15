@@ -1236,58 +1236,13 @@ export function toIncrementalV1(query: string): string {
         // We're at the top level model
         // Add the filter here
         if (fieldDepth === 1) {
-          const refreshedFilter = {
-            kind: 'Argument',
-            name: {
-              kind: 'Name',
-              value: 'filter',
-            },
-            value: {
-              kind: 'ObjectValue',
-              fields: [
-                {
-                  kind: 'ObjectField',
-                  name: {
-                    kind: 'Name',
-                    value: 'refreshedAtMillis',
-                  },
-                  value: {
-                    kind: 'ObjectValue',
-                    fields: [
-                      {
-                        kind: 'ObjectField',
-                        name: {
-                          kind: 'Name',
-                          value: 'greaterThanOrEqualTo',
-                        },
-                        value: {
-                          kind: 'Variable',
-                          name: {
-                            kind: 'Name',
-                            value: 'from',
-                          },
-                        },
-                      },
-                      {
-                        kind: 'ObjectField',
-                        name: {
-                          kind: 'Name',
-                          value: 'lessThan',
-                        },
-                        value: {
-                          kind: 'Variable',
-                          name: {
-                            kind: 'Name',
-                            value: 'to',
-                          },
-                        },
-                      },
-                    ],
-                  },
-                },
-              ],
-            },
-          };
+          const refreshedFilter = buildRefreshedFilter(
+            'filter',
+            'refreshedAtMillis',
+            'greaterThanOrEqualTo',
+            'lessThan'
+          );
+
           return {
             ...node,
             arguments: [...(node.arguments || []), refreshedFilter],
@@ -1430,58 +1385,13 @@ export function toIncrementalV2(query: string): string {
         // We're at the top level model
         // Add the filter here and refreshedAt to selections if needed
         if (fieldDepth === 0) {
-          const refreshedFilter = {
-            kind: 'Argument',
-            name: {
-              kind: 'Name',
-              value: 'where',
-            },
-            value: {
-              kind: 'ObjectValue',
-              fields: [
-                {
-                  kind: 'ObjectField',
-                  name: {
-                    kind: 'Name',
-                    value: 'refreshedAt',
-                  },
-                  value: {
-                    kind: 'ObjectValue',
-                    fields: [
-                      {
-                        kind: 'ObjectField',
-                        name: {
-                          kind: 'Name',
-                          value: '_gte',
-                        },
-                        value: {
-                          kind: 'Variable',
-                          name: {
-                            kind: 'Name',
-                            value: 'from',
-                          },
-                        },
-                      },
-                      {
-                        kind: 'ObjectField',
-                        name: {
-                          kind: 'Name',
-                          value: '_lt',
-                        },
-                        value: {
-                          kind: 'Variable',
-                          name: {
-                            kind: 'Name',
-                            value: 'to',
-                          },
-                        },
-                      },
-                    ],
-                  },
-                },
-              ],
-            },
-          };
+          const refreshedFilter = buildRefreshedFilter(
+            'where',
+            'refreshedAt',
+            '_gte',
+            '_lt'
+          );
+
           const selections = node.selectionSet?.selections || [];
           const newSelection = {
             kind: 'Field',
@@ -1518,5 +1428,65 @@ function withVariableDefinitions(
       ...(node.variableDefinitions || []),
     ],
     selectionSet: node.selectionSet,
+  };
+}
+
+function buildRefreshedFilter(
+  argumentName: string,
+  compareFieldName: string,
+  fromComparison: string,
+  toComparison: string
+): any {
+  return {
+    kind: 'Argument',
+    name: {
+      kind: 'Name',
+      value: argumentName,
+    },
+    value: {
+      kind: 'ObjectValue',
+      fields: [
+        {
+          kind: 'ObjectField',
+          name: {
+            kind: 'Name',
+            value: compareFieldName,
+          },
+          value: {
+            kind: 'ObjectValue',
+            fields: [
+              {
+                kind: 'ObjectField',
+                name: {
+                  kind: 'Name',
+                  value: fromComparison,
+                },
+                value: {
+                  kind: 'Variable',
+                  name: {
+                    kind: 'Name',
+                    value: 'from',
+                  },
+                },
+              },
+              {
+                kind: 'ObjectField',
+                name: {
+                  kind: 'Name',
+                  value: toComparison,
+                },
+                value: {
+                  kind: 'Variable',
+                  name: {
+                    kind: 'Name',
+                    value: 'to',
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ],
+    },
   };
 }
