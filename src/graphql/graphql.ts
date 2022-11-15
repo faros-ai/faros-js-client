@@ -464,7 +464,7 @@ export function flattenV2(
             const gqlType = unwrapType(type);
             if (!gqlType) {
               throw new VError(
-                'cannot unwrap type \'%s\' of field \'%s\'',
+                "cannot unwrap type '%s' of field '%s'",
                 type,
                 leafPath
               );
@@ -501,8 +501,8 @@ export function flattenV2(
     if (leafToPath.has(name)) {
       const otherPath = leafToPath.get(name);
       throw new VError(
-        'fields \'%s\' and \'%s\' will both map to the same name: ' +
-          '\'%s\'. use field aliases to prevent collision.',
+        "fields '%s' and '%s' will both map to the same name: " +
+          "'%s'. use field aliases to prevent collision.",
         path,
         otherPath,
         name
@@ -580,7 +580,7 @@ function setPathToDefault(
   const args = node.arguments;
   if (!gql.isScalarType(gqlType)) {
     throw new VError(
-      'cannot add default to field \'%s\': defaults are only ' +
+      "cannot add default to field '%s': defaults are only " +
         'supported on scalar fields',
       path
     );
@@ -590,8 +590,8 @@ function setPathToDefault(
     args[0].value.kind !== 'StringValue'
   ) {
     throw new VError(
-      'invalid default on field \'%s\': default must contain a single, ' +
-        'string valued argument called \'value\'',
+      "invalid default on field '%s': default must contain a single, " +
+        "string valued argument called 'value'",
       path
     );
   }
@@ -626,14 +626,14 @@ function setPathToDefault(
       break;
     default:
       throw new VError(
-        'cannot set default for field \'%s\' with type: %s',
+        "cannot set default for field '%s' with type: %s",
         path,
         gqlType.name
       );
   }
   if (invalidValue) {
     throw new VError(
-      '%s field \'%s\' has invalid default: %s',
+      "%s field '%s' has invalid default: %s",
       gqlType.name,
       path,
       value
@@ -677,7 +677,7 @@ export function flatten(
             const gqlType = unwrapType(type);
             if (!gqlType) {
               throw new VError(
-                'cannot unwrap type \'%s\' of field \'%s\'',
+                "cannot unwrap type '%s' of field '%s'",
                 type,
                 leafPath
               );
@@ -731,8 +731,8 @@ export function flatten(
     if (leafToPath.has(name)) {
       const otherPath = leafToPath.get(name);
       throw new VError(
-        'fields \'%s\' and \'%s\' will both map to the same name: ' +
-          '\'%s\'. use field aliases to prevent collision.',
+        "fields '%s' and '%s' will both map to the same name: " +
+          "'%s'. use field aliases to prevent collision.",
         path,
         otherPath,
         name
@@ -1117,4 +1117,240 @@ export function createIncrementalReadersV2(
     throw new VError('failed to create v2 incremental readers');
   }
   return result;
+}
+
+/**
+ * Converts a V1 query into incremental:
+ * Adds "from" and "to" query variables.
+ * Adds a filter "from" <= refreshedAt < "to" to the top level model.
+ * Makes sure metadata { refreshedAt } is selected.
+ * Example:
+ *   vcs {
+ *      pullRequests {
+ *        nodes {
+ *          title
+ *        }
+ *      }
+ *    }
+ *   becomes:
+ *    query incrementalQuery($from: builtin_BigInt!, $to: builtin_BigInt!) {
+ *      vcs {
+ *        pullRequests(
+ *          filter: {
+ *            refreshedAtMillis: {
+ *              greaterThanOrEqualTo: $from,
+ *              lessThan: $to}
+ *            }
+ *        ) {
+ *            nodes {
+ *              metadata {
+ *                refreshedAt
+ *              }
+ *              title
+ *            }
+ *          }
+ *      }
+ *    }
+ */
+export function toIncrementalV1(query: string): string {
+  let hasMetadata = false,
+    hasRefreshedAt = false,
+    firstNodesSeen = false;
+  let fieldDepth = 0;
+
+  const ast = gql.visit(gql.parse(query), {
+    Document(node) {
+      if (node.definitions.length !== 1) {
+        throw invalidQuery(
+          'document should contain a single query operation definition'
+        );
+      }
+    },
+    OperationDefinition(node) {
+      if (node.operation !== 'query') {
+        throw invalidQuery('only query operations are supported');
+      }
+
+      // Add refreshedAtMillis filter variables to query operation
+      return withVariableDefinitions(node, [
+        {
+          kind: Kind.VARIABLE_DEFINITION,
+          variable: {
+            kind: Kind.VARIABLE,
+            name: {kind: Kind.NAME, value: 'from'},
+          },
+          type: {
+            kind: Kind.NAMED_TYPE,
+            name: {kind: Kind.NAME, value: 'builtin_BigInt!'},
+          },
+        },
+        {
+          kind: Kind.VARIABLE_DEFINITION,
+          variable: {
+            kind: Kind.VARIABLE,
+            name: {kind: Kind.NAME, value: 'to'},
+          },
+          type: {
+            kind: Kind.NAMED_TYPE,
+            name: {kind: Kind.NAME, value: 'builtin_BigInt!'},
+          },
+        },
+      ]);
+    },
+    Field: {
+      enter(node) {
+        const name = node.alias?.value ?? node.name.value;
+
+        if (!firstNodesSeen) {
+          if (name === NODES) {
+            firstNodesSeen = true;
+          }
+          fieldDepth++;
+          return undefined;
+        }
+        if (!hasMetadata) {
+          if (name === 'metadata') {
+            hasMetadata = true;
+            fieldDepth++;
+            return undefined;
+          }
+          return false;
+        }
+        if (!hasRefreshedAt) {
+          if (name === 'refreshedAt') {
+            hasRefreshedAt = true;
+            fieldDepth++;
+            return undefined;
+          }
+          return false;
+        }
+        return false;
+      },
+      leave(node) {
+        const name = node.alias?.value ?? node.name.value;
+        fieldDepth--;
+
+        // We're at the top level model
+        // Add the filter here
+        if (fieldDepth === 1) {
+          const refreshedFilter = {
+            kind: 'Argument',
+            name: {
+              kind: 'Name',
+              value: 'filter',
+            },
+            value: {
+              kind: 'ObjectValue',
+              fields: [
+                {
+                  kind: 'ObjectField',
+                  name: {
+                    kind: 'Name',
+                    value: 'refreshedAtMillis',
+                  },
+                  value: {
+                    kind: 'ObjectValue',
+                    fields: [
+                      {
+                        kind: 'ObjectField',
+                        name: {
+                          kind: 'Name',
+                          value: 'greaterThanOrEqualTo',
+                        },
+                        value: {
+                          kind: 'Variable',
+                          name: {
+                            kind: 'Name',
+                            value: 'from',
+                          },
+                        },
+                      },
+                      {
+                        kind: 'ObjectField',
+                        name: {
+                          kind: 'Name',
+                          value: 'lessThan',
+                        },
+                        value: {
+                          kind: 'Variable',
+                          name: {
+                            kind: 'Name',
+                            value: 'to',
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          };
+          return {
+            ...node,
+            arguments: [...(node.arguments || []), refreshedFilter],
+          };
+        }
+
+        if (name === NODES && !hasMetadata) {
+          // Adds metadata { refreshedAt }
+          const selections = node.selectionSet?.selections || [];
+          const newSelection = {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'metadata'},
+            selectionSet: {
+              kind: 'SelectionSet',
+              selections: [
+                {
+                  kind: 'Field',
+                  name: {kind: 'Name', value: 'refreshedAt'},
+                },
+              ],
+            },
+          };
+
+          return {
+            ...node,
+            selectionSet: {
+              kind: Kind.SELECTION_SET,
+              selections: [...selections, newSelection],
+            },
+          };
+        }
+        if (name === 'metadata' && !hasRefreshedAt) {
+          // Adds refreshedAt
+          const selections = node.selectionSet?.selections || [];
+          const newSelection = {
+            kind: 'Field',
+            name: {kind: 'Name', value: 'refreshedAt'},
+          };
+
+          return {
+            ...node,
+            selectionSet: {
+              kind: Kind.SELECTION_SET,
+              selections: [...selections, newSelection],
+            },
+          };
+        }
+        return undefined;
+      },
+    },
+  });
+  return gql.print(ast);
+}
+
+function withVariableDefinitions(
+  node: gql.OperationDefinitionNode,
+  variableDefinitions: ReadonlyArray<gql.VariableDefinitionNode>
+): gql.OperationDefinitionNode {
+  return {
+    kind: Kind.OPERATION_DEFINITION,
+    name: {kind: Kind.NAME, value: 'incrementalQuery'},
+    operation: gql.OperationTypeNode.QUERY,
+    variableDefinitions: [
+      ...variableDefinitions,
+      ...(node.variableDefinitions || []),
+    ],
+    selectionSet: node.selectionSet,
+  };
 }

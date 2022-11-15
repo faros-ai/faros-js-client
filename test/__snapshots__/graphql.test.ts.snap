@@ -14,6 +14,82 @@ Object {
 }
 `;
 
+exports[`graphql convert to incremental V1 1`] = `
+"query incrementalQuery($from: builtin_BigInt!, $to: builtin_BigInt!) {
+  vcs {
+    pullRequests(
+      filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}
+    ) {
+      nodes {
+        metadata {
+          refreshedAt
+        }
+        title
+        number
+        reviews {
+          nodes {
+            reviewer {
+              name
+            }
+          }
+        }
+      }
+    }
+  }
+}"
+`;
+
+exports[`graphql convert to incremental V1 2`] = `
+"query incrementalQuery($from: builtin_BigInt!, $to: builtin_BigInt!) {
+  vcs {
+    pullRequests(
+      filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}
+    ) {
+      nodes {
+        metadata {
+          origin
+          refreshedAt
+        }
+        title
+        number
+        reviews {
+          nodes {
+            reviewer {
+              name
+            }
+          }
+        }
+      }
+    }
+  }
+}"
+`;
+
+exports[`graphql convert to incremental V1 3`] = `
+"query incrementalQuery($from: builtin_BigInt!, $to: builtin_BigInt!) {
+  vcs {
+    pullRequests(
+      filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}
+    ) {
+      nodes {
+        title
+        number
+        reviews {
+          nodes {
+            reviewer {
+              name
+            }
+          }
+        }
+        metadata {
+          refreshedAt
+        }
+      }
+    }
+  }
+}"
+`;
+
 exports[`graphql flatten nodes V2 with lists within lists 1`] = `
 Array [
   Object {

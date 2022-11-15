@@ -51,5 +51,6 @@ export {
   paginatedQueryV2,
   queryNodesPaths,
   readerFromQuery,
+  toIncrementalV1
 } from './graphql/graphql';
 export {Utils} from './utils';

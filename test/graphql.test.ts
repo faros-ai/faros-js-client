@@ -645,28 +645,28 @@ describe('graphql', () => {
       }
     `;
     expect(() => sut.flatten(nullQuery, graphDefaultSchema)).toThrow(
-      'invalid default on field \'nodes.strField\''
+      "invalid default on field 'nodes.strField'"
     );
     expect(() => sut.flatten(noValueQuery, graphDefaultSchema)).toThrow(
-      'invalid default on field \'nodes.strField\''
+      "invalid default on field 'nodes.strField'"
     );
     expect(() => sut.flatten(boolQuery, graphDefaultSchema)).toThrow(
-      'Boolean field \'nodes.boolField\' has invalid default'
+      "Boolean field 'nodes.boolField' has invalid default"
     );
     expect(() => sut.flatten(doubleQuery, graphDefaultSchema)).toThrow(
-      'Double field \'nodes.doubleField\' has invalid default'
+      "Double field 'nodes.doubleField' has invalid default"
     );
     expect(() => sut.flatten(floatQuery, graphDefaultSchema)).toThrow(
-      'Float field \'nodes.floatField\' has invalid default'
+      "Float field 'nodes.floatField' has invalid default"
     );
     expect(() => sut.flatten(intQuery, graphDefaultSchema)).toThrow(
-      'Int field \'nodes.intField\' has invalid default'
+      "Int field 'nodes.intField' has invalid default"
     );
     expect(() => sut.flatten(longQuery, graphDefaultSchema)).toThrow(
-      'Long field \'nodes.longField\' has invalid default'
+      "Long field 'nodes.longField' has invalid default"
     );
     expect(() => sut.flatten(strQuery, graphDefaultSchema)).toThrow(
-      'invalid default on field \'nodes.strField\''
+      "invalid default on field 'nodes.strField'"
     );
   });
 
@@ -675,5 +675,68 @@ describe('graphql', () => {
     expect(() => sut.flatten(query, graphSchema)).toThrow(
       'query exceeds max node depth of 10'
     );
+  });
+
+  test('convert to incremental V1', () => {
+    const query = `query MyQuery {
+      vcs {
+        pullRequests {
+          nodes {
+            metadata {
+              refreshedAt
+            }
+            title
+            number
+            reviews {
+              nodes {
+                reviewer {
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }`;
+    expect(sut.toIncrementalV1(query)).toMatchSnapshot();
+    const queryWithout_refreshedAt = `query MyQuery {
+      vcs {
+        pullRequests {
+          nodes {
+            metadata {
+              origin
+            }
+            title
+            number
+            reviews {
+              nodes {
+                reviewer {
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }`;
+    expect(sut.toIncrementalV1(queryWithout_refreshedAt)).toMatchSnapshot();
+    const queryWithout_metadata = `query MyQuery {
+      vcs {
+        pullRequests {
+          nodes {
+            title
+            number
+            reviews {
+              nodes {
+                reviewer {
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }`;
+    expect(sut.toIncrementalV1(queryWithout_metadata)).toMatchSnapshot();
   });
 });
