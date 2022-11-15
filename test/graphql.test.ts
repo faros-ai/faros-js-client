@@ -676,4 +676,85 @@ describe('graphql', () => {
       'query exceeds max node depth of 10'
     );
   });
+
+  test('convert to incremental V1', () => {
+    const query = `query MyQuery {
+      vcs {
+        pullRequests {
+          nodes {
+            metadata {
+              refreshedAt
+            }
+            title
+            number
+            reviews {
+              nodes {
+                reviewer {
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }`;
+    expect(sut.toIncrementalV1(query)).toMatchSnapshot();
+    const queryWithout_refreshedAt = `query MyQuery {
+      vcs {
+        pullRequests {
+          nodes {
+            metadata {
+              origin
+            }
+            title
+            number
+            reviews {
+              nodes {
+                reviewer {
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }`;
+    expect(sut.toIncrementalV1(queryWithout_refreshedAt)).toMatchSnapshot();
+    const queryWithout_metadata = `query MyQuery {
+      vcs {
+        pullRequests {
+          nodes {
+            title
+            number
+            reviews {
+              nodes {
+                reviewer {
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }`;
+    expect(sut.toIncrementalV1(queryWithout_metadata)).toMatchSnapshot();
+  });
+
+  test('convert to incremental V2', () => {
+    const query = `query MyQuery {
+      vcs_PullRequest {
+        number
+        title
+        refreshedAt
+      }
+    }`;
+    expect(sut.toIncrementalV2(query)).toMatchSnapshot();
+    const query_without_refreshed_at = `query MyQuery {
+      vcs_PullRequest {
+        number
+        title
+      }
+    }`;
+    expect(sut.toIncrementalV2(query_without_refreshed_at)).toMatchSnapshot();
+  });
 });
