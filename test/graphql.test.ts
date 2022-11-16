@@ -179,12 +179,22 @@ describe('graphql', () => {
     const type = graphSchemaV2.getType('cicd_Build');
     const query1 = sut.buildIncrementalQueryV2(type as gql.GraphQLObjectType);
     expect(query1).toMatchSnapshot();
+    const query2 = sut.buildIncrementalQueryV2(
+      type as gql.GraphQLObjectType,
+      false
+    );
+    expect(query2).toMatchSnapshot();
   });
 
   test('build incremental V1', () => {
     const type = graphSchema.getType('cicd_Build');
     const query1 = sut.buildIncrementalQueryV1(type as gql.GraphQLObjectType);
     expect(query1).toMatchSnapshot();
+    const query2 = sut.buildIncrementalQueryV1(
+      type as gql.GraphQLObjectType,
+      false
+    );
+    expect(query2).toMatchSnapshot();
   });
 
   test('empty cross merge', async () => {
@@ -756,5 +766,19 @@ describe('graphql', () => {
       }
     }`;
     expect(sut.toIncrementalV2(query_without_refreshed_at)).toMatchSnapshot();
+  });
+
+  test('create incremental queries V1', () => {
+    expect(sut.createIncrementalQueriesV1(graphSchema)).toMatchSnapshot();
+    expect(
+      sut.createIncrementalQueriesV1(graphSchema, false)
+    ).toMatchSnapshot();
+  });
+
+  test('create incremental queries V2', () => {
+    expect(sut.createIncrementalQueriesV2(graphSchemaV2)).toMatchSnapshot();
+    expect(
+      sut.createIncrementalQueriesV2(graphSchemaV2, false)
+    ).toMatchSnapshot();
   });
 });

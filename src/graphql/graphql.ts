@@ -949,7 +949,22 @@ export function createNonIncrementalReaders(
   });
 }
 
-export function buildIncrementalQueryV1(type: gql.GraphQLObjectType): Query {
+/**
+ * Creates an incremental query from a model type.
+ * The selections will include:
+ *  1. All the scalar fields.
+ *  2. Nested fragments for all referenced models, selecting their IDs.
+ *  3. A fragment "metadata { refreshedAt }"
+ *
+ * By default, it aliases referenced models IDs to prevent collisions
+ * if flattened.
+ * E.g., { id pipeline { id } } => { id pipeline { pipelineId: id } }
+ * The avoidCollisions parameter controls this behavior.
+ */
+export function buildIncrementalQueryV1(
+  type: gql.GraphQLObjectType,
+  avoidCollisions = true
+): Query {
   const name = type.name;
   // add fields and FKs
   const fieldsObj: any = {};
@@ -962,16 +977,28 @@ export function buildIncrementalQueryV1(type: gql.GraphQLObjectType): Query {
     } else if (isV1ModelType(field.type)) {
       // this is foreign key to a top-level model.
       // add nested fragment to select id of referenced model
-      let nestedName = `${field.name}Id`;
-      // check for collision between nested name and scalars
-      if (_.has(type.getFields(), nestedName)) {
-        nestedName = `${field.name}Fk`;
+      if (avoidCollisions) {
+        let nestedName = `${field.name}Id`;
+        // check for collision between nested name and scalars
+        if (_.has(type.getFields(), nestedName)) {
+          nestedName = `${field.name}Fk`;
+        }
+        fieldsObj[field.name] = {
+          [`${nestedName}: id`]: true,
+        };
+      } else {
+        fieldsObj[field.name] = {
+          [ID_FLD]: true,
+        };
       }
-      fieldsObj[field.name] = {
-        [`${nestedName}: id`]: true,
-      };
     }
   }
+
+  // Add refreshedAt
+  fieldsObj.metadata = {
+    refreshedAt: true,
+  };
+
   // transform name into a dot-separated path for setting fields and filters
   // e.g. cicd_ReleaseTagAssociation => cicd.releaseTagAssociations
   const segments = name.split('_');
@@ -1017,19 +1044,29 @@ export function createIncrementalReadersV1(
   pageSize: number,
   graphQLSchema: gql.GraphQLSchema
 ): ReadonlyArray<Reader> {
-  const result: Reader[] = [];
-  for (const name of Object.keys(graphQLSchema.getTypeMap())) {
-    const type = graphQLSchema.getType(name);
-    if (isV1ModelType(type)) {
-      const query = buildIncrementalQueryV1(type);
-      result.push(
-        readerFromQuery(graph, client, query, pageSize, graphQLSchema, true)
-      );
-    }
-  }
+  const result: Reader[] = createIncrementalQueriesV1(graphQLSchema).map(
+    (query) =>
+      readerFromQuery(graph, client, query, pageSize, graphQLSchema, true)
+  );
+
   if (!result.length) {
     throw new VError('failed to load v1 incremental readers');
   }
+  return result;
+}
+
+export function createIncrementalQueriesV1(
+  graphQLSchema: gql.GraphQLSchema,
+  avoidCollisions = true
+): ReadonlyArray<Query> {
+  const result: Query[] = [];
+  for (const name of Object.keys(graphQLSchema.getTypeMap())) {
+    const type = graphQLSchema.getType(name);
+    if (isV1ModelType(type)) {
+      result.push(buildIncrementalQueryV1(type, avoidCollisions));
+    }
+  }
+
   return result;
 }
 
@@ -1040,7 +1077,21 @@ function isV2ModelType(type: any): type is gql.GraphQLObjectType {
     : false;
 }
 
-export function buildIncrementalQueryV2(type: gql.GraphQLObjectType): Query {
+/**
+ * Creates an incremental query from a model type.
+ * The selections will include:
+ *  1. All the scalar fields.
+ *  2. Nested fragments for all referenced models, selecting their IDs.
+ *
+ * By default, it aliases referenced models IDs to prevent collisions
+ * if flattened.
+ * E.g., { id pipeline { id } } => { id pipeline { pipelineId: id } }
+ * The avoidCollisions parameter controls this behavior.
+ */
+export function buildIncrementalQueryV2(
+  type: gql.GraphQLObjectType,
+  avoidCollisions = true
+): Query {
   const name = type.name;
   // add fields and FKs
   const fieldsObj: any = {};
@@ -1053,14 +1104,20 @@ export function buildIncrementalQueryV2(type: gql.GraphQLObjectType): Query {
     } else if (isV2ModelType(field.type)) {
       // this is foreign key to a top-level model.
       // add nested fragment to select id of referenced model
-      let nestedName = `${field.name}Id`;
-      // check for collision between nested name and scalars
-      if (_.has(type.getFields(), nestedName)) {
-        nestedName = `${field.name}Fk`;
-      }
-      {
+      if (avoidCollisions) {
+        let nestedName = `${field.name}Id`;
+        // check for collision between nested name and scalars
+        if (_.has(type.getFields(), nestedName)) {
+          nestedName = `${field.name}Fk`;
+        }
+        {
+          fieldsObj[field.name] = {
+            [`${nestedName}: id`]: true,
+          };
+        }
+      } else {
         fieldsObj[field.name] = {
-          [`${nestedName}: id`]: true,
+          [ID_FLD]: true,
         };
       }
     }
@@ -1094,28 +1151,37 @@ export function createIncrementalReadersV2(
   pageSize: number,
   graphQLSchema: gql.GraphQLSchema
 ): ReadonlyArray<Reader> {
-  const result: Reader[] = [];
-  for (const name of Object.keys(graphQLSchema.getTypeMap())) {
-    const type = graphQLSchema.getType(name);
-    if (isV2ModelType(type)) {
-      const query = buildIncrementalQueryV2(type);
-      result.push(
-        readerFromQuery(
-          graph,
-          client,
-          query,
-          pageSize,
-          graphQLSchema,
-          true,
-          paginatedQueryV2,
-          flattenV2
-        )
-      );
-    }
-  }
+  const result: Reader[] = createIncrementalQueriesV2(graphQLSchema).map(
+    (query) =>
+      readerFromQuery(
+        graph,
+        client,
+        query,
+        pageSize,
+        graphQLSchema,
+        true,
+        paginatedQueryV2,
+        flattenV2
+      )
+  );
   if (!result.length) {
     throw new VError('failed to create v2 incremental readers');
   }
+  return result;
+}
+
+export function createIncrementalQueriesV2(
+  graphQLSchema: gql.GraphQLSchema,
+  avoidCollisions = true
+): ReadonlyArray<Query> {
+  const result: Query[] = [];
+  for (const name of Object.keys(graphQLSchema.getTypeMap())) {
+    const type = graphQLSchema.getType(name);
+    if (isV2ModelType(type)) {
+      result.push(buildIncrementalQueryV2(type, avoidCollisions));
+    }
+  }
+
   return result;
 }
 

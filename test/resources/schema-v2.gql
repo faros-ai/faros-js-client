@@ -208,6 +208,9 @@ type vcs_Repository {
   name: String
 }
 
+"""
+columns and relationships of "cicd_Build"
+"""
 type cicd_Build {
   createdAt: timestamptz
 
