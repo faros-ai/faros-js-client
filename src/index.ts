@@ -40,6 +40,8 @@ export {
   RecordIterable,
   buildIncrementalQueryV1,
   buildIncrementalQueryV2,
+  createIncrementalQueriesV1,
+  createIncrementalQueriesV2,
   createIncrementalReadersV1,
   createIncrementalReadersV2,
   createNonIncrementalReaders,
