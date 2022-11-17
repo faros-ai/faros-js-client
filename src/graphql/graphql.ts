@@ -3,11 +3,11 @@ import * as gql from 'graphql';
 import {Kind} from 'graphql';
 import {jsonToGraphQLQuery, VariableType} from 'json-to-graphql-query';
 import _ from 'lodash';
-import {plural} from 'pluralize';
+import {plural, singular} from 'pluralize';
 import {VError} from 'verror';
 
 import {FarosClient} from '../client';
-import {Query} from './types';
+import {Model, Query} from './types';
 
 export type AnyRecord = Record<string, any>;
 type AsyncOrSyncIterable<T> = AsyncIterable<T> | Iterable<T>;
@@ -1479,6 +1479,94 @@ export function toIncrementalV2(query: string): string {
     },
   });
   return gql.print(ast);
+}
+
+/**
+ * Extracts the model from a V1 query
+ *
+ * Example, for query:
+ *  vcs {
+ *     pullRequests {
+ *       nodes {
+ *         title
+ *       }
+ *     }
+ *  }
+ *
+ * returns:
+ * {
+ *  namespace: 'vcs',
+ *  name: 'PullRequest',
+ *  fullName: 'vcs_PullRequest'
+ * }
+ */
+export function extractModelNameV1(query: string): Model {
+  const fields: string[] = [];
+
+  gql.visit(gql.parse(query), {
+    Field: {
+      enter(node) {
+        const name = node.alias?.value ?? node.name.value;
+
+        if (name === NODES) {
+          return false;
+        }
+
+        fields.push(name);
+        return undefined;
+      },
+    },
+  });
+
+  ok(fields.length === 2, `expected 2 elements in ${fields}`);
+
+  const namespace = fields[0];
+  const name = _.upperFirst(singular(fields[1]));
+  return {
+    namespace,
+    name,
+    fullName: [namespace, name].join('_'),
+  };
+}
+
+/**
+ * Extracts the model from a V2 query
+ *
+ * Example, for query:
+ *  vcs_PullRequest {
+ *    title
+ *  }
+ *
+ * returns:
+ * {
+ *  namespace: 'vcs',
+ *  name: 'PullRequest',
+ *  fullName: 'vcs_PullRequest'
+ * }
+ */
+export function extractModelNameV2(query: string): Model {
+  let firstField: string | undefined;
+
+  gql.visit(gql.parse(query), {
+    Field: {
+      enter(node) {
+        firstField = node.alias?.value ?? node.name.value;
+        return false;
+      },
+    },
+  });
+
+  ok(firstField, 'No fields in query');
+  const fields: string[] = firstField.split('_');
+  ok(fields.length === 2, `expected 2 elements in ${fields}`);
+
+  const namespace = fields[0];
+  const name = singular(fields[1]);
+  return {
+    namespace,
+    name,
+    fullName: firstField,
+  };
 }
 
 function withVariableDefinitions(

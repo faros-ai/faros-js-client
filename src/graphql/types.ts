@@ -54,3 +54,9 @@ export interface Query {
   readonly name: string;
   readonly gql: string;
 }
+
+export interface Model {
+  readonly namespace: string;
+  readonly name: string;
+  readonly fullName: string;
+}

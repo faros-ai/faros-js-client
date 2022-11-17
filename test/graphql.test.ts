@@ -781,4 +781,43 @@ describe('graphql', () => {
       sut.createIncrementalQueriesV2(graphSchemaV2, false)
     ).toMatchSnapshot();
   });
+
+  test('extract model name V1', () => {
+    const query = `query MyQuery {
+      vcs {
+        pullRequests {
+          nodes {
+            title
+            number
+            reviews {
+              nodes {
+                reviewer {
+                  name
+                }
+              }
+            }
+          }
+        }
+      }
+    }`;
+    expect(sut.extractModelNameV1(query)).toEqual({
+      fullName: 'vcs_PullRequest',
+      name: 'PullRequest',
+      namespace: 'vcs',
+    });
+  });
+
+  test('extract model name V2', () => {
+    const query = `query MyQuery {
+      vcs_PullRequest {
+        number
+        title
+      }
+    }`;
+    expect(sut.extractModelNameV2(query)).toEqual({
+      fullName: 'vcs_PullRequest',
+      name: 'PullRequest',
+      namespace: 'vcs',
+    });
+  });
 });
