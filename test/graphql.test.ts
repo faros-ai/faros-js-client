@@ -782,42 +782,33 @@ describe('graphql', () => {
     ).toMatchSnapshot();
   });
 
-  test('extract model name V1', () => {
+  test('path to model V1', () => {
     const query = `query MyQuery {
-      vcs {
-        pullRequests {
+      cicd {
+        deployments {
           nodes {
-            title
-            number
-            reviews {
-              nodes {
-                reviewer {
-                  name
-                }
-              }
-            }
+            url
+            id
           }
         }
       }
     }`;
-    expect(sut.extractModelNameV1(query)).toEqual({
-      fullName: 'vcs_PullRequest',
-      name: 'PullRequest',
-      namespace: 'vcs',
+    expect(sut.pathToModelV1(query, graphSchema)).toEqual({
+      modelName: 'cicd_Deployment',
+      path: ['cicd', 'deployments', 'nodes'],
     });
   });
 
-  test('extract model name V2', () => {
+  test('path to model V2', () => {
     const query = `query MyQuery {
-      vcs_PullRequest {
+      cicd_Build {
         number
-        title
+        name
       }
     }`;
-    expect(sut.extractModelNameV2(query)).toEqual({
-      fullName: 'vcs_PullRequest',
-      name: 'PullRequest',
-      namespace: 'vcs',
+    expect(sut.pathToModelV2(query, graphSchemaV2)).toEqual({
+      modelName: 'cicd_Build',
+      path: ['cicd_Build'],
     });
   });
 });

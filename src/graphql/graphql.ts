@@ -3,11 +3,11 @@ import * as gql from 'graphql';
 import {Kind} from 'graphql';
 import {jsonToGraphQLQuery, VariableType} from 'json-to-graphql-query';
 import _ from 'lodash';
-import {plural, singular} from 'pluralize';
+import {plural} from 'pluralize';
 import {VError} from 'verror';
 
 import {FarosClient} from '../client';
-import {Model, Query} from './types';
+import {PathToModel, Query} from './types';
 
 export type AnyRecord = Record<string, any>;
 type AsyncOrSyncIterable<T> = AsyncIterable<T> | Iterable<T>;
@@ -1482,7 +1482,7 @@ export function toIncrementalV2(query: string): string {
 }
 
 /**
- * Extracts the model from a V1 query
+ * Returns the path to the queried top-level model in a V1 query
  *
  * Example, for query:
  *  vcs {
@@ -1495,42 +1495,55 @@ export function toIncrementalV2(query: string): string {
  *
  * returns:
  * {
- *  namespace: 'vcs',
- *  name: 'PullRequest',
- *  fullName: 'vcs_PullRequest'
+ *  modelName: 'vcs_PullRequest',
+ *  path: ['vcs', 'pullRequests', 'nodes'],
  * }
  */
-export function extractModelNameV1(query: string): Model {
-  const fields: string[] = [];
+export function pathToModelV1(
+  query: string,
+  schema: gql.GraphQLSchema
+): PathToModel {
+  const typeInfo = new gql.TypeInfo(schema);
+  let firstNodesSeen = false;
+  let modelName: string | undefined;
+  const fieldPath: string[] = [];
 
-  gql.visit(gql.parse(query), {
-    Field: {
-      enter(node) {
-        const name = node.alias?.value ?? node.name.value;
+  gql.visit(
+    gql.parse(query),
+    gql.visitWithTypeInfo(typeInfo, {
+      Field: {
+        enter(node) {
+          const name = node.alias?.value ?? node.name.value;
 
-        if (name === NODES) {
-          return false;
-        }
+          if (firstNodesSeen) {
+            const type = typeInfo.getParentType();
+            ok(isV1ModelType(type));
+            modelName = type.name;
+            return false;
+          }
 
-        fields.push(name);
-        return undefined;
+          fieldPath.push(name);
+
+          if (name === NODES) {
+            firstNodesSeen = true;
+          }
+
+          return undefined;
+        },
       },
-    },
-  });
+    })
+  );
 
-  ok(fields.length === 2, `expected 2 elements in ${fields}`);
+  ok(modelName !== undefined, 'Could not find queried top-level model');
 
-  const namespace = fields[0];
-  const name = _.upperFirst(singular(fields[1]));
   return {
-    namespace,
-    name,
-    fullName: [namespace, name].join('_'),
+    path: fieldPath,
+    modelName,
   };
 }
 
 /**
- * Extracts the model from a V2 query
+ * Returns the path to the queried top-level model in a V2 query
  *
  * Example, for query:
  *  vcs_PullRequest {
@@ -1539,33 +1552,43 @@ export function extractModelNameV1(query: string): Model {
  *
  * returns:
  * {
- *  namespace: 'vcs',
- *  name: 'PullRequest',
- *  fullName: 'vcs_PullRequest'
+ *  modelName: 'vcs_PullRequest',
+ *  path: ['vcs_PullRequest'],
  * }
  */
-export function extractModelNameV2(query: string): Model {
-  let firstField: string | undefined;
+export function pathToModelV2(
+  query: string,
+  schema: gql.GraphQLSchema
+): PathToModel {
+  const typeInfo = new gql.TypeInfo(schema);
+  let modelName: string | undefined;
+  const fieldPath: string[] = [];
 
-  gql.visit(gql.parse(query), {
-    Field: {
-      enter(node) {
-        firstField = node.alias?.value ?? node.name.value;
-        return false;
+  gql.visit(
+    gql.parse(query),
+    gql.visitWithTypeInfo(typeInfo, {
+      Field: {
+        enter(node) {
+          const name = node.alias?.value ?? node.name.value;
+          const type = typeInfo.getParentType();
+
+          if (isV2ModelType(type)) {
+            modelName = type.name;
+            return false;
+          }
+
+          fieldPath.push(name);
+          return undefined;
+        },
       },
-    },
-  });
+    })
+  );
 
-  ok(firstField, 'No fields in query');
-  const fields: string[] = firstField.split('_');
-  ok(fields.length === 2, `expected 2 elements in ${fields}`);
+  ok(modelName !== undefined, 'Could not find queried top-level model');
 
-  const namespace = fields[0];
-  const name = singular(fields[1]);
   return {
-    namespace,
-    name,
-    fullName: firstField,
+    path: fieldPath,
+    modelName,
   };
 }
 
