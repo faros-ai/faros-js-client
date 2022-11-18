@@ -7,7 +7,7 @@ import {plural} from 'pluralize';
 import {VError} from 'verror';
 
 import {FarosClient} from '../client';
-import {Query} from './types';
+import {PathToModel, Query} from './types';
 
 export type AnyRecord = Record<string, any>;
 type AsyncOrSyncIterable<T> = AsyncIterable<T> | Iterable<T>;
@@ -1479,6 +1479,117 @@ export function toIncrementalV2(query: string): string {
     },
   });
   return gql.print(ast);
+}
+
+/**
+ * Returns the path to the queried top-level model in a V1 query
+ *
+ * Example, for query:
+ *  vcs {
+ *     pullRequests {
+ *       nodes {
+ *         title
+ *       }
+ *     }
+ *  }
+ *
+ * returns:
+ * {
+ *  modelName: 'vcs_PullRequest',
+ *  path: ['vcs', 'pullRequests', 'nodes'],
+ * }
+ */
+export function pathToModelV1(
+  query: string,
+  schema: gql.GraphQLSchema
+): PathToModel {
+  const typeInfo = new gql.TypeInfo(schema);
+  let firstNodesSeen = false;
+  let modelName: string | undefined;
+  const fieldPath: string[] = [];
+
+  gql.visit(
+    gql.parse(query),
+    gql.visitWithTypeInfo(typeInfo, {
+      Field: {
+        enter(node) {
+          const name = node.alias?.value ?? node.name.value;
+
+          if (firstNodesSeen) {
+            const type = typeInfo.getParentType();
+            ok(isV1ModelType(type));
+            modelName = type.name;
+            return false;
+          }
+
+          fieldPath.push(name);
+
+          if (name === NODES) {
+            firstNodesSeen = true;
+          }
+
+          return undefined;
+        },
+      },
+    })
+  );
+
+  ok(modelName !== undefined, 'Could not find queried top-level model');
+
+  return {
+    path: fieldPath,
+    modelName,
+  };
+}
+
+/**
+ * Returns the path to the queried top-level model in a V2 query
+ *
+ * Example, for query:
+ *  vcs_PullRequest {
+ *    title
+ *  }
+ *
+ * returns:
+ * {
+ *  modelName: 'vcs_PullRequest',
+ *  path: ['vcs_PullRequest'],
+ * }
+ */
+export function pathToModelV2(
+  query: string,
+  schema: gql.GraphQLSchema
+): PathToModel {
+  const typeInfo = new gql.TypeInfo(schema);
+  let modelName: string | undefined;
+  const fieldPath: string[] = [];
+
+  gql.visit(
+    gql.parse(query),
+    gql.visitWithTypeInfo(typeInfo, {
+      Field: {
+        enter(node) {
+          const name = node.alias?.value ?? node.name.value;
+          const type = typeInfo.getParentType();
+
+          if (isV2ModelType(type)) {
+            modelName = type.name;
+            return false;
+          }
+
+          fieldPath.push(name);
+          return undefined;
+        },
+      },
+    })
+  );
+
+  ok(modelName !== undefined, 'Could not find queried top-level model');
+
+  return {
+    path: fieldPath,
+    modelName,
+  };
 }
 
 function withVariableDefinitions(

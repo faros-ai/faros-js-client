@@ -29,6 +29,7 @@ export {
   ObjectRelationship,
   Reference,
   Schema,
+  PathToModel,
   Query,
 } from './graphql/types';
 export {HasuraSchemaLoader} from './graphql/hasura-schema-loader';
@@ -51,6 +52,8 @@ export {
   flattenV2,
   paginatedQuery,
   paginatedQueryV2,
+  pathToModelV1,
+  pathToModelV2,
   queryNodesPaths,
   readerFromQuery,
   toIncrementalV1,

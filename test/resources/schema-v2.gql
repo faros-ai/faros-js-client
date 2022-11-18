@@ -38,6 +38,14 @@ type query_root {
     """filter the rows returned"""
     where: vcs_PullRequest_bool_exp
   ): [vcs_PullRequest!]!
+
+  """
+  fetch data from the table: "cicd_Build"
+  """
+  cicd_Build(
+    """limit the number of rows returned"""
+    limit: Int
+  ): [cicd_Build!]!
 }
 
 type ims_Incident {

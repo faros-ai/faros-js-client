@@ -54,3 +54,8 @@ export interface Query {
   readonly name: string;
   readonly gql: string;
 }
+
+export interface PathToModel {
+  readonly path: ReadonlyArray<string>;
+  readonly modelName: string;
+}

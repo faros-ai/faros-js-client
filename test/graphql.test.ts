@@ -781,4 +781,34 @@ describe('graphql', () => {
       sut.createIncrementalQueriesV2(graphSchemaV2, false)
     ).toMatchSnapshot();
   });
+
+  test('path to model V1', () => {
+    const query = `query MyQuery {
+      cicd {
+        deployments {
+          nodes {
+            url
+            id
+          }
+        }
+      }
+    }`;
+    expect(sut.pathToModelV1(query, graphSchema)).toEqual({
+      modelName: 'cicd_Deployment',
+      path: ['cicd', 'deployments', 'nodes'],
+    });
+  });
+
+  test('path to model V2', () => {
+    const query = `query MyQuery {
+      cicd_Build {
+        number
+        name
+      }
+    }`;
+    expect(sut.pathToModelV2(query, graphSchemaV2)).toEqual({
+      modelName: 'cicd_Build',
+      path: ['cicd_Build'],
+    });
+  });
 });
