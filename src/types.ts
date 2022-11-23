@@ -58,3 +58,12 @@ export interface Coordinates {
   lat: number;
   lon: number;
 }
+
+export interface Model {
+  name: string;
+  key: ReadonlyArray<string>;
+  forwardReferences: any;
+  backwardReferences: any;
+  keySchema: any;
+  dataSchema: any;
+}

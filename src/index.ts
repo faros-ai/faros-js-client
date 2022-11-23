@@ -12,6 +12,7 @@ export {
   Coordinates,
   FarosClientConfig,
   Location,
+  Model,
   NamedQuery,
   SecretName,
   UpdateAccount,

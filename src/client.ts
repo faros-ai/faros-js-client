@@ -2,6 +2,7 @@ import {AxiosInstance, AxiosRequestConfig} from 'axios';
 import * as gql from 'graphql';
 import {get as traverse} from 'lodash';
 import pino, {Logger} from 'pino';
+import VError from 'verror';
 
 import {makeAxiosInstanceWithRetry} from './axios';
 import {wrapApiError} from './errors';
@@ -10,6 +11,7 @@ import {Schema} from './graphql/types';
 import {
   Account,
   FarosClientConfig,
+  Model,
   NamedQuery,
   SecretName,
   UpdateAccount,
@@ -20,9 +22,15 @@ export const DEFAULT_AXIOS_CONFIG: AxiosRequestConfig = {timeout: 60000};
 
 export const GRAPH_VERSION_HEADER = 'x-faros-graph-version';
 
+enum GraphVersion {
+  V1 = 'v1',
+  V2 = 'v2',
+}
+
 /** Faros API client **/
 export class FarosClient {
   private readonly api: AxiosInstance;
+  private readonly graphVersion: GraphVersion;
 
   constructor(
     cfg: FarosClientConfig,
@@ -43,6 +51,8 @@ export class FarosClient {
       },
       logger
     );
+
+    this.graphVersion = cfg.useGraphQLV2 ? GraphVersion.V2 : GraphVersion.V1;
   }
 
   async tenant(): Promise<string> {
@@ -86,6 +96,20 @@ export class FarosClient {
         return false;
       }
       throw wrapApiError(err, `unable to check graph exists: ${graph}`);
+    }
+  }
+
+  async models(graph: string): Promise<ReadonlyArray<Model>> {
+    if (this.graphVersion !== GraphVersion.V1) {
+      throw new VError(`listing models is not supported for ${this.graphVersion}
+      graphs`);
+    }
+
+    try {
+      const {data} = await this.api.get(`/graphs/${graph}/models`);
+      return data.models;
+    } catch (err: any) {
+      throw wrapApiError(err, `unable to list models: ${graph}`);
     }
   }
 
