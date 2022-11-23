@@ -95,7 +95,7 @@ export class FarosClient {
       const {data} = await this.api.get(`/graphs/${graph}/models`);
       return data.models;
     } catch (err: any) {
-      throw wrapApiError(err, `unable to unable to list models: ${graph}`);
+      throw wrapApiError(err, `unable to list models: ${graph}`);
     }
   }
 
