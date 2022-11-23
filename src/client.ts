@@ -10,6 +10,7 @@ import {Schema} from './graphql/types';
 import {
   Account,
   FarosClientConfig,
+  Model,
   NamedQuery,
   SecretName,
   UpdateAccount,
@@ -86,6 +87,15 @@ export class FarosClient {
         return false;
       }
       throw wrapApiError(err, `unable to check graph exists: ${graph}`);
+    }
+  }
+
+  async models(graph: string): Promise<ReadonlyArray<Model>> {
+    try {
+      const {data} = await this.api.get(`/graphs/${graph}/models`);
+      return data.models;
+    } catch (err: any) {
+      throw wrapApiError(err, `unable to unable to list models: ${graph}`);
     }
   }
 

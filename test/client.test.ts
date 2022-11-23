@@ -66,6 +66,23 @@ describe('client', () => {
     expect(res).toBe(false);
   });
 
+  test('get models', async () => {
+    const mock = nock(apiUrl)
+      .get('/graphs/g1/models')
+      .reply(200, {
+        models: [
+          {name: 'model1', key: ['key1A', 'key1B']},
+          {name: 'model2', key: ['key2A', 'key2B']},
+        ],
+      });
+    const res = await client.models('g1');
+    mock.done();
+    expect(res).toEqual([
+      {name: 'model1', key: ['key1A', 'key1B']},
+      {name: 'model2', key: ['key2A', 'key2B']},
+    ]);
+  });
+
   test('get query', async () => {
     const mock = nock(apiUrl)
       .get('/queries/my-query')
