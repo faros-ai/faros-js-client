@@ -101,8 +101,9 @@ export class FarosClient {
 
   async models(graph: string): Promise<ReadonlyArray<Model>> {
     if (this.graphVersion !== GraphVersion.V1) {
-      throw new VError(`listing models is not supported for ${this.graphVersion}
-      graphs`);
+      throw new VError(
+        `listing models is not supported for ${this.graphVersion} graphs`
+      );
     }
 
     try {
