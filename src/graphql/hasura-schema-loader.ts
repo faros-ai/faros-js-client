@@ -137,7 +137,7 @@ export class HasuraSchemaLoader implements SchemaLoader {
         schema.types,
         (t) => t.name === tableName && t.kind === 'OBJECT'
       );
-      if (!type || !type.fields) {
+      if (!type?.fields) {
         continue;
       }
       const scalarTypes: any[] = type.fields.filter(

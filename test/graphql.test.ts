@@ -9,7 +9,7 @@ import {
   graphSchemaV2,
   graphSchemaV2ForPrimaryKeysTest,
   loadQueryFile,
-  toArray
+  toArray,
 } from './helpers';
 
 describe('graphql', () => {
@@ -778,56 +778,57 @@ describe('graphql', () => {
   test('create incremental queries V1', () => {
     expect(sut.createIncrementalQueriesV1(graphSchema)).toMatchSnapshot();
     expect(
-      sut.createIncrementalQueriesV1(graphSchema, false)
+      sut.createIncrementalQueriesV1(graphSchema, undefined, false)
     ).toMatchSnapshot();
   });
 
   test('create incremental queries V1 with primary keys info', () => {
-    const primaryKeys={
-      'cicd_Build':['pipeline','uid'],
-      'cicd_Deployment':['source','uid'],
-      'cicd_Organization':['source','uid'],
-      'cicd_Pipeline':['organization','uid'],
-      'cicd_Repository':['organization','uid']
+    const primaryKeys = {
+      cicd_Build: ['pipeline', 'uid'],
+      cicd_Deployment: ['source', 'uid'],
+      cicd_Organization: ['source', 'uid'],
+      cicd_Pipeline: ['organization', 'uid'],
+      cicd_Repository: ['organization', 'uid'],
     };
-    expect(sut.createIncrementalQueriesV1(
-      graphSchemaForPrimaryKeysTest,
-      true,
-      primaryKeys)
+    expect(
+      sut.createIncrementalQueriesV1(graphSchemaForPrimaryKeysTest, primaryKeys)
     ).toMatchSnapshot();
     expect(
       sut.createIncrementalQueriesV1(
         graphSchemaForPrimaryKeysTest,
-        false,
-        primaryKeys)
+        primaryKeys,
+        false
+      )
     ).toMatchSnapshot();
   });
 
   test('create incremental queries V2', () => {
     expect(sut.createIncrementalQueriesV2(graphSchemaV2)).toMatchSnapshot();
     expect(
-      sut.createIncrementalQueriesV2(graphSchemaV2, false)
+      sut.createIncrementalQueriesV2(graphSchemaV2, undefined, false)
     ).toMatchSnapshot();
   });
 
   test('create incremental queries V2 with primary keys info', () => {
-    const primaryKeys={
-      'cicd_Build':['pipeline','uid'],
-      'cicd_Deployment':['source','uid'],
-      'cicd_Organization':['source','uid'],
-      'cicd_Pipeline':['organizationId','uid'],
-      'cicd_Repository':['organizationId','uid']
+    const primaryKeys = {
+      cicd_Build: ['pipeline', 'uid'],
+      cicd_Deployment: ['source', 'uid'],
+      cicd_Organization: ['source', 'uid'],
+      cicd_Pipeline: ['organizationId', 'uid'],
+      cicd_Repository: ['organizationId', 'uid'],
     };
-    expect(sut.createIncrementalQueriesV2(
-      graphSchemaV2ForPrimaryKeysTest,
-      true,
-      primaryKeys)
+    expect(
+      sut.createIncrementalQueriesV2(
+        graphSchemaV2ForPrimaryKeysTest,
+        primaryKeys
+      )
     ).toMatchSnapshot();
     expect(
       sut.createIncrementalQueriesV2(
         graphSchemaV2ForPrimaryKeysTest,
-        false,
-        primaryKeys)
+        primaryKeys,
+        false
+      )
     ).toMatchSnapshot();
   });
 

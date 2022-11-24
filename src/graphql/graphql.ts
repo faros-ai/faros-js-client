@@ -969,7 +969,7 @@ export function createNonIncrementalReaders(
 export function buildIncrementalQueryV1(
   type: gql.GraphQLObjectType,
   avoidCollisions = true,
-  resolvedPrimaryKeys:Dictionary<string> = {}
+  resolvedPrimaryKeys: Dictionary<string> = {}
 ): Query {
   const name = type.name;
   // add fields and FKs
@@ -1065,14 +1065,16 @@ export function createIncrementalReadersV1(
 
 export function createIncrementalQueriesV1(
   graphQLSchema: gql.GraphQLSchema,
-  avoidCollisions = true,
-  primaryKeys: Dictionary<ReadonlyArray<string>> | undefined = undefined
+  primaryKeys?: Dictionary<ReadonlyArray<string>>,
+  avoidCollisions = true
 ): ReadonlyArray<Query> {
   const result: Query[] = [];
-  const resolvedPrimaryKeys = primaryKeys ? new PrimaryKeyResolver(
-    graphQLSchema,
-    primaryKeys,
-    isV1ModelType).resolvePrimaryKeys()
+  const resolvedPrimaryKeys = primaryKeys
+    ? new PrimaryKeyResolver(
+        graphQLSchema,
+        primaryKeys,
+        isV1ModelType
+      ).resolvePrimaryKeys()
     : {};
   for (const name of Object.keys(graphQLSchema.getTypeMap())) {
     const type = graphQLSchema.getType(name);
@@ -1110,7 +1112,7 @@ function isV2ModelType(type: any): type is gql.GraphQLObjectType {
 export function buildIncrementalQueryV2(
   type: gql.GraphQLObjectType,
   avoidCollisions = true,
-  resolvedPrimaryKeys:Dictionary<string> = {}
+  resolvedPrimaryKeys: Dictionary<string> = {}
 ): Query {
   const name = type.name;
   // add fields and FKs
@@ -1193,14 +1195,16 @@ export function createIncrementalReadersV2(
 
 export function createIncrementalQueriesV2(
   graphQLSchema: gql.GraphQLSchema,
-  avoidCollisions = true,
-  primaryKeys: Dictionary<ReadonlyArray<string>> | undefined = undefined
+  primaryKeys?: Dictionary<ReadonlyArray<string>>,
+  avoidCollisions = true
 ): ReadonlyArray<Query> {
   const result: Query[] = [];
-  const resolvedPrimaryKeys = primaryKeys ? new PrimaryKeyResolver(
-    graphQLSchema,
-    primaryKeys,
-    isV2ModelType).resolvePrimaryKeys()
+  const resolvedPrimaryKeys = primaryKeys
+    ? new PrimaryKeyResolver(
+        graphQLSchema,
+        primaryKeys,
+        isV2ModelType
+      ).resolvePrimaryKeys()
     : {};
   for (const name of Object.keys(graphQLSchema.getTypeMap())) {
     const type = graphQLSchema.getType(name);
@@ -1712,46 +1716,47 @@ class PrimaryKeyResolver {
    * are 'organization' (foreign key to cicd_Organization) and 'uid' (scalar),
    * the fully resolved primary key of 'cicd_Pipeline' is
    * { organization { source uid } uid }
-  */
+   */
   public resolvePrimaryKeys(): Dictionary<string> {
-      const result: Dictionary<string> = {};
+    const result: Dictionary<string> = {};
 
-      for (const name of Object.keys(this.graphQLSchema.getTypeMap())) {
-        const type = this.graphQLSchema.getType(name);
-        if (this.isTopLevelModelTypeChecker(type)) {
-          result[name] = this.resolvePrimaryKey(type);
-        }
+    for (const name of Object.keys(this.graphQLSchema.getTypeMap())) {
+      const type = this.graphQLSchema.getType(name);
+      if (this.isTopLevelModelTypeChecker(type)) {
+        result[name] = this.resolvePrimaryKey(type);
       }
+    }
 
-      return result;
+    return result;
   }
 
   @Memoize()
-  private resolvePrimaryKey(
-    type: gql.GraphQLObjectType): string {
-      const resolved = [];
+  private resolvePrimaryKey(type: gql.GraphQLObjectType): string {
+    const resolved = [];
 
-      for (const fldName of this.primaryKeys[type.name] || []) {
-        let field = type.getFields()[fldName];
+    for (const fldName of this.primaryKeys[type.name] || []) {
+      let field = type.getFields()[fldName];
 
-        // Attempt to look up the field without the Id suffix
-        // E.g., organizationId => organization
-        if (field === undefined && fldName.endsWith('Id')) {
-          field = type.getFields()[fldName.slice(0, -2)];
-        }
-
-        ok(field !== undefined,
-          `expected ${fldName} to be a field of ${type.name}`);
-
-        if (gql.isScalarType(unwrapType(field.type))) {
-          resolved.push(field.name);
-        } else if (this.isTopLevelModelTypeChecker(field.type)) {
-          resolved.push(
-            `${field.name} { ${this.resolvePrimaryKey(field.type)} }`
-          );
-        }
+      // Attempt to look up the field without the Id suffix
+      // E.g., organizationId => organization
+      if (field === undefined && fldName.endsWith('Id')) {
+        field = type.getFields()[fldName.slice(0, -2)];
       }
 
-      return resolved.join(' ');
+      ok(
+        field !== undefined,
+        `expected ${fldName} to be a field of ${type.name}`
+      );
+
+      if (gql.isScalarType(unwrapType(field.type))) {
+        resolved.push(field.name);
+      } else if (this.isTopLevelModelTypeChecker(field.type)) {
+        resolved.push(
+          `${field.name} { ${this.resolvePrimaryKey(field.type)} }`
+        );
+      }
+    }
+
+    return resolved.join(' ');
   }
 }
