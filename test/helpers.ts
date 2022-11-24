@@ -16,6 +16,26 @@ export const graphSchemaV2 = gql.buildSchema(
   fs.readFileSync(path.join(__dirname, 'resources', 'schema-v2.gql'), 'utf-8')
 );
 
+export const graphSchemaForPrimaryKeysTest = gql.buildSchema(
+  fs.readFileSync(
+    path.join(
+      __dirname,
+      'resources',
+      'v1_schema_for_pk_test.gql'
+    ),
+    'utf-8')
+);
+
+export const graphSchemaV2ForPrimaryKeysTest = gql.buildSchema(
+  fs.readFileSync(
+    path.join(
+      __dirname,
+      'resources',
+      'v2_schema_for_pk_test.gql'
+    ),
+    'utf-8')
+);
+
 export async function loadQueryFile(name: string): Promise<string> {
   const query = await fs.readFile(
     path.join(__dirname, 'resources', 'queries', name),

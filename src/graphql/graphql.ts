@@ -4,6 +4,8 @@ import {Kind} from 'graphql';
 import {jsonToGraphQLQuery, VariableType} from 'json-to-graphql-query';
 import _ from 'lodash';
 import {plural} from 'pluralize';
+import {Dictionary} from 'ts-essentials';
+import {Memoize} from 'typescript-memoize';
 import {VError} from 'verror';
 
 import {FarosClient} from '../client';
@@ -960,10 +962,14 @@ export function createNonIncrementalReaders(
  * if flattened.
  * E.g., { id pipeline { id } } => { id pipeline { pipelineId: id } }
  * The avoidCollisions parameter controls this behavior.
+ *
+ * If resolvedPrimaryKeys is provided, it will use the fully resolved
+ * primary key fragment for referenced models instead of the ID field.
  */
 export function buildIncrementalQueryV1(
   type: gql.GraphQLObjectType,
-  avoidCollisions = true
+  avoidCollisions = true,
+  resolvedPrimaryKeys:Dictionary<string> = {}
 ): Query {
   const name = type.name;
   // add fields and FKs
@@ -977,6 +983,8 @@ export function buildIncrementalQueryV1(
     } else if (isV1ModelType(field.type)) {
       // this is foreign key to a top-level model.
       // add nested fragment to select id of referenced model
+      const fk = resolvedPrimaryKeys[field.type.name] || ID_FLD;
+
       if (avoidCollisions) {
         let nestedName = `${field.name}Id`;
         // check for collision between nested name and scalars
@@ -984,11 +992,11 @@ export function buildIncrementalQueryV1(
           nestedName = `${field.name}Fk`;
         }
         fieldsObj[field.name] = {
-          [`${nestedName}: id`]: true,
+          [`${nestedName}: ${fk}`]: true,
         };
       } else {
         fieldsObj[field.name] = {
-          [ID_FLD]: true,
+          [fk]: true,
         };
       }
     }
@@ -1057,13 +1065,21 @@ export function createIncrementalReadersV1(
 
 export function createIncrementalQueriesV1(
   graphQLSchema: gql.GraphQLSchema,
-  avoidCollisions = true
+  avoidCollisions = true,
+  primaryKeys: Dictionary<ReadonlyArray<string>> | undefined = undefined
 ): ReadonlyArray<Query> {
   const result: Query[] = [];
+  const resolvedPrimaryKeys = primaryKeys ? new PrimaryKeyResolver(
+    graphQLSchema,
+    primaryKeys,
+    isV1ModelType).resolvePrimaryKeys()
+    : {};
   for (const name of Object.keys(graphQLSchema.getTypeMap())) {
     const type = graphQLSchema.getType(name);
     if (isV1ModelType(type)) {
-      result.push(buildIncrementalQueryV1(type, avoidCollisions));
+      result.push(
+        buildIncrementalQueryV1(type, avoidCollisions, resolvedPrimaryKeys)
+      );
     }
   }
 
@@ -1087,10 +1103,14 @@ function isV2ModelType(type: any): type is gql.GraphQLObjectType {
  * if flattened.
  * E.g., { id pipeline { id } } => { id pipeline { pipelineId: id } }
  * The avoidCollisions parameter controls this behavior.
+ *
+ * If resolvedPrimaryKeys is provided, it will use the fully resolved
+ * primary key fragment for referenced models instead of the ID field.
  */
 export function buildIncrementalQueryV2(
   type: gql.GraphQLObjectType,
-  avoidCollisions = true
+  avoidCollisions = true,
+  resolvedPrimaryKeys:Dictionary<string> = {}
 ): Query {
   const name = type.name;
   // add fields and FKs
@@ -1104,6 +1124,7 @@ export function buildIncrementalQueryV2(
     } else if (isV2ModelType(field.type)) {
       // this is foreign key to a top-level model.
       // add nested fragment to select id of referenced model
+      const fk = resolvedPrimaryKeys[field.type.name] || ID_FLD;
       if (avoidCollisions) {
         let nestedName = `${field.name}Id`;
         // check for collision between nested name and scalars
@@ -1112,12 +1133,12 @@ export function buildIncrementalQueryV2(
         }
         {
           fieldsObj[field.name] = {
-            [`${nestedName}: id`]: true,
+            [`${nestedName}: ${fk}`]: true,
           };
         }
       } else {
         fieldsObj[field.name] = {
-          [ID_FLD]: true,
+          [fk]: true,
         };
       }
     }
@@ -1172,13 +1193,21 @@ export function createIncrementalReadersV2(
 
 export function createIncrementalQueriesV2(
   graphQLSchema: gql.GraphQLSchema,
-  avoidCollisions = true
+  avoidCollisions = true,
+  primaryKeys: Dictionary<ReadonlyArray<string>> | undefined = undefined
 ): ReadonlyArray<Query> {
   const result: Query[] = [];
+  const resolvedPrimaryKeys = primaryKeys ? new PrimaryKeyResolver(
+    graphQLSchema,
+    primaryKeys,
+    isV2ModelType).resolvePrimaryKeys()
+    : {};
   for (const name of Object.keys(graphQLSchema.getTypeMap())) {
     const type = graphQLSchema.getType(name);
     if (isV2ModelType(type)) {
-      result.push(buildIncrementalQueryV2(type, avoidCollisions));
+      result.push(
+        buildIncrementalQueryV2(type, avoidCollisions, resolvedPrimaryKeys)
+      );
     }
   }
 
@@ -1666,4 +1695,63 @@ function buildRefreshedFilter(
       ],
     },
   };
+}
+
+class PrimaryKeyResolver {
+  constructor(
+    readonly graphQLSchema: gql.GraphQLSchema,
+    readonly primaryKeys: Dictionary<ReadonlyArray<string>>,
+    readonly isTopLevelModelTypeChecker = isV1ModelType
+  ) {}
+
+  /**
+   * Fully resolves the primary keys of models in the schema.
+   *
+   * E.g., if the primary keys of 'cicd_Organization' are 'source'
+   * and 'uid' (both scalars) and the primary keys of 'cicd_Pipeline'
+   * are 'organization' (foreign key to cicd_Organization) and 'uid' (scalar),
+   * the fully resolved primary key of 'cicd_Pipeline' is
+   * { organization { source uid } uid }
+  */
+  public resolvePrimaryKeys(): Dictionary<string> {
+      const result: Dictionary<string> = {};
+
+      for (const name of Object.keys(this.graphQLSchema.getTypeMap())) {
+        const type = this.graphQLSchema.getType(name);
+        if (this.isTopLevelModelTypeChecker(type)) {
+          result[name] = this.resolvePrimaryKey(type);
+        }
+      }
+
+      return result;
+  }
+
+  @Memoize()
+  private resolvePrimaryKey(
+    type: gql.GraphQLObjectType): string {
+      const resolved = [];
+
+      for (const fldName of this.primaryKeys[type.name] || []) {
+        let field = type.getFields()[fldName];
+
+        // Attempt to look up the field without the Id suffix
+        // E.g., organizationId => organization
+        if (field === undefined && fldName.endsWith('Id')) {
+          field = type.getFields()[fldName.slice(0, -2)];
+        }
+
+        ok(field !== undefined,
+          `expected ${fldName} to be a field of ${type.name}`);
+
+        if (gql.isScalarType(unwrapType(field.type))) {
+          resolved.push(field.name);
+        } else if (this.isTopLevelModelTypeChecker(field.type)) {
+          resolved.push(
+            `${field.name} { ${this.resolvePrimaryKey(field.type)} }`
+          );
+        }
+      }
+
+      return resolved.join(' ');
+  }
 }

@@ -3,7 +3,14 @@ import 'jest-extended';
 import * as gql from 'graphql';
 
 import * as sut from '../src/graphql/graphql';
-import {graphSchema, graphSchemaV2, loadQueryFile, toArray} from './helpers';
+import {
+  graphSchema,
+  graphSchemaForPrimaryKeysTest,
+  graphSchemaV2,
+  graphSchemaV2ForPrimaryKeysTest,
+  loadQueryFile,
+  toArray
+} from './helpers';
 
 describe('graphql', () => {
   test('query nodes paths', async () => {
@@ -775,10 +782,52 @@ describe('graphql', () => {
     ).toMatchSnapshot();
   });
 
+  test('create incremental queries V1 with primary keys info', () => {
+    const primaryKeys={
+      'cicd_Build':['pipeline','uid'],
+      'cicd_Deployment':['source','uid'],
+      'cicd_Organization':['source','uid'],
+      'cicd_Pipeline':['organization','uid'],
+      'cicd_Repository':['organization','uid']
+    };
+    expect(sut.createIncrementalQueriesV1(
+      graphSchemaForPrimaryKeysTest,
+      true,
+      primaryKeys)
+    ).toMatchSnapshot();
+    expect(
+      sut.createIncrementalQueriesV1(
+        graphSchemaForPrimaryKeysTest,
+        false,
+        primaryKeys)
+    ).toMatchSnapshot();
+  });
+
   test('create incremental queries V2', () => {
     expect(sut.createIncrementalQueriesV2(graphSchemaV2)).toMatchSnapshot();
     expect(
       sut.createIncrementalQueriesV2(graphSchemaV2, false)
+    ).toMatchSnapshot();
+  });
+
+  test('create incremental queries V2 with primary keys info', () => {
+    const primaryKeys={
+      'cicd_Build':['pipeline','uid'],
+      'cicd_Deployment':['source','uid'],
+      'cicd_Organization':['source','uid'],
+      'cicd_Pipeline':['organizationId','uid'],
+      'cicd_Repository':['organizationId','uid']
+    };
+    expect(sut.createIncrementalQueriesV2(
+      graphSchemaV2ForPrimaryKeysTest,
+      true,
+      primaryKeys)
+    ).toMatchSnapshot();
+    expect(
+      sut.createIncrementalQueriesV2(
+        graphSchemaV2ForPrimaryKeysTest,
+        false,
+        primaryKeys)
     ).toMatchSnapshot();
   });
 
