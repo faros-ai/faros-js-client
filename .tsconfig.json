@@ -6,6 +6,7 @@
     "outDir": "./lib",
     "declaration": true,
     "esModuleInterop": true,
+    "experimentalDecorators": true,
     "strict": true
   },
   "include": [

@@ -1,0 +1,105 @@
+schema {
+  query: query_root
+}
+
+"""whether this query should be cached (Hasura Cloud only)"""
+directive @cached(
+  """measured in seconds"""
+  ttl: Int! = 60
+
+  """refresh the cache entry"""
+  refresh: Boolean! = false
+) on QUERY
+
+type query_root {
+  """
+  fetch data from the table: "cicd_Build"
+  """
+  cicd_Build(
+    """limit the number of rows returned"""
+    limit: Int
+  ): [cicd_Build!]!
+}
+
+"""
+columns and relationships of "cicd_Build"
+"""
+type cicd_Build {
+  """generated"""
+  id: String!
+  name: String
+
+  """An object relationship"""
+  pipeline: cicd_Pipeline
+
+  uid: String!
+  url: String
+}
+
+"""
+columns and relationships of "cicd_Pipeline"
+"""
+type cicd_Pipeline {
+  """generated"""
+  id: String!
+
+  name: String
+
+  """An object relationship"""
+  organization: cicd_Organization
+
+  uid: String!
+  url: String
+}
+
+"""
+columns and relationships of "cicd_Organization"
+"""
+type cicd_Organization {
+  description: String
+
+  """generated"""
+  id: String!
+
+  name: String
+  origin: String
+  source: String
+  uid: String!
+  url: String
+}
+
+"""
+columns and relationships of "cicd_Repository"
+"""
+type cicd_Repository {
+  description: String
+
+  """generated"""
+  id: String!
+
+  name: String
+
+  """An object relationship"""
+  organization: cicd_Organization
+  origin: String
+  uid: String!
+  url: String
+}
+
+"""
+columns and relationships of "cicd_Deployment"
+"""
+type cicd_Deployment {
+  """generated"""
+  id: String!
+
+  source: String
+
+  """generated"""
+  statusCategory: String
+
+  """generated"""
+  statusDetail: String
+  uid: String!
+  url: String
+}

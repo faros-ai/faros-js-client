@@ -43,6 +43,7 @@
     "pino": "^8.5.0",
     "pluralize": "^8.0.0",
     "toposort": "^2.0.2",
+    "typescript-memoize": "^1.1.0",
     "verror": "^1.10.0"
   },
   "devDependencies": {
@@ -55,9 +56,9 @@
     "@types/tmp": "^0.2.0",
     "@types/toposort": "^2.0.3",
     "@types/verror": "^1.10.4",
-    "@typescript-eslint/eslint-plugin": "^4.3.0",
-    "@typescript-eslint/parser": "^4.3.0",
-    "eslint": "^7.24.0",
+    "@typescript-eslint/eslint-plugin": "^5.27.1",
+    "@typescript-eslint/parser": "^5.27.1",
+    "eslint": "^8.17.0",
     "eslint-plugin-simple-import-sort": "^8.0.0",
     "husky": "^8.0.1",
     "jest": "^27.5.1",

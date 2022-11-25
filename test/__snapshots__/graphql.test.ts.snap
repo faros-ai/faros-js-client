@@ -238,6 +238,56 @@ Array [
 ]
 `;
 
+exports[`graphql create incremental queries V1 with primary keys info 1`] = `
+Array [
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { deployments (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid source application { applicationId: id } build { buildId: pipeline { organization { source uid } uid } uid } metadata { refreshedAt } } } } }",
+    "name": "cicd_Deployment",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { compute { applications (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id name displayName platform metadata { refreshedAt } } } } }",
+    "name": "compute_Application",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { builds (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name number pipeline { pipelineId: organization { source uid } uid } metadata { refreshedAt } } } } }",
+    "name": "cicd_Build",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { pipelines (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name organization { organizationId: source uid } metadata { refreshedAt } } } } }",
+    "name": "cicd_Pipeline",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { organizations (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name source metadata { refreshedAt } } } } }",
+    "name": "cicd_Organization",
+  },
+]
+`;
+
+exports[`graphql create incremental queries V1 with primary keys info 2`] = `
+Array [
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { deployments (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid source application { id } build { pipeline { organization { source uid } uid } uid } metadata { refreshedAt } } } } }",
+    "name": "cicd_Deployment",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { compute { applications (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id name displayName platform metadata { refreshedAt } } } } }",
+    "name": "compute_Application",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { builds (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name number pipeline { organization { source uid } uid } metadata { refreshedAt } } } } }",
+    "name": "cicd_Build",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { pipelines (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name organization { source uid } metadata { refreshedAt } } } } }",
+    "name": "cicd_Pipeline",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { organizations (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name source metadata { refreshedAt } } } } }",
+    "name": "cicd_Organization",
+  },
+]
+`;
+
 exports[`graphql create incremental queries V2 1`] = `
 Array [
   Object {
@@ -260,6 +310,56 @@ Array [
   Object {
     "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id } }",
     "name": "cicd_Pipeline",
+  },
+]
+`;
+
+exports[`graphql create incremental queries V2 with primary keys info 1`] = `
+Array [
+  Object {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id name pipeline { pipelineId: organization { source uid } uid } uid url } }",
+    "name": "cicd_Build",
+  },
+  Object {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id name organization { organizationId: source uid } uid url } }",
+    "name": "cicd_Pipeline",
+  },
+  Object {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Organization (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id description name origin source uid url } }",
+    "name": "cicd_Organization",
+  },
+  Object {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Repository (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id description name organization { organizationId: source uid } origin uid url } }",
+    "name": "cicd_Repository",
+  },
+  Object {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Deployment (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id source statusCategory statusDetail uid url } }",
+    "name": "cicd_Deployment",
+  },
+]
+`;
+
+exports[`graphql create incremental queries V2 with primary keys info 2`] = `
+Array [
+  Object {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id name pipeline { organization { source uid } uid } uid url } }",
+    "name": "cicd_Build",
+  },
+  Object {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id name organization { source uid } uid url } }",
+    "name": "cicd_Pipeline",
+  },
+  Object {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Organization (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id description name origin source uid url } }",
+    "name": "cicd_Organization",
+  },
+  Object {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Repository (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id description name organization { source uid } origin uid url } }",
+    "name": "cicd_Repository",
+  },
+  Object {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Deployment (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id source statusCategory statusDetail uid url } }",
+    "name": "cicd_Deployment",
   },
 ]
 `;
