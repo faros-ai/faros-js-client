@@ -1730,7 +1730,7 @@ class PrimaryKeyResolver {
     return result;
   }
 
-  @Memoize()
+  @Memoize((type: gql.GraphQLObjectType) => type.name)
   private resolvePrimaryKey(type: gql.GraphQLObjectType): string {
     const resolved = [];
 
