@@ -9,7 +9,7 @@ import {Memoize} from 'typescript-memoize';
 import {VError} from 'verror';
 
 import {FarosClient} from '../client';
-import {PathToModel, Query} from './types';
+import {PathToModel, Query, Reference} from './types';
 
 export type AnyRecord = Record<string, any>;
 type AsyncOrSyncIterable<T> = AsyncIterable<T> | Iterable<T>;
@@ -466,7 +466,7 @@ export function flattenV2(
             const gqlType = unwrapType(type);
             if (!gqlType) {
               throw new VError(
-                'cannot unwrap type \'%s\' of field \'%s\'',
+                "cannot unwrap type '%s' of field '%s'",
                 type,
                 leafPath
               );
@@ -503,8 +503,8 @@ export function flattenV2(
     if (leafToPath.has(name)) {
       const otherPath = leafToPath.get(name);
       throw new VError(
-        'fields \'%s\' and \'%s\' will both map to the same name: ' +
-          '\'%s\'. use field aliases to prevent collision.',
+        "fields '%s' and '%s' will both map to the same name: " +
+          "'%s'. use field aliases to prevent collision.",
         path,
         otherPath,
         name
@@ -582,7 +582,7 @@ function setPathToDefault(
   const args = node.arguments;
   if (!gql.isScalarType(gqlType)) {
     throw new VError(
-      'cannot add default to field \'%s\': defaults are only ' +
+      "cannot add default to field '%s': defaults are only " +
         'supported on scalar fields',
       path
     );
@@ -592,8 +592,8 @@ function setPathToDefault(
     args[0].value.kind !== 'StringValue'
   ) {
     throw new VError(
-      'invalid default on field \'%s\': default must contain a single, ' +
-        'string valued argument called \'value\'',
+      "invalid default on field '%s': default must contain a single, " +
+        "string valued argument called 'value'",
       path
     );
   }
@@ -628,14 +628,14 @@ function setPathToDefault(
       break;
     default:
       throw new VError(
-        'cannot set default for field \'%s\' with type: %s',
+        "cannot set default for field '%s' with type: %s",
         path,
         gqlType.name
       );
   }
   if (invalidValue) {
     throw new VError(
-      '%s field \'%s\' has invalid default: %s',
+      "%s field '%s' has invalid default: %s",
       gqlType.name,
       path,
       value
@@ -679,7 +679,7 @@ export function flatten(
             const gqlType = unwrapType(type);
             if (!gqlType) {
               throw new VError(
-                'cannot unwrap type \'%s\' of field \'%s\'',
+                "cannot unwrap type '%s' of field '%s'",
                 type,
                 leafPath
               );
@@ -733,8 +733,8 @@ export function flatten(
     if (leafToPath.has(name)) {
       const otherPath = leafToPath.get(name);
       throw new VError(
-        'fields \'%s\' and \'%s\' will both map to the same name: ' +
-          '\'%s\'. use field aliases to prevent collision.',
+        "fields '%s' and '%s' will both map to the same name: " +
+          "'%s'. use field aliases to prevent collision.",
         path,
         otherPath,
         name
@@ -1073,6 +1073,7 @@ export function createIncrementalQueriesV1(
     ? new PrimaryKeyResolver(
         graphQLSchema,
         primaryKeys,
+        {},
         isV1ModelType
       ).resolvePrimaryKeys()
     : {};
@@ -1196,6 +1197,7 @@ export function createIncrementalReadersV2(
 export function createIncrementalQueriesV2(
   graphQLSchema: gql.GraphQLSchema,
   primaryKeys?: Dictionary<ReadonlyArray<string>>,
+  references?: Dictionary<Dictionary<Reference>>,
   avoidCollisions = true
 ): ReadonlyArray<Query> {
   const result: Query[] = [];
@@ -1203,6 +1205,7 @@ export function createIncrementalQueriesV2(
     ? new PrimaryKeyResolver(
         graphQLSchema,
         primaryKeys,
+        references || {},
         isV2ModelType
       ).resolvePrimaryKeys()
     : {};
@@ -1705,6 +1708,7 @@ class PrimaryKeyResolver {
   constructor(
     readonly graphQLSchema: gql.GraphQLSchema,
     readonly primaryKeys: Dictionary<ReadonlyArray<string>>,
+    readonly references: Dictionary<Dictionary<Reference>>,
     readonly isTopLevelModelTypeChecker = isV1ModelType
   ) {}
 
@@ -1733,20 +1737,24 @@ class PrimaryKeyResolver {
   @Memoize((type: gql.GraphQLObjectType) => type.name)
   private resolvePrimaryKey(type: gql.GraphQLObjectType): string {
     const resolved = [];
+    const typeReferences = this.references[type.name] || {};
 
     for (const fldName of this.primaryKeys[type.name] || []) {
-      let field = type.getFields()[fldName];
-
-      // Attempt to look up the field without the Id suffix
-      // E.g., organizationId => organization
-      if (field === undefined && fldName.endsWith('Id')) {
-        field = type.getFields()[fldName.slice(0, -2)];
+      const reference = typeReferences[fldName];
+      let field;
+      if (reference) {
+        field = type.getFields()[reference.field];
+        ok(
+          field !== undefined,
+          `expected ${reference.field} to be a field of ${type.name}`
+        );
+      } else {
+        field = type.getFields()[fldName];
+        ok(
+          field !== undefined,
+          `expected ${fldName} to be a field of ${type.name}`
+        );
       }
-
-      ok(
-        field !== undefined,
-        `expected ${fldName} to be a field of ${type.name}`
-      );
 
       if (gql.isScalarType(unwrapType(field.type))) {
         resolved.push(field.name);

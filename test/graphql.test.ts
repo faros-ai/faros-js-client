@@ -662,28 +662,28 @@ describe('graphql', () => {
       }
     `;
     expect(() => sut.flatten(nullQuery, graphDefaultSchema)).toThrow(
-      'invalid default on field \'nodes.strField\''
+      "invalid default on field 'nodes.strField'"
     );
     expect(() => sut.flatten(noValueQuery, graphDefaultSchema)).toThrow(
-      'invalid default on field \'nodes.strField\''
+      "invalid default on field 'nodes.strField'"
     );
     expect(() => sut.flatten(boolQuery, graphDefaultSchema)).toThrow(
-      'Boolean field \'nodes.boolField\' has invalid default'
+      "Boolean field 'nodes.boolField' has invalid default"
     );
     expect(() => sut.flatten(doubleQuery, graphDefaultSchema)).toThrow(
-      'Double field \'nodes.doubleField\' has invalid default'
+      "Double field 'nodes.doubleField' has invalid default"
     );
     expect(() => sut.flatten(floatQuery, graphDefaultSchema)).toThrow(
-      'Float field \'nodes.floatField\' has invalid default'
+      "Float field 'nodes.floatField' has invalid default"
     );
     expect(() => sut.flatten(intQuery, graphDefaultSchema)).toThrow(
-      'Int field \'nodes.intField\' has invalid default'
+      "Int field 'nodes.intField' has invalid default"
     );
     expect(() => sut.flatten(longQuery, graphDefaultSchema)).toThrow(
-      'Long field \'nodes.longField\' has invalid default'
+      "Long field 'nodes.longField' has invalid default"
     );
     expect(() => sut.flatten(strQuery, graphDefaultSchema)).toThrow(
-      'invalid default on field \'nodes.strField\''
+      "invalid default on field 'nodes.strField'"
     );
   });
 
@@ -805,11 +805,11 @@ describe('graphql', () => {
   test('create incremental queries V2', () => {
     expect(sut.createIncrementalQueriesV2(graphSchemaV2)).toMatchSnapshot();
     expect(
-      sut.createIncrementalQueriesV2(graphSchemaV2, undefined, false)
+      sut.createIncrementalQueriesV2(graphSchemaV2, undefined, undefined, false)
     ).toMatchSnapshot();
   });
 
-  test('create incremental queries V2 with primary keys info', () => {
+  test('create incremental queries V2 with primary keys/references', () => {
     const primaryKeys = {
       cicd_Build: ['pipeline', 'uid'],
       cicd_Deployment: ['source', 'uid'],
@@ -817,19 +817,73 @@ describe('graphql', () => {
       cicd_Pipeline: ['organizationId', 'uid'],
       cicd_Repository: ['organizationId', 'uid'],
     };
-    expect(
-      sut.createIncrementalQueriesV2(
-        graphSchemaV2ForPrimaryKeysTest,
-        primaryKeys
-      )
-    ).toMatchSnapshot();
+    const organizationReferences = {
+      organizationId: {
+        field: 'organization',
+        model: 'cicd_Organization',
+        foreignKey: 'organizationId',
+      },
+      organization: {
+        field: 'organization',
+        model: 'cicd_Organization',
+        foreignKey: 'organizationId',
+      },
+    };
+    const references = {
+      cicd_Pipeline: organizationReferences,
+      cicd_Repository: organizationReferences,
+    };
     expect(
       sut.createIncrementalQueriesV2(
         graphSchemaV2ForPrimaryKeysTest,
         primaryKeys,
+        references,
         false
       )
     ).toMatchSnapshot();
+  });
+
+  test('create incremental queries V2 when missing expected field', () => {
+    const primaryKeys = {
+      cicd_Build: ['pipeline', 'uid'],
+      cicd_Deployment: ['source', 'uid'],
+      cicd_Organization: ['source', 'uid'],
+      cicd_Pipeline: ['organizationId', 'uid'],
+      cicd_Repository: ['organizationId', 'uid'],
+    };
+    expect(() =>
+      sut.createIncrementalQueriesV2(
+        graphSchemaV2ForPrimaryKeysTest,
+        primaryKeys
+      )
+    ).toThrowErrorMatchingInlineSnapshot(
+      '"expected organizationId to be a field of cicd_Pipeline"'
+    );
+    const organizationReferences = {
+      organizationId: {
+        field: 'missing_field',
+        model: 'cicd_Organization',
+        foreignKey: 'organizationId',
+      },
+      organization: {
+        field: 'missing_field',
+        model: 'cicd_Organization',
+        foreignKey: 'organizationId',
+      },
+    };
+    const references = {
+      cicd_Pipeline: organizationReferences,
+      cicd_Repository: organizationReferences,
+    };
+    expect(() =>
+      sut.createIncrementalQueriesV2(
+        graphSchemaV2ForPrimaryKeysTest,
+        primaryKeys,
+        references
+      )
+    ).toThrowErrorMatchingInlineSnapshot(
+      '"expected missing_field to be a field of cicd_Pipeline"'
+    );
   });
 
   test('path to model V1', () => {
