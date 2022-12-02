@@ -466,7 +466,7 @@ export function flattenV2(
             const gqlType = unwrapType(type);
             if (!gqlType) {
               throw new VError(
-                "cannot unwrap type '%s' of field '%s'",
+                'cannot unwrap type \'%s\' of field \'%s\'',
                 type,
                 leafPath
               );
@@ -503,8 +503,8 @@ export function flattenV2(
     if (leafToPath.has(name)) {
       const otherPath = leafToPath.get(name);
       throw new VError(
-        "fields '%s' and '%s' will both map to the same name: " +
-          "'%s'. use field aliases to prevent collision.",
+        'fields \'%s\' and \'%s\' will both map to the same name: ' +
+          '\'%s\'. use field aliases to prevent collision.',
         path,
         otherPath,
         name
@@ -582,7 +582,7 @@ function setPathToDefault(
   const args = node.arguments;
   if (!gql.isScalarType(gqlType)) {
     throw new VError(
-      "cannot add default to field '%s': defaults are only " +
+      'cannot add default to field \'%s\': defaults are only ' +
         'supported on scalar fields',
       path
     );
@@ -592,8 +592,8 @@ function setPathToDefault(
     args[0].value.kind !== 'StringValue'
   ) {
     throw new VError(
-      "invalid default on field '%s': default must contain a single, " +
-        "string valued argument called 'value'",
+      'invalid default on field \'%s\': default must contain a single, ' +
+        'string valued argument called \'value\'',
       path
     );
   }
@@ -628,14 +628,14 @@ function setPathToDefault(
       break;
     default:
       throw new VError(
-        "cannot set default for field '%s' with type: %s",
+        'cannot set default for field \'%s\' with type: %s',
         path,
         gqlType.name
       );
   }
   if (invalidValue) {
     throw new VError(
-      "%s field '%s' has invalid default: %s",
+      '%s field \'%s\' has invalid default: %s',
       gqlType.name,
       path,
       value
@@ -679,7 +679,7 @@ export function flatten(
             const gqlType = unwrapType(type);
             if (!gqlType) {
               throw new VError(
-                "cannot unwrap type '%s' of field '%s'",
+                'cannot unwrap type \'%s\' of field \'%s\'',
                 type,
                 leafPath
               );
@@ -733,8 +733,8 @@ export function flatten(
     if (leafToPath.has(name)) {
       const otherPath = leafToPath.get(name);
       throw new VError(
-        "fields '%s' and '%s' will both map to the same name: " +
-          "'%s'. use field aliases to prevent collision.",
+        'fields \'%s\' and \'%s\' will both map to the same name: ' +
+          '\'%s\'. use field aliases to prevent collision.',
         path,
         otherPath,
         name
