@@ -1,21 +1,25 @@
 import {ok} from 'assert';
 import axios, {AxiosInstance} from 'axios';
 import fs from 'fs-extra';
-import {camelCase, find} from 'lodash';
+import {camelCase, find, isEmpty, snakeCase} from 'lodash';
 import path from 'path';
+import pino, {Logger} from 'pino';
 import toposort from 'toposort';
-import {Dictionary} from 'ts-essentials';
+import {assert, Dictionary} from 'ts-essentials';
 import {VError} from 'verror';
 
 import {
   foreignKeyForArray,
   foreignKeyForObj,
   isManualConfiguration,
+  MULTI_TENANT_COLUMNS,
+  parsePrimaryKeys,
   SchemaLoader,
 } from './schema';
 import {
   ArrayForeignKey,
   ArrayRelationship,
+  BackReference,
   ObjectRelationship,
   Reference,
   Schema,
@@ -25,11 +29,21 @@ import {
 // Loads schema from a Hasura api
 export class HasuraSchemaLoader implements SchemaLoader {
   private readonly api: AxiosInstance;
-  // where applicable ensure names that will be interpreted as
-  // graphql fields are camel cased
-  private readonly camelCaseFieldNames: boolean;
 
-  constructor(url: string, adminSecret?: string, camelCaseFieldNames = false) {
+  /**
+   * Create a schema loader
+   * @param url Hasura instance URL
+   * @param adminSecret Hasura admin credential
+   * @param camelCaseFieldNames where applicable ensure names that will be
+   * interpreted as GraphQL fields are camel cased. False by default
+   * @param logger
+   */
+  constructor(
+    url: string,
+    adminSecret?: string,
+    private readonly camelCaseFieldNames = false,
+    private readonly logger: Logger = pino({name: 'hasura-schema-loader'}),
+  ) {
     this.api = axios.create({
       baseURL: url,
       headers: {
@@ -37,7 +51,6 @@ export class HasuraSchemaLoader implements SchemaLoader {
         ...(adminSecret && {'X-Hasura-Admin-Secret': adminSecret}),
       },
     });
-    this.camelCaseFieldNames = camelCaseFieldNames;
   }
 
   private async fetchDbSource(): Promise<Source> {
@@ -75,13 +88,7 @@ export class HasuraSchemaLoader implements SchemaLoader {
     result
       .filter((row) => row[0] !== 'table_name')
       .forEach(([table, exp]) => {
-        // TODO: better way to do this?
-        primaryKeys[table] = exp
-          .replace('pkey(VARIADIC ARRAY[', '')
-          .replace('])', '')
-          .split(', ')
-          .map((col) => col.replace(/"/g, ''))
-          .map((col) => (this.camelCaseFieldNames ? camelCase(col) : col));
+        primaryKeys[table] = parsePrimaryKeys(exp, this.camelCaseFieldNames);
       });
     return primaryKeys;
   }
@@ -95,7 +102,7 @@ export class HasuraSchemaLoader implements SchemaLoader {
    *   targetTable (e.g. cicd_Pipeline): table.table.name
    *
    * The output, res, can be used as:
-   *   res['cicd_Build']['pipeline_id'] => 'cicd_Pipeline
+   *   res['cicd_Build']['pipeline_id'] => 'cicd_Pipeline'
    */
   static indexFkTargetModels(source: Source): Dictionary<Dictionary<string>> {
     const res: Dictionary<Dictionary<string>> = {};
@@ -117,7 +124,7 @@ export class HasuraSchemaLoader implements SchemaLoader {
   }
 
   async loadSchema(): Promise<Schema> {
-    const primaryKeys = await this.fetchPrimaryKeys();
+    const primaryKeysFromDb = await this.fetchPrimaryKeys();
     const source = await this.fetchDbSource();
     const targetTableByFk = HasuraSchemaLoader.indexFkTargetModels(source);
     const query = await fs.readFile(
@@ -129,7 +136,8 @@ export class HasuraSchemaLoader implements SchemaLoader {
     const tableNames = [];
     const scalars: Dictionary<Dictionary<string>> = {};
     const references: Dictionary<Dictionary<Reference>> = {};
-    const backReferences: Dictionary<Reference[]> = {};
+    const backReferences: Dictionary<BackReference[]> = {};
+    const primaryKeysFromSchema: Dictionary<string []> = {};
     for (const table of source.tables) {
       const tableName = table.table.name;
       tableNames.push(tableName);
@@ -148,10 +156,24 @@ export class HasuraSchemaLoader implements SchemaLoader {
       );
       const tableScalars: Dictionary<string> = {};
       for (const scalar of scalarTypes) {
-        tableScalars[scalar.name] =
-          scalar.type.ofType?.name ?? scalar.type.name;
+        if (!MULTI_TENANT_COLUMNS.has(snakeCase(scalar.name))) {
+          tableScalars[scalar.name] =
+            scalar.type.ofType?.name ?? scalar.type.name;
+        }
       }
       scalars[tableName] = tableScalars;
+      if (type.description) {
+        try {
+          const {primaryKeys} = JSON.parse(type.description);
+          if (primaryKeys) {
+            assert(Array.isArray(primaryKeys), 'primaryKeys is not an array');
+            primaryKeysFromSchema[tableName] = this.camelCaseFieldNames ?
+              primaryKeys.map((c) => camelCase(c)) : primaryKeys;
+          }
+        } catch (e) {
+          this.logger.warn(e, `error parsing ${tableName} description`);
+        }
+      }
       const tableReferences: Dictionary<Reference> = {};
       for (const rel of table.object_relationships ?? []) {
         const fk = foreignKeyForObj(rel);
@@ -159,6 +181,7 @@ export class HasuraSchemaLoader implements SchemaLoader {
         const relMetadata = {
           field: rel.name,
           model: targetTableByFk[table.table.name][fk],
+          foreignKey: relFldName
         };
         // index relation metadata using both FK column and rel.name
         // this is needed for cross-compatibility with CE and SaaS
@@ -190,7 +213,8 @@ export class HasuraSchemaLoader implements SchemaLoader {
     }
     const sortedModelDependencies = toposort(modelDeps);
     return {
-      primaryKeys,
+      primaryKeys: isEmpty(primaryKeysFromSchema) ?
+        primaryKeysFromDb : primaryKeysFromSchema,
       scalars,
       references,
       backReferences,

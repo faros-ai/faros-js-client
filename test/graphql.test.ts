@@ -7,6 +7,7 @@ import {
   graphSchema,
   graphSchemaForPrimaryKeysTest,
   graphSchemaV2,
+  graphSchemaV2ForForeignKeyExclusionTest,
   graphSchemaV2ForPrimaryKeysTest,
   loadQueryFile,
   toArray,
@@ -805,11 +806,11 @@ describe('graphql', () => {
   test('create incremental queries V2', () => {
     expect(sut.createIncrementalQueriesV2(graphSchemaV2)).toMatchSnapshot();
     expect(
-      sut.createIncrementalQueriesV2(graphSchemaV2, undefined, false)
+      sut.createIncrementalQueriesV2(graphSchemaV2, undefined, undefined, false)
     ).toMatchSnapshot();
   });
 
-  test('create incremental queries V2 with primary keys info', () => {
+  test('create incremental queries V2 with primary keys/references', () => {
     const primaryKeys = {
       cicd_Build: ['pipeline', 'uid'],
       cicd_Deployment: ['source', 'uid'],
@@ -817,16 +818,98 @@ describe('graphql', () => {
       cicd_Pipeline: ['organizationId', 'uid'],
       cicd_Repository: ['organizationId', 'uid'],
     };
-    expect(
-      sut.createIncrementalQueriesV2(
-        graphSchemaV2ForPrimaryKeysTest,
-        primaryKeys
-      )
-    ).toMatchSnapshot();
+    const organizationReferences = {
+      organizationId: {
+        field: 'organization',
+        model: 'cicd_Organization',
+        foreignKey: 'organizationId',
+      },
+      organization: {
+        field: 'organization',
+        model: 'cicd_Organization',
+        foreignKey: 'organizationId',
+      },
+    };
+    const references = {
+      cicd_Pipeline: organizationReferences,
+      cicd_Repository: organizationReferences,
+    };
     expect(
       sut.createIncrementalQueriesV2(
         graphSchemaV2ForPrimaryKeysTest,
         primaryKeys,
+        references,
+        false
+      )
+    ).toMatchSnapshot();
+  });
+
+  test('create incremental queries V2 when missing expected field', () => {
+    const primaryKeys = {
+      cicd_Build: ['pipeline', 'uid'],
+      cicd_Deployment: ['source', 'uid'],
+      cicd_Organization: ['source', 'uid'],
+      cicd_Pipeline: ['organizationId', 'uid'],
+      cicd_Repository: ['organizationId', 'uid'],
+    };
+    expect(() =>
+      sut.createIncrementalQueriesV2(
+        graphSchemaV2ForPrimaryKeysTest,
+        primaryKeys
+      )
+    ).toThrowErrorMatchingInlineSnapshot(
+      '"expected organizationId to be a field of cicd_Pipeline"'
+    );
+    const organizationReferences = {
+      organizationId: {
+        field: 'missing_field',
+        model: 'cicd_Organization',
+        foreignKey: 'organizationId',
+      },
+      organization: {
+        field: 'missing_field',
+        model: 'cicd_Organization',
+        foreignKey: 'organizationId',
+      },
+    };
+    const references = {
+      cicd_Pipeline: organizationReferences,
+      cicd_Repository: organizationReferences,
+    };
+    expect(() =>
+      sut.createIncrementalQueriesV2(
+        graphSchemaV2ForPrimaryKeysTest,
+        primaryKeys,
+        references
+      )
+    ).toThrowErrorMatchingSnapshot();
+  });
+
+  test('excludes foreign key (scalar) identifier from selection', () => {
+    const primaryKeys = {
+      cicd_Organization: ['source', 'uid'],
+      cicd_Pipeline: ['organizationId', 'uid'],
+    };
+    const organizationReferences = {
+      organizationId: {
+        field: 'organization',
+        model: 'cicd_Organization',
+        foreignKey: 'organizationId',
+      },
+      organization: {
+        field: 'organization',
+        model: 'cicd_Organization',
+        foreignKey: 'organizationId',
+      },
+    };
+    const references = {
+      cicd_Pipeline: organizationReferences,
+    };
+    expect(
+      sut.createIncrementalQueriesV2(
+        graphSchemaV2ForForeignKeyExclusionTest,
+        primaryKeys,
+        references,
         false
       )
     ).toMatchSnapshot();

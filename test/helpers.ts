@@ -30,6 +30,13 @@ export const graphSchemaV2ForPrimaryKeysTest = gql.buildSchema(
   )
 );
 
+export const graphSchemaV2ForForeignKeyExclusionTest = gql.buildSchema(
+  fs.readFileSync(
+    path.join(__dirname, 'resources', 'v2_schema_for_fk_exclusion_test.gql'),
+    'utf-8'
+  )
+);
+
 export async function loadQueryFile(name: string): Promise<string> {
   const query = await fs.readFile(
     path.join(__dirname, 'resources', 'queries', name),

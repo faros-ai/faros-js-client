@@ -314,32 +314,9 @@ Array [
 ]
 `;
 
-exports[`graphql create incremental queries V2 with primary keys info 1`] = `
-Array [
-  Object {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id name pipeline { pipelineId: organization { source uid } uid } uid url } }",
-    "name": "cicd_Build",
-  },
-  Object {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id name organization { organizationId: source uid } uid url } }",
-    "name": "cicd_Pipeline",
-  },
-  Object {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Organization (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id description name origin source uid url } }",
-    "name": "cicd_Organization",
-  },
-  Object {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Repository (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id description name organization { organizationId: source uid } origin uid url } }",
-    "name": "cicd_Repository",
-  },
-  Object {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Deployment (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id source statusCategory statusDetail uid url } }",
-    "name": "cicd_Deployment",
-  },
-]
-`;
+exports[`graphql create incremental queries V2 when missing expected field 2`] = `"expected missing_field to be a reference field of cicd_Pipeline (foreign key to cicd_Organization)"`;
 
-exports[`graphql create incremental queries V2 with primary keys info 2`] = `
+exports[`graphql create incremental queries V2 with primary keys/references 1`] = `
 Array [
   Object {
     "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id name pipeline { organization { source uid } uid } uid url } }",
@@ -360,6 +337,19 @@ Array [
   Object {
     "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Deployment (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id source statusCategory statusDetail uid url } }",
     "name": "cicd_Deployment",
+  },
+]
+`;
+
+exports[`graphql excludes foreign key (scalar) identifier from selection 1`] = `
+Array [
+  Object {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id name organization { source uid } uid url } }",
+    "name": "cicd_Pipeline",
+  },
+  Object {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Organization (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id description name origin source uid url } }",
+    "name": "cicd_Organization",
   },
 ]
 `;
