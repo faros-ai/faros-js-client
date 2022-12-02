@@ -9,7 +9,7 @@ import {Memoize} from 'typescript-memoize';
 import {VError} from 'verror';
 
 import {FarosClient} from '../client';
-import {PathToModel, Query} from './types';
+import {PathToModel, Query, Reference} from './types';
 
 export type AnyRecord = Record<string, any>;
 type AsyncOrSyncIterable<T> = AsyncIterable<T> | Iterable<T>;
@@ -1073,6 +1073,7 @@ export function createIncrementalQueriesV1(
     ? new PrimaryKeyResolver(
         graphQLSchema,
         primaryKeys,
+        {},
         isV1ModelType
       ).resolvePrimaryKeys()
     : {};
@@ -1112,7 +1113,8 @@ function isV2ModelType(type: any): type is gql.GraphQLObjectType {
 export function buildIncrementalQueryV2(
   type: gql.GraphQLObjectType,
   avoidCollisions = true,
-  resolvedPrimaryKeys: Dictionary<string> = {}
+  resolvedPrimaryKeys: Dictionary<string> = {},
+  references: Dictionary<Reference> = {}
 ): Query {
   const name = type.name;
   // add fields and FKs
@@ -1122,7 +1124,20 @@ export function buildIncrementalQueryV2(
   for (const fldName of Object.keys(type.getFields())) {
     const field = type.getFields()[fldName];
     if (gql.isScalarType(unwrapType(field.type))) {
-      fieldsObj[field.name] = true; // arbitrary value here
+      const reference = references[fldName];
+      if (reference) {
+        // This is a (scalar) foreign key to a top-level model
+        // Check that the non-scalar corresponding foreign key
+        // exists and skip from the query selection
+        const checkField = type.getFields()[reference.field];
+        ok(
+          checkField !== undefined,
+          `expected ${reference.field} to be a reference field of` +
+            ` ${type.name} (foreign key to ${reference.model})`
+        );
+      } else {
+        fieldsObj[field.name] = true; // arbitrary value here
+      }
     } else if (isV2ModelType(field.type)) {
       // this is foreign key to a top-level model.
       // add nested fragment to select id of referenced model
@@ -1196,6 +1211,7 @@ export function createIncrementalReadersV2(
 export function createIncrementalQueriesV2(
   graphQLSchema: gql.GraphQLSchema,
   primaryKeys?: Dictionary<ReadonlyArray<string>>,
+  references?: Dictionary<Dictionary<Reference>>,
   avoidCollisions = true
 ): ReadonlyArray<Query> {
   const result: Query[] = [];
@@ -1203,14 +1219,25 @@ export function createIncrementalQueriesV2(
     ? new PrimaryKeyResolver(
         graphQLSchema,
         primaryKeys,
+        references || {},
         isV2ModelType
       ).resolvePrimaryKeys()
     : {};
   for (const name of Object.keys(graphQLSchema.getTypeMap())) {
     const type = graphQLSchema.getType(name);
+    let typeReferences = {};
+    if (references && type) {
+      typeReferences = references[type.name] || {};
+    }
+
     if (isV2ModelType(type)) {
       result.push(
-        buildIncrementalQueryV2(type, avoidCollisions, resolvedPrimaryKeys)
+        buildIncrementalQueryV2(
+          type,
+          avoidCollisions,
+          resolvedPrimaryKeys,
+          typeReferences
+        )
       );
     }
   }
@@ -1705,6 +1732,7 @@ class PrimaryKeyResolver {
   constructor(
     readonly graphQLSchema: gql.GraphQLSchema,
     readonly primaryKeys: Dictionary<ReadonlyArray<string>>,
+    readonly references: Dictionary<Dictionary<Reference>>,
     readonly isTopLevelModelTypeChecker = isV1ModelType
   ) {}
 
@@ -1733,20 +1761,25 @@ class PrimaryKeyResolver {
   @Memoize((type: gql.GraphQLObjectType) => type.name)
   private resolvePrimaryKey(type: gql.GraphQLObjectType): string {
     const resolved = [];
+    const typeReferences = this.references[type.name] || {};
 
     for (const fldName of this.primaryKeys[type.name] || []) {
-      let field = type.getFields()[fldName];
-
-      // Attempt to look up the field without the Id suffix
-      // E.g., organizationId => organization
-      if (field === undefined && fldName.endsWith('Id')) {
-        field = type.getFields()[fldName.slice(0, -2)];
+      const reference = typeReferences[fldName];
+      let field;
+      if (reference) {
+        field = type.getFields()[reference.field];
+        ok(
+          field !== undefined,
+          `expected ${reference.field} to be a reference field of` +
+            ` ${type.name} (foreign key to ${reference.model})`
+        );
+      } else {
+        field = type.getFields()[fldName];
+        ok(
+          field !== undefined,
+          `expected ${fldName} to be a field of ${type.name}`
+        );
       }
-
-      ok(
-        field !== undefined,
-        `expected ${fldName} to be a field of ${type.name}`
-      );
 
       if (gql.isScalarType(unwrapType(field.type))) {
         resolved.push(field.name);
