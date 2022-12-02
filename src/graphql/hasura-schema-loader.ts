@@ -165,9 +165,11 @@ export class HasuraSchemaLoader implements SchemaLoader {
       if (type.description) {
         try {
           const {primaryKeys} = JSON.parse(type.description);
-          assert(Array.isArray(primaryKeys), 'primaryKeys is not an array');
-          primaryKeysFromSchema[tableName] = this.camelCaseFieldNames ?
-            primaryKeys.map((c) => camelCase(c)) : primaryKeys;
+          if (primaryKeys) {
+            assert(Array.isArray(primaryKeys), 'primaryKeys is not an array');
+            primaryKeysFromSchema[tableName] = this.camelCaseFieldNames ?
+              primaryKeys.map((c) => camelCase(c)) : primaryKeys;
+          }
         } catch (e) {
           this.logger.warn(e, `error parsing ${tableName} description`);
         }
