@@ -1,7 +1,7 @@
 import {ok} from 'assert';
 import axios, {AxiosInstance} from 'axios';
 import fs from 'fs-extra';
-import {camelCase, find} from 'lodash';
+import {camelCase, find, snakeCase} from 'lodash';
 import path from 'path';
 import toposort from 'toposort';
 import {Dictionary} from 'ts-essentials';
@@ -11,11 +11,14 @@ import {
   foreignKeyForArray,
   foreignKeyForObj,
   isManualConfiguration,
+  MULTI_TENANT_COLUMNS,
+  parsePrimaryKeys,
   SchemaLoader,
 } from './schema';
 import {
   ArrayForeignKey,
   ArrayRelationship,
+  BackReference,
   ObjectRelationship,
   Reference,
   Schema,
@@ -75,13 +78,7 @@ export class HasuraSchemaLoader implements SchemaLoader {
     result
       .filter((row) => row[0] !== 'table_name')
       .forEach(([table, exp]) => {
-        // TODO: better way to do this?
-        primaryKeys[table] = exp
-          .replace('pkey(VARIADIC ARRAY[', '')
-          .replace('])', '')
-          .split(', ')
-          .map((col) => col.replace(/"/g, ''))
-          .map((col) => (this.camelCaseFieldNames ? camelCase(col) : col));
+        primaryKeys[table] = parsePrimaryKeys(exp, this.camelCaseFieldNames);
       });
     return primaryKeys;
   }
@@ -95,7 +92,7 @@ export class HasuraSchemaLoader implements SchemaLoader {
    *   targetTable (e.g. cicd_Pipeline): table.table.name
    *
    * The output, res, can be used as:
-   *   res['cicd_Build']['pipeline_id'] => 'cicd_Pipeline
+   *   res['cicd_Build']['pipeline_id'] => 'cicd_Pipeline'
    */
   static indexFkTargetModels(source: Source): Dictionary<Dictionary<string>> {
     const res: Dictionary<Dictionary<string>> = {};
@@ -129,7 +126,7 @@ export class HasuraSchemaLoader implements SchemaLoader {
     const tableNames = [];
     const scalars: Dictionary<Dictionary<string>> = {};
     const references: Dictionary<Dictionary<Reference>> = {};
-    const backReferences: Dictionary<Reference[]> = {};
+    const backReferences: Dictionary<BackReference[]> = {};
     for (const table of source.tables) {
       const tableName = table.table.name;
       tableNames.push(tableName);
@@ -148,8 +145,10 @@ export class HasuraSchemaLoader implements SchemaLoader {
       );
       const tableScalars: Dictionary<string> = {};
       for (const scalar of scalarTypes) {
-        tableScalars[scalar.name] =
-          scalar.type.ofType?.name ?? scalar.type.name;
+        if (!MULTI_TENANT_COLUMNS.has(snakeCase(scalar.name))) {
+          tableScalars[scalar.name] =
+            scalar.type.ofType?.name ?? scalar.type.name;
+        }
       }
       scalars[tableName] = tableScalars;
       const tableReferences: Dictionary<Reference> = {};
@@ -159,6 +158,7 @@ export class HasuraSchemaLoader implements SchemaLoader {
         const relMetadata = {
           field: rel.name,
           model: targetTableByFk[table.table.name][fk],
+          foreignKey: relFldName
         };
         // index relation metadata using both FK column and rel.name
         // this is needed for cross-compatibility with CE and SaaS

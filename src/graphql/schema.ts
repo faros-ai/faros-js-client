@@ -1,5 +1,5 @@
 import {ok} from 'assert';
-import _ from 'lodash';
+import _, {camelCase} from 'lodash';
 
 import {
   ArrayForeignKey,
@@ -9,6 +9,9 @@ import {
   ObjectRelationship,
   Schema,
 } from './types';
+
+export const MULTI_TENANT_COLUMNS = new Set(['tenant_id', 'graph_name']);
+const PG_TYPE_REGEX = /\((.*)\)::.*/;
 
 export function foreignKeyForObj(rel: ObjectRelationship): string {
   if (isManualConfiguration(rel.using)) {
@@ -44,6 +47,31 @@ export function foreignKeyForArray(rel: ArrayRelationship): string {
   const fk = arrFK.foreign_key_constraint_on?.column;
   ok(fk, `expected array fk on ${JSON.stringify(arrFK)}`);
   return fk;
+}
+
+/**
+ * Parse elements of primary key from pkey function definition.
+ * e.g. pkey(VARIADIC ARRAY[tenant_id, graph_name, source, uid])
+ */
+export function parsePrimaryKeys(
+  exp: string,
+  camelCaseFieldNames: boolean,
+  includeMultiTenantColumns = false
+): string [] {
+  return exp
+    .replace('pkey(VARIADIC ARRAY[', '')
+    .replace('])', '')
+    .split(', ')
+    .map((col) => col.replace(/"/g, ''))
+    .map((col) => {
+      // extract col from types e.g. foo::text => foo
+      const matches = col.match(PG_TYPE_REGEX);
+      return matches ? matches[1] : col;
+    })
+    .filter((col) =>
+      // conditionally filter multi-tenant columns
+      includeMultiTenantColumns || !MULTI_TENANT_COLUMNS.has(col))
+    .map((col) => (camelCaseFieldNames ? camelCase(col) : col));
 }
 
 export function isManualConfiguration(
