@@ -1,10 +1,11 @@
 import {ok} from 'assert';
 import axios, {AxiosInstance} from 'axios';
 import fs from 'fs-extra';
-import {camelCase, find, snakeCase} from 'lodash';
+import {camelCase, find, isEmpty, snakeCase} from 'lodash';
 import path from 'path';
+import pino, {Logger} from 'pino';
 import toposort from 'toposort';
-import {Dictionary} from 'ts-essentials';
+import {assert, Dictionary} from 'ts-essentials';
 import {VError} from 'verror';
 
 import {
@@ -28,11 +29,21 @@ import {
 // Loads schema from a Hasura api
 export class HasuraSchemaLoader implements SchemaLoader {
   private readonly api: AxiosInstance;
-  // where applicable ensure names that will be interpreted as
-  // graphql fields are camel cased
-  private readonly camelCaseFieldNames: boolean;
 
-  constructor(url: string, adminSecret?: string, camelCaseFieldNames = false) {
+  /**
+   * Create a schema loader
+   * @param url Hasura instance URL
+   * @param adminSecret Hasura admin credential
+   * @param camelCaseFieldNames where applicable ensure names that will be
+   * interpreted as GraphQL fields are camel cased. False by default
+   * @param logger
+   */
+  constructor(
+    url: string,
+    adminSecret?: string,
+    private readonly camelCaseFieldNames = false,
+    private readonly logger: Logger = pino({name: 'hasura-schema-loader'}),
+  ) {
     this.api = axios.create({
       baseURL: url,
       headers: {
@@ -40,7 +51,6 @@ export class HasuraSchemaLoader implements SchemaLoader {
         ...(adminSecret && {'X-Hasura-Admin-Secret': adminSecret}),
       },
     });
-    this.camelCaseFieldNames = camelCaseFieldNames;
   }
 
   private async fetchDbSource(): Promise<Source> {
@@ -114,7 +124,7 @@ export class HasuraSchemaLoader implements SchemaLoader {
   }
 
   async loadSchema(): Promise<Schema> {
-    const primaryKeys = await this.fetchPrimaryKeys();
+    const primaryKeysFromDb = await this.fetchPrimaryKeys();
     const source = await this.fetchDbSource();
     const targetTableByFk = HasuraSchemaLoader.indexFkTargetModels(source);
     const query = await fs.readFile(
@@ -127,6 +137,7 @@ export class HasuraSchemaLoader implements SchemaLoader {
     const scalars: Dictionary<Dictionary<string>> = {};
     const references: Dictionary<Dictionary<Reference>> = {};
     const backReferences: Dictionary<BackReference[]> = {};
+    const primaryKeysFromSchema: Dictionary<string []> = {};
     for (const table of source.tables) {
       const tableName = table.table.name;
       tableNames.push(tableName);
@@ -151,6 +162,18 @@ export class HasuraSchemaLoader implements SchemaLoader {
         }
       }
       scalars[tableName] = tableScalars;
+      if (type.description) {
+        try {
+          const {primaryKeys} = JSON.parse(type.description);
+          if (primaryKeys) {
+            assert(Array.isArray(primaryKeys), 'primaryKeys is not an array');
+            primaryKeysFromSchema[tableName] = this.camelCaseFieldNames ?
+              primaryKeys.map((c) => camelCase(c)) : primaryKeys;
+          }
+        } catch (e) {
+          this.logger.warn(e, `error parsing ${tableName} description`);
+        }
+      }
       const tableReferences: Dictionary<Reference> = {};
       for (const rel of table.object_relationships ?? []) {
         const fk = foreignKeyForObj(rel);
@@ -190,7 +213,8 @@ export class HasuraSchemaLoader implements SchemaLoader {
     }
     const sortedModelDependencies = toposort(modelDeps);
     return {
-      primaryKeys,
+      primaryKeys: isEmpty(primaryKeysFromSchema) ?
+        primaryKeysFromDb : primaryKeysFromSchema,
       scalars,
       references,
       backReferences,
