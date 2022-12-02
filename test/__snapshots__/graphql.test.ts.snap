@@ -314,6 +314,8 @@ Array [
 ]
 `;
 
+exports[`graphql create incremental queries V2 when missing expected field 2`] = `"expected missing_field to be a reference field of cicd_Pipeline (foreign key to cicd_Organization)"`;
+
 exports[`graphql create incremental queries V2 with primary keys/references 1`] = `
 Array [
   Object {
