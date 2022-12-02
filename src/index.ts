@@ -29,6 +29,7 @@ export {
   ObjectForeignKey,
   ObjectRelationship,
   Reference,
+  BackReference,
   Schema,
   PathToModel,
   Query,
