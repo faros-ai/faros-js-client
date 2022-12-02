@@ -1132,7 +1132,8 @@ export function buildIncrementalQueryV2(
         const checkField = type.getFields()[reference.field];
         ok(
           checkField !== undefined,
-          `expected ${reference.field} to be a field of ${type.name}`
+          `expected ${reference.field} to be a reference field of` +
+            ` ${type.name} (foreign key to ${reference.model})`
         );
       } else {
         fieldsObj[field.name] = true; // arbitrary value here
@@ -1769,7 +1770,8 @@ class PrimaryKeyResolver {
         field = type.getFields()[reference.field];
         ok(
           field !== undefined,
-          `expected ${reference.field} to be a field of ${type.name}`
+          `expected ${reference.field} to be a reference field of` +
+            ` ${type.name} (foreign key to ${reference.model})`
         );
       } else {
         field = type.getFields()[fldName];
