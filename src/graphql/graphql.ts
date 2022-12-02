@@ -1113,7 +1113,8 @@ function isV2ModelType(type: any): type is gql.GraphQLObjectType {
 export function buildIncrementalQueryV2(
   type: gql.GraphQLObjectType,
   avoidCollisions = true,
-  resolvedPrimaryKeys: Dictionary<string> = {}
+  resolvedPrimaryKeys: Dictionary<string> = {},
+  references: Dictionary<Reference> = {}
 ): Query {
   const name = type.name;
   // add fields and FKs
@@ -1123,7 +1124,19 @@ export function buildIncrementalQueryV2(
   for (const fldName of Object.keys(type.getFields())) {
     const field = type.getFields()[fldName];
     if (gql.isScalarType(unwrapType(field.type))) {
-      fieldsObj[field.name] = true; // arbitrary value here
+      const reference = references[fldName];
+      if (reference) {
+        // This is a (scalar) foreign key to a top-level model
+        // Check that the non-scalar corresponding foreign key
+        // exists and skip from the query selection
+        const checkField = type.getFields()[reference.field];
+        ok(
+          checkField !== undefined,
+          `expected ${reference.field} to be a field of ${type.name}`
+        );
+      } else {
+        fieldsObj[field.name] = true; // arbitrary value here
+      }
     } else if (isV2ModelType(field.type)) {
       // this is foreign key to a top-level model.
       // add nested fragment to select id of referenced model
@@ -1211,9 +1224,19 @@ export function createIncrementalQueriesV2(
     : {};
   for (const name of Object.keys(graphQLSchema.getTypeMap())) {
     const type = graphQLSchema.getType(name);
+    let typeReferences = {};
+    if (references && type) {
+      typeReferences = references[type.name] || {};
+    }
+
     if (isV2ModelType(type)) {
       result.push(
-        buildIncrementalQueryV2(type, avoidCollisions, resolvedPrimaryKeys)
+        buildIncrementalQueryV2(
+          type,
+          avoidCollisions,
+          resolvedPrimaryKeys,
+          typeReferences
+        )
       );
     }
   }

@@ -7,6 +7,7 @@ import {
   graphSchema,
   graphSchemaForPrimaryKeysTest,
   graphSchemaV2,
+  graphSchemaV2ForForeignKeyExclusionTest,
   graphSchemaV2ForPrimaryKeysTest,
   loadQueryFile,
   toArray,
@@ -884,6 +885,36 @@ describe('graphql', () => {
     ).toThrowErrorMatchingInlineSnapshot(
       '"expected missing_field to be a field of cicd_Pipeline"'
     );
+  });
+
+  test('excludes foreign key (scalar) identifier from selection', () => {
+    const primaryKeys = {
+      cicd_Organization: ['source', 'uid'],
+      cicd_Pipeline: ['organizationId', 'uid'],
+    };
+    const organizationReferences = {
+      organizationId: {
+        field: 'organization',
+        model: 'cicd_Organization',
+        foreignKey: 'organizationId',
+      },
+      organization: {
+        field: 'organization',
+        model: 'cicd_Organization',
+        foreignKey: 'organizationId',
+      },
+    };
+    const references = {
+      cicd_Pipeline: organizationReferences,
+    };
+    expect(
+      sut.createIncrementalQueriesV2(
+        graphSchemaV2ForForeignKeyExclusionTest,
+        primaryKeys,
+        references,
+        false
+      )
+    ).toMatchSnapshot();
   });
 
   test('path to model V1', () => {

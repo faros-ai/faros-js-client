@@ -1,0 +1,54 @@
+schema {
+  query: query_root
+}
+
+"""whether this query should be cached (Hasura Cloud only)"""
+directive @cached(
+  """measured in seconds"""
+  ttl: Int! = 60
+
+  """refresh the cache entry"""
+  refresh: Boolean! = false
+) on QUERY
+
+type query_root {
+  """
+  fetch data from the table: "cicd_Pipeline"
+  """
+  cicd_Pipeline(
+    """limit the number of rows returned"""
+    limit: Int
+  ): [cicd_Pipeline!]!
+}
+
+"""
+columns and relationships of "cicd_Pipeline"
+"""
+type cicd_Pipeline {
+  """generated"""
+  id: String!
+
+  name: String
+
+  """An object relationship"""
+  organization: cicd_Organization
+  organizationId: String
+  uid: String!
+  url: String
+}
+
+"""
+columns and relationships of "cicd_Organization"
+"""
+type cicd_Organization {
+  description: String
+
+  """generated"""
+  id: String!
+
+  name: String
+  origin: String
+  source: String
+  uid: String!
+  url: String
+}
