@@ -131,6 +131,7 @@ describe('client', () => {
         owner: {
           field: 'cal_User',
           model: 'cal_User',
+          foreignKey: 'user'
         },
       },
     },

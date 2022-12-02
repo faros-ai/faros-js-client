@@ -36,16 +36,20 @@ export interface ArrayRelationship {
   using: ArrayForeignKey | ManualConfiguration;
 }
 
-export interface Reference {
+export interface BackReference {
   field: string;
   model: string;
+}
+
+export interface Reference extends BackReference {
+  foreignKey: string;
 }
 
 export interface Schema {
   primaryKeys: Dictionary<string[]>;
   scalars: Dictionary<Dictionary<string>>;
   references: Dictionary<Dictionary<Reference>>;
-  backReferences: Dictionary<Reference[]>;
+  backReferences: Dictionary<BackReference[]>;
   sortedModelDependencies: ReadonlyArray<string>;
   tableNames: ReadonlyArray<string>;
 }
