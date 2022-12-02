@@ -2,7 +2,7 @@ import {ok} from 'assert';
 import * as gql from 'graphql';
 import {Kind} from 'graphql';
 import {jsonToGraphQLQuery, VariableType} from 'json-to-graphql-query';
-import _, { isNil } from 'lodash';
+import _, {isNil} from 'lodash';
 import {plural} from 'pluralize';
 import {Dictionary} from 'ts-essentials';
 import {Memoize} from 'typescript-memoize';
