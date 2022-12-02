@@ -2,7 +2,7 @@ import {ok} from 'assert';
 import * as gql from 'graphql';
 import {Kind} from 'graphql';
 import {jsonToGraphQLQuery, VariableType} from 'json-to-graphql-query';
-import _ from 'lodash';
+import _, { isNil } from 'lodash';
 import {plural} from 'pluralize';
 import {Dictionary} from 'ts-essentials';
 import {Memoize} from 'typescript-memoize';
@@ -1131,7 +1131,7 @@ export function buildIncrementalQueryV2(
         // exists and skip from the query selection
         const checkField = type.getFields()[reference.field];
         ok(
-          checkField !== undefined,
+          !isNil(checkField),
           `expected ${reference.field} to be a reference field of` +
             ` ${type.name} (foreign key to ${reference.model})`
         );
@@ -1769,14 +1769,14 @@ class PrimaryKeyResolver {
       if (reference) {
         field = type.getFields()[reference.field];
         ok(
-          field !== undefined,
+          !isNil(field),
           `expected ${reference.field} to be a reference field of` +
             ` ${type.name} (foreign key to ${reference.model})`
         );
       } else {
         field = type.getFields()[fldName];
         ok(
-          field !== undefined,
+          !isNil(field),
           `expected ${fldName} to be a field of ${type.name}`
         );
       }
