@@ -68,7 +68,7 @@
     "jest-mock": "^28.1.0",
     "nock": "^13.1.0",
     "pino-pretty": "^9.0.1",
-    "prettier": "2.5.1",
+    "prettier": "2.8.0",
     "tmp": "^0.2.1",
     "ts-essentials": "^7.0.0",
     "ts-jest": "^27.0.7",
