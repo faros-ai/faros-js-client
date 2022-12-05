@@ -61,4 +61,5 @@ export {
   toIncrementalV1,
   toIncrementalV2,
 } from './graphql/graphql';
+export {FarosGraphSchema} from './schema';
 export {Utils} from './utils';

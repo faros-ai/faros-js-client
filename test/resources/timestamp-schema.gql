@@ -12,3 +12,10 @@ type ims_Incident {
 type ims_TimestampObject {
   createdAt: Timestamp!
 }
+
+scalar timestamptz
+
+type vcs_Commit {
+  uid: ID!
+  createdAt: timestamptz
+}
