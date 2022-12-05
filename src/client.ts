@@ -11,6 +11,7 @@ import {Schema} from './graphql/types';
 import {
   Account,
   FarosClientConfig,
+  Location,
   Model,
   NamedQuery,
   SecretName,
