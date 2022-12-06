@@ -95,6 +95,15 @@ describe('client', () => {
     });
   });
 
+  test('get entry schema', async () => {
+    const mock = nock(apiUrl)
+      .get('/graphs/g1/revisions/entries/schema')
+      .reply(200, {schema: []});
+    const res = await client.entrySchema('g1');
+    mock.done();
+    expect(res).toEqual([]);
+  });
+
   test('gql', async () => {
     const query = `{
       tms {

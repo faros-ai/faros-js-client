@@ -127,6 +127,23 @@ export class FarosClient {
     }
   }
 
+  async entrySchema(graph: string): Promise<any> {
+    if (this.graphVersion !== GraphVersion.V1) {
+      throw new VError(
+        `entry schema is not supported for ${this.graphVersion} graphs`
+      );
+    }
+
+    try {
+      const {data} = await this.api.get(
+        `/graphs/${graph}/revisions/entries/schema`
+      );
+      return data.schema;
+    } catch (err: any) {
+      throw wrapApiError(err, `unable to load entry schema of graph: ${graph}`);
+    }
+  }
+
   /* returns only the data object of a standard qgl response */
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   async gql(graph: string, query: string, variables?: any): Promise<any> {
