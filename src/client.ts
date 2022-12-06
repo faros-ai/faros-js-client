@@ -183,7 +183,7 @@ export class FarosClient {
     return await this.gql(graph, query, variables);
   }
 
-  async gqlSchema(graph = 'default'): Promise<Schema> {
+  async gqlSchema(graph: string): Promise<Schema> {
     try {
       const {data} = await this.api.get(`/graphs/${graph}/graphql/schema`);
       return data;
