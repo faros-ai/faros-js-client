@@ -127,7 +127,7 @@ export class FarosClient {
     }
   }
 
-  async entrySchema(graph = 'default'): Promise<any> {
+  async entrySchema(graph: string): Promise<any> {
     if (this.graphVersion !== GraphVersion.V1) {
       throw new VError(
         `entry schema is not supported for ${this.graphVersion} graphs`
@@ -140,7 +140,7 @@ export class FarosClient {
       );
       return data.schema;
     } catch (err: any) {
-      throw wrapApiError(err, 'unable to load entry schema');
+      throw wrapApiError(err, `unable to load entry schema of graph: ${graph}`);
     }
   }
 
