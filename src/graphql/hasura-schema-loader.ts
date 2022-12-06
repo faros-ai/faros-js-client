@@ -171,7 +171,9 @@ export class HasuraSchemaLoader implements SchemaLoader {
               primaryKeys.map((c) => camelCase(c)) : primaryKeys;
           }
         } catch (e) {
-          this.logger.warn(e, `error parsing ${tableName} description`);
+          this.logger.debug(
+            `unable to parse ${tableName} description: ${JSON.stringify(e)}`
+          );
         }
       }
       const tableReferences: Dictionary<Reference> = {};
