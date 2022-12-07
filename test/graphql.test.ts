@@ -5,6 +5,7 @@ import * as gql from 'graphql';
 import * as sut from '../src/graphql/graphql';
 import {
   graphSchema,
+  graphSchemaForEmbeddedFieldsTest,
   graphSchemaForPrimaryKeysTest,
   graphSchemaV2,
   graphSchemaV2ForForeignKeyExclusionTest,
@@ -780,6 +781,19 @@ describe('graphql', () => {
     expect(sut.createIncrementalQueriesV1(graphSchema)).toMatchSnapshot();
     expect(
       sut.createIncrementalQueriesV1(graphSchema, undefined, false)
+    ).toMatchSnapshot();
+  });
+
+  test('create incremental queries V1 with embedded fields', () => {
+    expect(
+      sut.createIncrementalQueriesV1(graphSchemaForEmbeddedFieldsTest)
+    ).toMatchSnapshot();
+    expect(
+      sut.createIncrementalQueriesV1(
+        graphSchemaForEmbeddedFieldsTest,
+        undefined,
+        false
+      )
     ).toMatchSnapshot();
   });
 

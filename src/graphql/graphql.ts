@@ -2,7 +2,7 @@ import {ok} from 'assert';
 import * as gql from 'graphql';
 import {Kind} from 'graphql';
 import {jsonToGraphQLQuery, VariableType} from 'json-to-graphql-query';
-import _, {isNil} from 'lodash';
+import _ from 'lodash';
 import {plural} from 'pluralize';
 import {Dictionary} from 'ts-essentials';
 import {Memoize} from 'typescript-memoize';
@@ -969,7 +969,8 @@ export function createNonIncrementalReaders(
 export function buildIncrementalQueryV1(
   type: gql.GraphQLObjectType,
   avoidCollisions = true,
-  resolvedPrimaryKeys: Dictionary<string> = {}
+  resolvedPrimaryKeys: Dictionary<string> = {},
+  resolvedEmbeddedFields: Dictionary<string> = {}
 ): Query {
   const name = type.name;
   // add fields and FKs
@@ -978,12 +979,26 @@ export function buildIncrementalQueryV1(
   fieldsObj[ID_FLD] = true;
   for (const fldName of Object.keys(type.getFields())) {
     const field = type.getFields()[fldName];
-    if (gql.isScalarType(unwrapType(field.type))) {
+    let unwrappedType = unwrapType(field.type) || field.type;
+    if (gql.isListType(unwrappedType)) {
+      unwrappedType = unwrappedType.ofType;
+    }
+
+    if (gql.isScalarType(unwrappedType)) {
       fieldsObj[field.name] = true; // arbitrary value here
-    } else if (isV1ModelType(field.type)) {
+    } else if (isV1EmbeddedType(unwrappedType)) {
+      const resolved = resolvedEmbeddedFields[unwrappedType.name];
+      ok(
+        !_.isNil(resolved),
+        `expected ${unwrappedType.name} embedded type to have been resolved`
+      );
+      fieldsObj[field.name] = {
+        [resolved]: true,
+      };
+    } else if (isV1ModelType(unwrappedType)) {
       // this is foreign key to a top-level model.
       // add nested fragment to select id of referenced model
-      const fk = resolvedPrimaryKeys[field.type.name] || ID_FLD;
+      const fk = resolvedPrimaryKeys[unwrappedType.name] || ID_FLD;
 
       if (avoidCollisions) {
         let nestedName = `${field.name}Id`;
@@ -1045,6 +1060,14 @@ function isV1ModelType(type: any): type is gql.GraphQLObjectType {
   );
 }
 
+function isV1EmbeddedType(type: any): type is gql.GraphQLObjectType {
+  return (
+    gql.isObjectType(type) &&
+    !gql.isIntrospectionType(type) &&
+    !_.some(type.getInterfaces(), (i) => i.name === 'Node')
+  );
+}
+
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function createIncrementalReadersV1(
   client: FarosClient,
@@ -1077,11 +1100,19 @@ export function createIncrementalQueriesV1(
         isV1ModelType
       ).resolvePrimaryKeys()
     : {};
+  const resolvedEmbeddedFields = new EmbeddedFieldResolver(
+    graphQLSchema
+  ).resolveEmbeddedFields();
   for (const name of Object.keys(graphQLSchema.getTypeMap())) {
     const type = graphQLSchema.getType(name);
     if (isV1ModelType(type)) {
       result.push(
-        buildIncrementalQueryV1(type, avoidCollisions, resolvedPrimaryKeys)
+        buildIncrementalQueryV1(
+          type,
+          avoidCollisions,
+          resolvedPrimaryKeys,
+          resolvedEmbeddedFields
+        )
       );
     }
   }
@@ -1131,7 +1162,7 @@ export function buildIncrementalQueryV2(
         // exists and skip from the query selection
         const checkField = type.getFields()[reference.field];
         ok(
-          !isNil(checkField),
+          !_.isNil(checkField),
           `expected ${reference.field} to be a reference field of` +
             ` ${type.name} (foreign key to ${reference.model})`
         );
@@ -1769,14 +1800,14 @@ class PrimaryKeyResolver {
       if (reference) {
         field = type.getFields()[reference.field];
         ok(
-          !isNil(field),
+          !_.isNil(field),
           `expected ${reference.field} to be a reference field of` +
             ` ${type.name} (foreign key to ${reference.model})`
         );
       } else {
         field = type.getFields()[fldName];
         ok(
-          !isNil(field),
+          !_.isNil(field),
           `expected ${fldName} to be a field of ${type.name}`
         );
       }
@@ -1786,6 +1817,55 @@ class PrimaryKeyResolver {
       } else if (this.isTopLevelModelTypeChecker(field.type)) {
         resolved.push(
           `${field.name} { ${this.resolvePrimaryKey(field.type)} }`
+        );
+      }
+    }
+
+    return resolved.join(' ');
+  }
+}
+
+class EmbeddedFieldResolver {
+  constructor(readonly graphQLSchema: gql.GraphQLSchema) {}
+
+  /**
+   * Fully resolves embedded objects in the schema.
+   *
+   * E.g., given a type 'Person' with fields 'name: String' and
+   * 'contact: Contact' and type 'Contact' with fields
+   * 'email: String' and 'phone: String', the type 'Person'
+   * resolves to { name contact { email phone } }
+   */
+  public resolveEmbeddedFields(): Dictionary<string> {
+    const result: Dictionary<string> = {};
+
+    for (const name of Object.keys(this.graphQLSchema.getTypeMap())) {
+      const type = this.graphQLSchema.getType(name);
+      if (isV1EmbeddedType(type)) {
+        result[name] = this.resolveEmbeddedField(type);
+      }
+    }
+
+    return result;
+  }
+
+  @Memoize((type: gql.GraphQLObjectType) => type.name)
+  private resolveEmbeddedField(type: gql.GraphQLObjectType): string {
+    const resolved = [];
+
+    for (const fldName of Object.keys(type.getFields())) {
+      const field = type.getFields()[fldName];
+      let unwrappedType = unwrapType(field.type) || field.type;
+
+      if (gql.isListType(unwrappedType)) {
+        unwrappedType = unwrappedType.ofType;
+      }
+
+      if (gql.isScalarType(unwrappedType) || gql.isEnumType(unwrappedType)) {
+        resolved.push(field.name);
+      } else if (isV1EmbeddedType(unwrappedType)) {
+        resolved.push(
+          `${field.name} { ${this.resolveEmbeddedField(unwrappedType)} }`
         );
       }
     }

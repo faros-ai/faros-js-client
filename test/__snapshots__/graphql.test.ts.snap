@@ -238,6 +238,64 @@ Array [
 ]
 `;
 
+exports[`graphql create incremental queries V1 with embedded fields 1`] = `
+Array [
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { fake { models (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id deep { env { category detail } envs { category detail } name topics } person { name contact { email phone } } metadata { refreshedAt } } } } }",
+    "name": "fake_Model",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { deployments (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid source env { category detail } envs { category detail } application { applicationId: id } build { buildId: id } metadata { refreshedAt } } } } }",
+    "name": "cicd_Deployment",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { compute { applications (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id name displayName platform metadata { refreshedAt } } } } }",
+    "name": "compute_Application",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { builds (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name number pipeline { pipelineId: id } metadata { refreshedAt } } } } }",
+    "name": "cicd_Build",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { pipelines (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name organization { organizationId: id } metadata { refreshedAt } } } } }",
+    "name": "cicd_Pipeline",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { organizations (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name source metadata { refreshedAt } } } } }",
+    "name": "cicd_Organization",
+  },
+]
+`;
+
+exports[`graphql create incremental queries V1 with embedded fields 2`] = `
+Array [
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { fake { models (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id deep { env { category detail } envs { category detail } name topics } person { name contact { email phone } } metadata { refreshedAt } } } } }",
+    "name": "fake_Model",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { deployments (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid source env { category detail } envs { category detail } application { id } build { id } metadata { refreshedAt } } } } }",
+    "name": "cicd_Deployment",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { compute { applications (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id name displayName platform metadata { refreshedAt } } } } }",
+    "name": "compute_Application",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { builds (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name number pipeline { id } metadata { refreshedAt } } } } }",
+    "name": "cicd_Build",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { pipelines (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name organization { id } metadata { refreshedAt } } } } }",
+    "name": "cicd_Pipeline",
+  },
+  Object {
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { organizations (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name source metadata { refreshedAt } } } } }",
+    "name": "cicd_Organization",
+  },
+]
+`;
+
 exports[`graphql create incremental queries V1 with primary keys info 1`] = `
 Array [
   Object {
