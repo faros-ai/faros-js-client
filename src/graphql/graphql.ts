@@ -1806,7 +1806,10 @@ class PrimaryKeyResolver {
         );
       } else {
         field = type.getFields()[fldName];
-        ok(!_.isNil(field), `expected ${fldName} to be a field of ${type.name}`);
+        ok(
+          !_.isNil(field),
+          `expected ${fldName} to be a field of ${type.name}`
+        );
       }
 
       if (gql.isScalarType(unwrapType(field.type))) {
