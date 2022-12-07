@@ -2,7 +2,7 @@ import {ok} from 'assert';
 import * as gql from 'graphql';
 import {Kind} from 'graphql';
 import {jsonToGraphQLQuery, VariableType} from 'json-to-graphql-query';
-import _, {isNil, some} from 'lodash';
+import _ from 'lodash';
 import {plural} from 'pluralize';
 import {Dictionary} from 'ts-essentials';
 import {Memoize} from 'typescript-memoize';
@@ -989,7 +989,7 @@ export function buildIncrementalQueryV1(
     } else if (isV1EmbeddedType(unwrappedType)) {
       const resolved = resolvedEmbeddedFields[unwrappedType.name];
       ok(
-        !isNil(resolved),
+        !_.isNil(resolved),
         `expected ${unwrappedType.name} embedded type to have been resolved`
       );
       fieldsObj[field.name] = {
@@ -1063,13 +1063,8 @@ function isV1ModelType(type: any): type is gql.GraphQLObjectType {
 function isV1EmbeddedType(type: any): type is gql.GraphQLObjectType {
   return (
     gql.isObjectType(type) &&
-    !some(type.getInterfaces(), (i) => i.name === 'Node') &&
-    type.name !== '__Schema' &&
-    type.name !== '__Type' &&
-    type.name !== '__Field' &&
-    type.name !== '__EnumValue' &&
-    type.name !== '__Directive' &&
-    type.name !== '__InputValue'
+    !gql.isIntrospectionType(type) &&
+    !_.some(type.getInterfaces(), (i) => i.name === 'Node')
   );
 }
 
@@ -1167,7 +1162,7 @@ export function buildIncrementalQueryV2(
         // exists and skip from the query selection
         const checkField = type.getFields()[reference.field];
         ok(
-          !isNil(checkField),
+          !_.isNil(checkField),
           `expected ${reference.field} to be a reference field of` +
             ` ${type.name} (foreign key to ${reference.model})`
         );
@@ -1805,13 +1800,13 @@ class PrimaryKeyResolver {
       if (reference) {
         field = type.getFields()[reference.field];
         ok(
-          !isNil(field),
+          !_.isNil(field),
           `expected ${reference.field} to be a reference field of` +
             ` ${type.name} (foreign key to ${reference.model})`
         );
       } else {
         field = type.getFields()[fldName];
-        ok(!isNil(field), `expected ${fldName} to be a field of ${type.name}`);
+        ok(!_.isNil(field), `expected ${fldName} to be a field of ${type.name}`);
       }
 
       if (gql.isScalarType(unwrapType(field.type))) {
