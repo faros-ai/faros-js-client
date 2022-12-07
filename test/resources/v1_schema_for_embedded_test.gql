@@ -120,6 +120,16 @@ type NodeMetadata {
   refreshedAt: String
 }
 
+type Person {
+  name: String
+  contact: Contact
+}
+
+type Contact {
+  email: String
+  phone: String
+}
+
 type deeply_Embedded {
   env: cicd_Environment
   envs: [cicd_Environment]
@@ -139,6 +149,7 @@ enum cicd_EnvironmentCategory {
 
 type fake_Model implements Node {
   deep: deeply_Embedded
+  person: Person
 }
 
 type cicd_Deployment implements Node {

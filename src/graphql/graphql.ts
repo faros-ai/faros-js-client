@@ -1831,13 +1831,12 @@ class EmbeddedFieldResolver {
   constructor(readonly graphQLSchema: gql.GraphQLSchema) {}
 
   /**
-   * Fully resolves the primary keys of models in the schema.
+   * Fully resolves embedded objects in the schema.
    *
-   * E.g., if the primary keys of 'cicd_Organization' are 'source'
-   * and 'uid' (both scalars) and the primary keys of 'cicd_Pipeline'
-   * are 'organization' (foreign key to cicd_Organization) and 'uid' (scalar),
-   * the fully resolved primary key of 'cicd_Pipeline' is
-   * { organization { source uid } uid }
+   * E.g., given a type 'Person' with fields 'name: String' and
+   * 'contact: Contact' and type 'Contact' with fields
+   * 'email: String' and 'phone: String', the type 'Person'
+   * resolves to { name contact { email phone } }
    */
   public resolveEmbeddedFields(): Dictionary<string> {
     const result: Dictionary<string> = {};

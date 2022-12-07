@@ -241,7 +241,7 @@ Array [
 exports[`graphql create incremental queries V1 with embedded fields 1`] = `
 Array [
   Object {
-    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { fake { models (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id deep { env { category detail } envs { category detail } name topics } metadata { refreshedAt } } } } }",
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { fake { models (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id deep { env { category detail } envs { category detail } name topics } person { name contact { email phone } } metadata { refreshedAt } } } } }",
     "name": "fake_Model",
   },
   Object {
@@ -270,7 +270,7 @@ Array [
 exports[`graphql create incremental queries V1 with embedded fields 2`] = `
 Array [
   Object {
-    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { fake { models (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id deep { env { category detail } envs { category detail } name topics } metadata { refreshedAt } } } } }",
+    "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { fake { models (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id deep { env { category detail } envs { category detail } name topics } person { name contact { email phone } } metadata { refreshedAt } } } } }",
     "name": "fake_Model",
   },
   Object {
