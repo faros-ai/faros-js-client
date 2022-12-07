@@ -23,6 +23,13 @@ export const graphSchemaForPrimaryKeysTest = gql.buildSchema(
   )
 );
 
+export const graphSchemaForEmbeddedFieldsTest = gql.buildSchema(
+  fs.readFileSync(
+    path.join(__dirname, 'resources', 'v1_schema_for_embedded_test.gql'),
+    'utf-8'
+  )
+);
+
 export const graphSchemaV2ForPrimaryKeysTest = gql.buildSchema(
   fs.readFileSync(
     path.join(__dirname, 'resources', 'v2_schema_for_pk_test.gql'),
