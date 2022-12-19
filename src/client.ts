@@ -123,16 +123,22 @@ export class FarosClient {
     }
   }
 
-  async addCanonicalModels(graph: string): Promise<void> {
+  async addCanonicalModels(
+    graph: string,
+    models?: string,
+    schema = 'canonical'
+  ): Promise<void> {
     if (this.graphVersion !== GraphVersion.V1) {
       throw new VError(
-        `addCanonicalModels is not supported for ${this.graphVersion} graphs`
+        `Adding models is not supported for ${this.graphVersion} graphs`
       );
     }
     try {
-      await this.api.post(`/graphs/${graph}/models?schema=canonical`, '', {
-        headers: {'content-type': 'application/graphql'},
-      });
+      await this.api.post(
+        `/graphs/${graph}/models?schema=${schema}`,
+        models ?? '',
+        {headers: {'content-type': 'application/graphql'}}
+      );
     } catch (err: any) {
       throw wrapApiError(err, `failed to add models to graph: ${graph}`);
     }
