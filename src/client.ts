@@ -134,8 +134,11 @@ export class FarosClient {
       );
     }
     try {
-      await this.api.post(`/graphs/${graph}/models?schema=${schema}`, models, {
+      await this.api.post(`/graphs/${graph}/models`, models, {
         headers: {'content-type': 'application/graphql'},
+        params: {
+          ...(schema && {schema})
+        },
       });
     } catch (err: any) {
       throw wrapApiError(err, `failed to add models to graph: ${graph}`);
