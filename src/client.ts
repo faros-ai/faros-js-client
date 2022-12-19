@@ -100,6 +100,14 @@ export class FarosClient {
     }
   }
 
+  async createGraph(graph: string): Promise<void> {
+    try {
+      await this.api.put(`/graphs/${graph}`);
+    } catch (err: any) {
+      throw wrapApiError(err, `failed to create graph: ${graph}`);
+    }
+  }
+
   async models(graph: string): Promise<ReadonlyArray<Model>> {
     if (this.graphVersion !== GraphVersion.V1) {
       throw new VError(
@@ -113,6 +121,32 @@ export class FarosClient {
     } catch (err: any) {
       throw wrapApiError(err, `unable to list models: ${graph}`);
     }
+  }
+
+  async addModels(
+    graph: string,
+    models: string,
+    schema?: string
+  ): Promise<void> {
+    if (this.graphVersion !== GraphVersion.V1) {
+      throw new VError(
+        `Adding models is not supported for ${this.graphVersion} graphs`
+      );
+    }
+    try {
+      await this.api.post(`/graphs/${graph}/models`, models, {
+        headers: {'content-type': 'application/graphql'},
+        params: {
+          ...(schema && {schema})
+        },
+      });
+    } catch (err: any) {
+      throw wrapApiError(err, `failed to add models to graph: ${graph}`);
+    }
+  }
+
+  async addCanonicalModels(graph: string): Promise<void> {
+    return await this.addModels(graph, '', 'canonical');
   }
 
   async namedQuery(name: string): Promise<NamedQuery | undefined> {
