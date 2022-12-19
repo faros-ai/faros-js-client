@@ -123,10 +123,10 @@ export class FarosClient {
     }
   }
 
-  async addCanonicalModels(
+  async addModels(
     graph: string,
-    models?: string,
-    schema = 'canonical'
+    models: string,
+    schema: string
   ): Promise<void> {
     if (this.graphVersion !== GraphVersion.V1) {
       throw new VError(
@@ -134,14 +134,16 @@ export class FarosClient {
       );
     }
     try {
-      await this.api.post(
-        `/graphs/${graph}/models?schema=${schema}`,
-        models ?? '',
-        {headers: {'content-type': 'application/graphql'}}
-      );
+      await this.api.post(`/graphs/${graph}/models?schema=${schema}`, models, {
+        headers: {'content-type': 'application/graphql'},
+      });
     } catch (err: any) {
       throw wrapApiError(err, `failed to add models to graph: ${graph}`);
     }
+  }
+
+  async addCanonicalModels(graph: string): Promise<void> {
+    return await this.addModels(graph, '', 'canonical');
   }
 
   async namedQuery(name: string): Promise<NamedQuery | undefined> {
