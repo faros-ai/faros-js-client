@@ -126,7 +126,7 @@ export class FarosClient {
   async addModels(
     graph: string,
     models: string,
-    schema: string
+    schema?: string
   ): Promise<void> {
     if (this.graphVersion !== GraphVersion.V1) {
       throw new VError(
