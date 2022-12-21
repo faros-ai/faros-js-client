@@ -3,7 +3,9 @@ import _ from 'lodash';
 import VError from 'verror';
 
 /** Typescript needs a hint to correctly narrow readonly arrays */
-export function isTypedArray<T>(arg: T | ReadonlyArray<T>): arg is ReadonlyArray<T> {
+export function isTypedArray<T>(
+  arg: T | ReadonlyArray<T>
+): arg is ReadonlyArray<T> {
   return Array.isArray(arg);
 }
 
