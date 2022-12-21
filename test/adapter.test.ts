@@ -6,8 +6,8 @@ import _ from 'lodash';
 import {FarosClient} from '../src';
 import * as sut from '../src/adapter';
 import {
-graphSchemaForAdapterTest,
-graphSchemaV2ForAdapterTest,
+graphSchemaForAdapterTest as v1Schema,
+graphSchemaV2ForAdapterTest as v2Schema,
 toArray,
 toIterator} from './helpers';
 
@@ -49,12 +49,14 @@ describe('AST utilities', () => {
 
   function expectConversion(assertion: ConversionAssertion): void {
     const message = assertion.failureMessage;
-    const v1TypeInfo = new gql.TypeInfo(graphSchemaForAdapterTest);
+    const v1TypeInfo = new gql.TypeInfo(v1Schema);
     const v1AST = normalizeAST(gql.parse(assertion.v1Query));
     const v2AST = normalizeAST(gql.parse(assertion.v2Query));
-    const actualV2AST = normalizeAST(sut.asV2AST(v1AST, v1TypeInfo) as gql.DocumentNode);
-    expect(gql.validate(graphSchemaForAdapterTest, v1AST), message).toBeEmpty();
-    expect(gql.validate(graphSchemaV2ForAdapterTest, v2AST), message).toBeEmpty();
+    const actualV2AST = normalizeAST(
+      sut.asV2AST(v1AST, v1TypeInfo) as gql.DocumentNode
+    );
+    expect(gql.validate(v1Schema, v1AST), message).toBeEmpty();
+    expect(gql.validate(v2Schema, v2AST), message).toBeEmpty();
     expect(gql.print(actualV2AST), message).toEqual(gql.print(v2AST));
     const fieldPaths = assertion.fieldPaths;
     if (fieldPaths) {
@@ -588,13 +590,13 @@ describe('query adapter', () => {
   function asV1Nodes(run: RunV1Query): AsyncIterable<any> {
     const nodeIterable = () => toIterator(run.v2Nodes);
     const faros: FarosClient = {graphVersion: 'v2', nodeIterable} as any;
-    const adapter = new sut.QueryAdapter(faros, graphSchemaForAdapterTest);
+    const adapter = new sut.QueryAdapter(faros, v1Schema);
     return adapter.nodes('default', run.v1Query);
   }
 
   test('invalid faros client fails', () => {
     const faros: FarosClient = {graphVersion: 'v1'} as any;
-    expect(() => new sut.QueryAdapter(faros, graphSchemaForAdapterTest))
+    expect(() => new sut.QueryAdapter(faros, v1Schema))
       .toThrowError('query adapter only works with v2 clients');
   });
 
