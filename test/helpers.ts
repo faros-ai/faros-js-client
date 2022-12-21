@@ -44,6 +44,20 @@ export const graphSchemaV2ForForeignKeyExclusionTest = gql.buildSchema(
   )
 );
 
+export const graphSchemaForAdapterTest = gql.buildSchema(
+  fs.readFileSync(
+    path.join(__dirname, 'resources', 'v1_schema_for_adapter_test.gql'),
+    'utf-8'
+  )
+);
+
+export const graphSchemaV2ForAdapterTest = gql.buildSchema(
+  fs.readFileSync(
+    path.join(__dirname, 'resources', 'v2_schema_for_adapter_test.gql'),
+    'utf-8'
+  )
+);
+
 export async function loadQueryFile(name: string): Promise<string> {
   const query = await fs.readFile(
     path.join(__dirname, 'resources', 'queries', name),

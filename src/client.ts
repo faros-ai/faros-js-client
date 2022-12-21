@@ -31,7 +31,7 @@ enum GraphVersion {
 /** Faros API client **/
 export class FarosClient {
   private readonly api: AxiosInstance;
-  private readonly graphVersion: GraphVersion;
+  readonly graphVersion: GraphVersion;
 
   constructor(
     cfg: FarosClientConfig,
