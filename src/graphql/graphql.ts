@@ -75,11 +75,16 @@ export function isObjectListType(type: any): type is gql.GraphQLList<any> {
   return gql.isListType(type) && gql.isObjectType(type.ofType);
 }
 
-export function isEmbeddedObjectListType(type: any): type is gql.GraphQLList<any> {
+export function isEmbeddedObjectListType(
+  type: any
+): type is gql.GraphQLList<any> {
   return gql.isListType(type) && isEmbeddedObjectType(type.ofType);
 }
 
-export function isModelQuery(parentType: any, type: any): type is gql.GraphQLObjectType {
+export function isModelQuery(
+  parentType: any,
+  type: any
+): type is gql.GraphQLObjectType {
   return (
     gql.isObjectType(parentType) && parentType.name.endsWith('Query') &&
     gql.isObjectType(type) && type.name.endsWith('Connection')
