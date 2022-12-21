@@ -362,8 +362,8 @@ export class QueryAdapter {
         } catch (err: any) {
           throw new VError(
             err,
-            'failed to convert value in v2 field \'%s\' into value in v1 field ' +
-              '\'%s\' of type \'%s\'',
+            'failed to convert value in v2 field \'%s\' into value in v1 ' +
+              'field \'%s\' of type \'%s\'',
             v2Path,
             v1Path.path,
             isPrimitiveListType(v1Path.type)
@@ -404,7 +404,13 @@ export class QueryAdapter {
     const v1TypeInfo = new gql.TypeInfo(this.v1Schema);
     const nodePaths = this.nodePaths(v1AST, v1TypeInfo);
     const v2Query = gql.print(asV2AST(v1AST, v1TypeInfo));
-    const v2Nodes = this.faros.nodeIterable(graph, v2Query, pageSize, paginatedQueryV2);
+    const v2Nodes = this.faros.nodeIterable(
+      graph,
+      v2Query,
+      pageSize,
+      paginatedQueryV2
+    );
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     return {
       async *[Symbol.asyncIterator](): AsyncIterator<any> {
