@@ -63,3 +63,9 @@ export {
 } from './graphql/graphql';
 export {FarosGraphSchema} from './schema';
 export {Utils} from './utils';
+export {
+  FieldPaths,
+  getFieldPaths,
+  asV2AST,
+  QueryAdapter,
+} from './adapter';

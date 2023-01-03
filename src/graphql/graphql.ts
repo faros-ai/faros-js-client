@@ -31,8 +31,10 @@ export interface FlattenContext {
   readonly listPaths?: ReadonlyArray<string>;
 }
 
-const NODES = 'nodes';
-const EDGES = 'edges';
+export const NODES = 'nodes';
+export const EDGES = 'edges';
+export const METADATA = 'metadata';
+export const REFRESHED_AT = 'refreshedAt';
 
 const DEFAULT_DIRECTIVE = 'default';
 const MAX_NODE_DEPTH = 10;
@@ -44,6 +46,66 @@ const ALLOWED_ARG_TYPES = new Set(['where', 'filter']);
 
 function invalidQuery(message: string): Error {
   return new Error(`invalid query: ${message}`);
+}
+
+/**
+ * An embedded type is an object type that can be inlined in another object
+ * type with the following exceptions:
+ *
+ * 1. It is not a query type for a model namespace, e.g., vcs_Query
+ * 2. It is not a connection spec type and does not implement a connection spec
+ *    type, e.g., node, connection or edge
+ */
+ export function isEmbeddedObjectType(type: any | undefined | null): boolean {
+  if (gql.isNonNullType(type)) {
+    return isEmbeddedObjectType(type.ofType);
+  } else if (!gql.isObjectType(type)) {
+    return false;
+  }
+
+  return !(
+    type.name.endsWith('Query') ||
+    type.name.endsWith('Connection') ||
+    type.name.endsWith('Edge') ||
+    isV1ModelType(type)
+  );
+}
+
+export function isObjectListType(type: any): type is gql.GraphQLList<any> {
+  return gql.isListType(type) && gql.isObjectType(type.ofType);
+}
+
+export function isEmbeddedObjectListType(
+  type: any
+): type is gql.GraphQLList<any> {
+  return gql.isListType(type) && isEmbeddedObjectType(type.ofType);
+}
+
+export function isModelQuery(
+  parentType: any,
+  type: any
+): type is gql.GraphQLObjectType {
+  return (
+    gql.isObjectType(parentType) && parentType.name.endsWith('Query') &&
+    gql.isObjectType(type) && type.name.endsWith('Connection')
+  );
+}
+
+function isLeafType(type: any): boolean {
+  if (gql.isNonNullType(type)) {
+    type = type.ofType;
+  }
+
+  if (gql.isListType(type)) {
+    let ofType = type.ofType;
+    // The element type can also be non-null
+    if (gql.isNonNullType(ofType)) {
+      ofType = ofType.ofType;
+    }
+    // A list of object types will be serialized as a list of strings
+    return gql.isLeafType(ofType) || gql.isObjectType(ofType);
+  }
+  return gql.isLeafType(type);
 }
 
 /** Returns paths to all node collections in a query */
@@ -212,23 +274,6 @@ export function paginatedQuery(query: string): PaginatedQuery {
     edgesPath,
     pageInfoPath,
   };
-}
-
-function isLeafType(type: any): boolean {
-  if (gql.isNonNullType(type)) {
-    type = type.ofType;
-  }
-
-  if (gql.isListType(type)) {
-    let ofType = type.ofType;
-    // The element type can also be non-null
-    if (gql.isNonNullType(ofType)) {
-      ofType = ofType.ofType;
-    }
-    // A list of object types will be serialized as a list of strings
-    return gql.isLeafType(ofType) || gql.isObjectType(ofType);
-  }
-  return gql.isLeafType(type);
 }
 
 function createOperationDefinition(
@@ -902,6 +947,11 @@ export function readerFromQuery(
   flattener = flatten
 ): Reader {
   const flattenCtx = flattener(query.gql, graphSchema);
+  if (!(flattenCtx.leafPaths.length && flattenCtx.fieldTypes.size)) {
+    throw new VError(
+      'unable to extract metadata from query %s: %s',
+      query.name, query.gql);
+  }
   return {
     execute(args: Map<string, any>): AsyncIterable<AnyRecord> {
       const nodes = faros.nodeIterable(

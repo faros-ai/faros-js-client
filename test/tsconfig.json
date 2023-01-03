@@ -3,6 +3,9 @@
   "compilerOptions": {
     "outDir": "../out/test",
   },
+  "files": [
+    "../node_modules/jest-expect-message/types/index.d.ts"
+  ],
   "references": [
     {
       "path": "../src"

@@ -2,44 +2,54 @@ import fs from 'fs-extra';
 import * as gql from 'graphql';
 import path from 'path';
 
+export const SCHEMA_DIR = path.join(__dirname, 'resources', 'schemas');
+
 // This is a subset of our schema. Make sure to extend if needed
 // when adding tests.
 // This schema is NOT a V1 copy of the V2 schema below
 export const graphSchema = gql.buildSchema(
-  fs.readFileSync(path.join(__dirname, 'resources', 'schema.gql'), 'utf-8')
+  fs.readFileSync(path.join(SCHEMA_DIR, 'schema.gql'), 'utf-8')
 );
 
 // This is a subset of our schema. Make sure to extend if needed
 //  when adding tests.
 // This schema is NOT a V2 copy of the V1 schema above
 export const graphSchemaV2 = gql.buildSchema(
-  fs.readFileSync(path.join(__dirname, 'resources', 'schema-v2.gql'), 'utf-8')
+  fs.readFileSync(path.join(SCHEMA_DIR, 'schema-v2.gql'), 'utf-8')
 );
 
 export const graphSchemaForPrimaryKeysTest = gql.buildSchema(
-  fs.readFileSync(
-    path.join(__dirname, 'resources', 'v1_schema_for_pk_test.gql'),
-    'utf-8'
-  )
+  fs.readFileSync(path.join(SCHEMA_DIR, 'v1_schema_for_pk_test.gql'), 'utf-8')
 );
 
 export const graphSchemaForEmbeddedFieldsTest = gql.buildSchema(
   fs.readFileSync(
-    path.join(__dirname, 'resources', 'v1_schema_for_embedded_test.gql'),
+    path.join(SCHEMA_DIR, 'v1_schema_for_embedded_test.gql'),
     'utf-8'
   )
 );
 
 export const graphSchemaV2ForPrimaryKeysTest = gql.buildSchema(
-  fs.readFileSync(
-    path.join(__dirname, 'resources', 'v2_schema_for_pk_test.gql'),
-    'utf-8'
-  )
+  fs.readFileSync(path.join(SCHEMA_DIR, 'v2_schema_for_pk_test.gql'), 'utf-8')
 );
 
 export const graphSchemaV2ForForeignKeyExclusionTest = gql.buildSchema(
   fs.readFileSync(
-    path.join(__dirname, 'resources', 'v2_schema_for_fk_exclusion_test.gql'),
+    path.join(SCHEMA_DIR, 'v2_schema_for_fk_exclusion_test.gql'),
+    'utf-8'
+  )
+);
+
+export const graphSchemaForAdapterTest = gql.buildSchema(
+  fs.readFileSync(
+    path.join(SCHEMA_DIR, 'v1_schema_for_adapter_test.gql'),
+    'utf-8'
+  )
+);
+
+export const graphSchemaV2ForAdapterTest = gql.buildSchema(
+  fs.readFileSync(
+    path.join(SCHEMA_DIR, 'v2_schema_for_adapter_test.gql'),
     'utf-8'
   )
 );
