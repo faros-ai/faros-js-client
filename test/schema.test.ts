@@ -1,11 +1,15 @@
 import fs from 'fs';
 import {buildSchema} from 'graphql';
+import path from 'path';
 
 import {FarosGraphSchema} from '../src/schema';
+import {SCHEMA_DIR} from './helpers';
 
 describe('schema', () => {
   const schema = new FarosGraphSchema(
-    buildSchema(fs.readFileSync('test/resources/timestamp-schema.gql', 'utf8'))
+    buildSchema(
+      fs.readFileSync(path.join(SCHEMA_DIR, 'timestamp-schema.gql'), 'utf8')
+    )
   );
 
   test('ignore non-timestamp field', () => {
