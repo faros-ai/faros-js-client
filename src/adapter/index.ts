@@ -399,7 +399,12 @@ export class QueryAdapter {
     throw new VError('invalid path value: %s', pathValue);
   }
 
-  nodes(graph: string, v1Query: string, pageSize = 100): AsyncIterable<any> {
+  nodes(
+    graph: string,
+    v1Query: string,
+    pageSize = 100,
+    args: Map<string, any> = new Map<string, any>()
+  ): AsyncIterable<any> {
     const v1AST = gql.parse(v1Query);
     const v1TypeInfo = new gql.TypeInfo(this.v1Schema);
     const nodePaths = this.nodePaths(v1AST, v1TypeInfo);
@@ -408,7 +413,8 @@ export class QueryAdapter {
       graph,
       v2Query,
       pageSize,
-      paginatedQueryV2
+      paginatedQueryV2,
+      args
     );
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
