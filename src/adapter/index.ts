@@ -403,12 +403,13 @@ export class QueryAdapter {
     graph: string,
     v1Query: string,
     pageSize = 100,
-    args: Map<string, any> = new Map<string, any>()
+    args: Map<string, any> = new Map<string, any>(),
+    postProcessV2Query: (v2Query: string) => string = _.identity
   ): AsyncIterable<any> {
     const v1AST = gql.parse(v1Query);
     const v1TypeInfo = new gql.TypeInfo(this.v1Schema);
     const nodePaths = this.nodePaths(v1AST, v1TypeInfo);
-    const v2Query = gql.print(asV2AST(v1AST, v1TypeInfo));
+    const v2Query = postProcessV2Query(gql.print(asV2AST(v1AST, v1TypeInfo)));
     const v2Nodes = this.faros.nodeIterable(
       graph,
       v2Query,
