@@ -1173,7 +1173,7 @@ export function createIncrementalQueriesV1(
 function isV2ModelType(type: any): type is gql.GraphQLObjectType {
   return gql.isObjectType(type)
     ? type.name !== 'graph' && // exclude graph table from extract
-        (type.description ?? '').startsWith('columns and relationships of')
+        (type.description ?? '').includes('farosModel')
     : false;
 }
 
