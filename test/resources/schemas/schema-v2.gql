@@ -217,7 +217,7 @@ type vcs_Repository {
 }
 
 """
-columns and relationships of "cicd_Build"
+"farosModel": "cicd_Build"
 """
 type cicd_Build {
   createdAt: timestamptz
@@ -251,7 +251,7 @@ type cicd_Build {
 }
 
 """
-columns and relationships of "cicd_Pipeline"
+"farosModel": "cicd_Pipeline"
 """
 type cicd_Pipeline {
   """generated"""
