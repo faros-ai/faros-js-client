@@ -218,6 +218,10 @@ export function getFieldPaths(
  *    as JSONB arrays in V2 and cannot be extracted. Example:
  *
  *    task { additionalFields { name value } } => task { additionalFields }
+ *
+ * 5. Renames the "first" field argument to "limit". Example:
+ *
+ *    deployments(first: 1) { uid } => deployments(limit: 1) { uid }
  */
 export function asV2AST(ast: gql.ASTNode, typeInfo: gql.TypeInfo): gql.ASTNode {
   return gql.visit(ast, gql.visitWithTypeInfo(typeInfo, {
@@ -242,7 +246,7 @@ export function asV2AST(ast: gql.ASTNode, typeInfo: gql.TypeInfo): gql.ASTNode {
         return {
           ...modelField,
           name: {
-            kind: 'Name',
+            kind: gql.Kind.NAME,
             value: queryNamespace(modelNamespace, model)
           },
         };
@@ -279,8 +283,15 @@ export function asV2AST(ast: gql.ASTNode, typeInfo: gql.TypeInfo): gql.ASTNode {
           }
           typeInfo.leave(selection);
         }
-        return {kind: 'SelectionSet', selections: newSelections};
+        return {kind: gql.Kind.SELECTION_SET, selections: newSelections};
       }
+    },
+    // Handles rule (5)
+    Argument(node) {
+      if (node.name.value === 'first') {
+        return {...node, name: {kind: gql.Kind.NAME, value: 'limit'}};
+      }
+      return undefined;
     }
   }));
 }
