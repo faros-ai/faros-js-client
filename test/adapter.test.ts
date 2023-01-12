@@ -392,6 +392,61 @@ describe('AST utilities', () => {
     });
   });
 
+  test('rename first field argument to limit', () => {
+    expectConversion({
+      v1Query: `
+        {
+          cicd {
+            deployments {
+              nodes {
+                uid
+                changeset(first: 1) {
+                  nodes {
+                    commit {
+                      sha
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      `,
+      v2Query: `
+        {
+          cicd_Deployment {
+            uid
+            changeset(limit: 1) {
+              commit {
+                sha
+              }
+            }
+          }
+        }
+      `,
+      fieldPaths: {
+        cicd_Deployment: {
+          path: 'cicd.deployments.nodes',
+          nestedPaths: {
+            uid: {
+              path: 'uid',
+              type: 'string'
+            },
+            changeset: {
+              path: 'changeset.nodes',
+              nestedPaths: {
+                'commit.sha': {
+                  path: 'commit.sha',
+                  type: 'string'
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+  });
+
   test('all rules', () => {
     expectConversion({
       v1Query: `
