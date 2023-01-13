@@ -326,7 +326,7 @@ export class QueryAdapter {
       return v2Value;
     }
 
-    if (type === 'double') {
+    if (type === 'float' || type === 'double') {
       if (_.isString(v2Value)) {
         const double = parseFloat(v2Value);
         if (!isNaN(double)) {
