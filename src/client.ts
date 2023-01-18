@@ -305,45 +305,44 @@ export class FarosClient {
     const {query, edgesPath, pageInfoPath} = paginator(rawQuery);
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
-    // relay-based implementation provides pageInfoPath
-    if (!isEmpty(pageInfoPath)) {
+    if (isEmpty(pageInfoPath)) {
+      // if pageInfoPath is missing assume offset and limits are used
       return {
         async* [Symbol.asyncIterator](): AsyncIterator<any> {
-          let cursor: string | undefined;
+          let offset = 0;
           let hasNextPage = true;
           while (hasNextPage) {
             const data = await self.gqlNoDirectives(graph, query, {
-              pageSize,
-              cursor,
+              limit: pageSize,
+              offset,
               ...Object.fromEntries(args.entries()),
             });
             const edges = traverse(data, edgesPath) || [];
             for (const edge of edges) {
-              yield edge.node;
-              cursor = edge.cursor;
+              yield edge;
             }
-            hasNextPage = traverse(data, pageInfoPath)?.hasNextPage ?? false;
+            offset += pageSize;
+            hasNextPage = !isEmpty(edges);
           }
         },
       };
     }
     return {
-      // without pageInfoPath assume offset and limits are used
-      async* [Symbol.asyncIterator](): AsyncIterator<any> {
-        let offset = 0;
+      async *[Symbol.asyncIterator](): AsyncIterator<any> {
+        let cursor: string | undefined;
         let hasNextPage = true;
         while (hasNextPage) {
           const data = await self.gqlNoDirectives(graph, query, {
-            limit: pageSize,
-            offset,
+            pageSize,
+            cursor,
             ...Object.fromEntries(args.entries()),
           });
           const edges = traverse(data, edgesPath) || [];
           for (const edge of edges) {
-            yield edge;
+            yield edge.node;
+            cursor = edge.cursor;
           }
-          offset += pageSize;
-          hasNextPage = !isEmpty(edges);
+          hasNextPage = traverse(data, pageInfoPath)?.hasNextPage ?? false;
         }
       },
     };
