@@ -33,7 +33,10 @@ export function makeAxiosInstanceWithRetry(
 ): AxiosInstance {
   return makeAxiosInstance(config, {
     retries,
-    retryCondition: isRetryableError,
+    retryCondition: (error) => {
+      // Timeouts should be retryable
+      return error.code === 'ECONNABORTED' || isRetryableError(error);
+    },
     retryDelay: (retryNumber, error) => {
       if (logger) {
         logger.warn(
@@ -42,5 +45,6 @@ export function makeAxiosInstanceWithRetry(
       }
       return retryNumber * delay;
     },
+    shouldResetTimeout: true
   });
 }
