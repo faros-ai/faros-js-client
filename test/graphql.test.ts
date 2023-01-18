@@ -184,10 +184,11 @@ describe('graphql', () => {
     expect(paginatedQuery.query).toEqual(expectedQuery);
   });
 
-  test('paginated v2a query', async () => {
+  test('paginated offset/limit v2 query', async () => {
     const query = await loadQueryFile('commits-v2.gql');
-    const paginatedQuery = sut.paginatedQueryV2a(query);
-    const expectedQuery = await loadQueryFile('paginated-commits-v2a.gql');
+    const paginatedQuery = sut.paginateWithOffsetLimitV2(query);
+    const expectedQuery =
+      await loadQueryFile('paginated-commits-offset-limit-v2.gql');
     expect(paginatedQuery.query).toEqual(expectedQuery);
     expect(paginatedQuery.edgesPath).toEqual([
       'vcs_Commit',

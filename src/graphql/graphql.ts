@@ -463,7 +463,7 @@ function createOffsetLimitOperationDefinition(
 /**
  * Paginate v2 queries with limit and offsets.
  */
-export function paginatedQueryV2a(query: string): PaginatedQuery {
+export function paginateWithOffsetLimitV2(query: string): PaginatedQuery {
   const edgesPath: string[] = [];
   const ast = gql.visit(gql.parse(query), {
     Document(node) {
@@ -1108,7 +1108,7 @@ export function createNonIncrementalReaders(
           graphSchema,
           false,
           process.env.GRAPHQL_V2_PAGINATOR === 'relay' ?
-            paginatedQueryV2 : paginatedQueryV2a,
+            paginatedQueryV2 : paginateWithOffsetLimitV2,
           flattenV2
         );
       default:
