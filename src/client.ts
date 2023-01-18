@@ -305,6 +305,7 @@ export class FarosClient {
     const {query, edgesPath, pageInfoPath} = paginator(rawQuery);
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
+    // relay-based implementation provides pageInfoPath
     if (!isEmpty(pageInfoPath)) {
       return {
         async* [Symbol.asyncIterator](): AsyncIterator<any> {
@@ -327,6 +328,7 @@ export class FarosClient {
       };
     }
     return {
+      // without pageInfoPath assume offset and limits are used
       async* [Symbol.asyncIterator](): AsyncIterator<any> {
         let offset = 0;
         let hasNextPage = true;
