@@ -424,6 +424,118 @@ export function paginatedQueryV2(query: string): PaginatedQuery {
   };
 }
 
+function createOffsetLimitOperationDefinition(
+  node: gql.OperationDefinitionNode,
+): gql.OperationDefinitionNode {
+  return {
+    kind: Kind.OPERATION_DEFINITION,
+    name: {kind: Kind.NAME, value: 'paginatedQuery'},
+    operation: gql.OperationTypeNode.QUERY,
+    variableDefinitions: [
+      {
+        kind: Kind.VARIABLE_DEFINITION,
+        variable: {
+          kind: Kind.VARIABLE,
+          name: {kind: Kind.NAME, value: 'offset'},
+        },
+        type: {
+          kind: Kind.NAMED_TYPE,
+          name: {kind: Kind.NAME, value: 'Int'},
+        },
+      },
+      {
+        kind: Kind.VARIABLE_DEFINITION,
+        variable: {
+          kind: Kind.VARIABLE,
+          name: {kind: Kind.NAME, value: 'limit'},
+        },
+        type: {
+          kind: Kind.NAMED_TYPE,
+          name: {kind: Kind.NAME, value: 'Int'},
+        },
+      },
+      ...(node.variableDefinitions || []),
+    ],
+    selectionSet: node.selectionSet,
+  };
+}
+
+export function paginatedQueryV2a(query: string): PaginatedQuery {
+  const edgesPath: string[] = [];
+  const ast = gql.visit(gql.parse(query), {
+    Document(node) {
+      if (node.definitions.length !== 1) {
+        throw invalidQuery(
+          'document should contain a single query operation definition',
+        );
+      }
+    },
+    OperationDefinition(node) {
+      if (node.operation !== 'query') {
+        throw invalidQuery('only query operations are supported');
+      }
+
+      // Add pagination variables to query operation
+      return createOffsetLimitOperationDefinition(node);
+    },
+    Field: {
+      enter(node) {
+        if (edgesPath.length) {
+          // Skip rest of nodes once edges path has been set
+          return false;
+        }
+        edgesPath.push(node.name.value);
+        // copy existing where args
+        const existing = (node.arguments ?? []).filter((n) =>
+          ALLOWED_ARG_TYPES.has(n.name.value),
+        );
+        return {
+          ...node,
+          arguments: [
+            ...existing,
+            {
+              kind: 'Argument',
+              name: {kind: 'Name', value: 'offset'},
+              value: {
+                kind: 'Variable',
+                name: {kind: 'Name', value: 'offset'},
+              },
+            },
+            {
+              kind: 'Argument',
+              name: {kind: 'Name', value: 'limit'},
+              value: {
+                kind: 'Variable',
+                name: {kind: 'Name', value: 'limit'},
+              },
+            },
+            {
+              kind: 'Argument',
+              name: {kind: 'Name', value: 'order_by'},
+              value: {
+                kind: 'ObjectValue',
+                fields: [
+                  {
+                    kind: 'ObjectField',
+                    name: {kind: 'Name', value: 'refreshedAt'},
+                    value: {kind: 'EnumValue', value: 'asc'},
+                  },
+                ],
+              },
+            },
+          ],
+        };
+      },
+    },
+  });
+
+  return {
+    query: gql.print(ast),
+    edgesPath,
+    pageInfoPath: [],
+  };
+}
+
 /**
  * Returns true if this type represents a list of non-leaf objects.
  */
