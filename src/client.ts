@@ -36,7 +36,7 @@ export class FarosClient {
   constructor(
     cfg: FarosClientConfig,
     logger: Logger = pino({name: 'faros-client'}),
-    axiosConfig: AxiosRequestConfig = DEFAULT_AXIOS_CONFIG
+    axiosConfig: AxiosRequestConfig = DEFAULT_AXIOS_CONFIG,
   ) {
     const url = Utils.urlWithoutTrailingSlashes(cfg.url);
 
@@ -50,7 +50,7 @@ export class FarosClient {
           ...(cfg.useGraphQLV2 && {[GRAPH_VERSION_HEADER]: 'v2'}),
         },
       },
-      logger
+      logger,
     );
 
     this.graphVersion = cfg.useGraphQLV2 ? GraphVersion.V2 : GraphVersion.V1;
@@ -111,7 +111,7 @@ export class FarosClient {
   async models(graph: string): Promise<ReadonlyArray<Model>> {
     if (this.graphVersion !== GraphVersion.V1) {
       throw new VError(
-        `listing models is not supported for ${this.graphVersion} graphs`
+        `listing models is not supported for ${this.graphVersion} graphs`,
       );
     }
 
@@ -126,18 +126,18 @@ export class FarosClient {
   async addModels(
     graph: string,
     models: string,
-    schema?: string
+    schema?: string,
   ): Promise<void> {
     if (this.graphVersion !== GraphVersion.V1) {
       throw new VError(
-        `Adding models is not supported for ${this.graphVersion} graphs`
+        `Adding models is not supported for ${this.graphVersion} graphs`,
       );
     }
     try {
       await this.api.post(`/graphs/${graph}/models`, models, {
         headers: {'content-type': 'application/graphql'},
         params: {
-          ...(schema && {schema})
+          ...(schema && {schema}),
         },
       });
     } catch (err: any) {
@@ -164,13 +164,13 @@ export class FarosClient {
   async entrySchema(graph: string): Promise<any> {
     if (this.graphVersion !== GraphVersion.V1) {
       throw new VError(
-        `entry schema is not supported for ${this.graphVersion} graphs`
+        `entry schema is not supported for ${this.graphVersion} graphs`,
       );
     }
 
     try {
       const {data} = await this.api.get(
-        `/graphs/${graph}/revisions/entries/schema`
+        `/graphs/${graph}/revisions/entries/schema`,
       );
       return data.schema;
     } catch (err: any) {
@@ -179,6 +179,7 @@ export class FarosClient {
   }
 
   /* returns only the data object of a standard qgl response */
+
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   async gql(graph: string, query: string, variables?: any): Promise<any> {
     try {
@@ -191,6 +192,7 @@ export class FarosClient {
   }
 
   /* returns both data (as res.data) and errors (as res.errors) */
+
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   async rawGql(graph: string, query: string, variables?: any): Promise<any> {
     try {
@@ -205,7 +207,7 @@ export class FarosClient {
   async gqlNoDirectives(
     graph: string,
     rawQuery: string,
-    variables?: unknown
+    variables?: unknown,
   ): Promise<any> {
     const ast = gql.visit(gql.parse(rawQuery), {
       // Strip directives from query. These are not supported.
@@ -300,13 +302,13 @@ export class FarosClient {
     rawQuery: string,
     pageSize = 100,
     paginator = paginatedQuery,
-    args: Map<string, any> = new Map<string, any>()
+    args: Map<string, any> = new Map<string, any>(),
   ): AsyncIterable<any> {
     const {query, edgesPath, pageInfoPath} = paginator(rawQuery);
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
     if (isEmpty(pageInfoPath)) {
-      // if pageInfoPath is missing assume offset and limits are used
+      // use offset and limit
       return {
         async* [Symbol.asyncIterator](): AsyncIterator<any> {
           let offset = 0;
@@ -327,8 +329,9 @@ export class FarosClient {
         },
       };
     }
+    // use relay-styled cursors
     return {
-      async *[Symbol.asyncIterator](): AsyncIterator<any> {
+      async* [Symbol.asyncIterator](): AsyncIterator<any> {
         let cursor: string | undefined;
         let hasNextPage = true;
         while (hasNextPage) {
