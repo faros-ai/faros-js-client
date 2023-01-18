@@ -14,6 +14,7 @@ export function isTypedArray<T>(
 const primitiveTypes = [
   'boolean',
   'double',
+  'float',
   'int',
   'long',
   'string',
@@ -75,6 +76,8 @@ export function asLeafValueType(type: gql.GraphQLType): LeafValueType {
       return 'boolean';
     } else if (type.name === 'Double') {
       return 'double';
+    } else if (type.name === 'Float') {
+      return 'float';
     } else if (type.name === 'Int') {
       return 'int';
     } else if (type.name === 'Long') {
