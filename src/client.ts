@@ -1,6 +1,6 @@
 import {AxiosInstance, AxiosRequestConfig} from 'axios';
 import * as gql from 'graphql';
-import {get as traverse} from 'lodash';
+import {get as traverse, isEmpty} from 'lodash';
 import pino, {Logger} from 'pino';
 import VError from 'verror';
 
@@ -305,6 +305,29 @@ export class FarosClient {
     const {query, edgesPath, pageInfoPath} = paginator(rawQuery);
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
+    if (isEmpty(pageInfoPath)) {
+      // use offset and limit
+      return {
+        async* [Symbol.asyncIterator](): AsyncIterator<any> {
+          let offset = 0;
+          let hasNextPage = true;
+          while (hasNextPage) {
+            const data = await self.gqlNoDirectives(graph, query, {
+              limit: pageSize,
+              offset,
+              ...Object.fromEntries(args.entries()),
+            });
+            const edges = traverse(data, edgesPath) || [];
+            for (const edge of edges) {
+              yield edge;
+            }
+            offset += pageSize;
+            hasNextPage = !isEmpty(edges);
+          }
+        },
+      };
+    }
+    // use relay-styled cursors
     return {
       async *[Symbol.asyncIterator](): AsyncIterator<any> {
         let cursor: string | undefined;

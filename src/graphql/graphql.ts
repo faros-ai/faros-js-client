@@ -1,6 +1,7 @@
 import {ok} from 'assert';
 import * as gql from 'graphql';
 import {Kind} from 'graphql';
+import {VariableDefinitionNode} from 'graphql/language/ast';
 import {jsonToGraphQLQuery, VariableType} from 'json-to-graphql-query';
 import _ from 'lodash';
 import {plural} from 'pluralize';
@@ -177,7 +178,10 @@ export function paginatedQuery(query: string): PaginatedQuery {
       }
 
       // Add pagination variables to query operation
-      return createOperationDefinition(node);
+      return createOperationDefinition(
+        node,
+        [['pageSize', 'Int'], ['cursor', 'Cursor']]
+      );
     },
     Field: {
       enter(node) {
@@ -276,43 +280,6 @@ export function paginatedQuery(query: string): PaginatedQuery {
   };
 }
 
-function createOperationDefinition(
-  node: gql.OperationDefinitionNode,
-  cursorType = 'Cursor'
-): gql.OperationDefinitionNode {
-  return {
-    kind: Kind.OPERATION_DEFINITION,
-    name: {kind: Kind.NAME, value: 'paginatedQuery'},
-    operation: gql.OperationTypeNode.QUERY,
-    variableDefinitions: [
-      {
-        kind: Kind.VARIABLE_DEFINITION,
-        variable: {
-          kind: Kind.VARIABLE,
-          name: {kind: Kind.NAME, value: 'pageSize'},
-        },
-        type: {
-          kind: Kind.NAMED_TYPE,
-          name: {kind: Kind.NAME, value: 'Int'},
-        },
-      },
-      {
-        kind: Kind.VARIABLE_DEFINITION,
-        variable: {
-          kind: Kind.VARIABLE,
-          name: {kind: Kind.NAME, value: 'cursor'},
-        },
-        type: {
-          kind: Kind.NAMED_TYPE,
-          name: {kind: Kind.NAME, value: cursorType},
-        },
-      },
-      ...(node.variableDefinitions || []),
-    ],
-    selectionSet: node.selectionSet,
-  };
-}
-
 /**
  * Paginates v2 graphql queries.
  */
@@ -334,7 +301,10 @@ export function paginatedQueryV2(query: string): PaginatedQuery {
       }
 
       // Add pagination variables to query operation
-      return createOperationDefinition(node, 'String');
+      return createOperationDefinition(
+        node,
+        [['pageSize', 'Int'], ['cursor', 'String']]
+      );
     },
     Field: {
       enter(node) {
@@ -421,6 +391,116 @@ export function paginatedQueryV2(query: string): PaginatedQuery {
     query: gql.print(ast),
     edgesPath,
     pageInfoPath,
+  };
+}
+
+function createOperationDefinition(
+  node: gql.OperationDefinitionNode,
+  varDefs: [string, string][]
+): gql.OperationDefinitionNode {
+  const variableDefinitions: VariableDefinitionNode [] =
+    varDefs.map(([varName, varType]) => {
+      return {
+        kind: Kind.VARIABLE_DEFINITION,
+        variable: {
+          kind: Kind.VARIABLE,
+          name: {kind: Kind.NAME, value: varName},
+        },
+        type: {
+          kind: Kind.NAMED_TYPE,
+          name: {kind: Kind.NAME, value: varType},
+        },
+      };
+    });
+  variableDefinitions.push(...(node.variableDefinitions || []));
+  return {
+    kind: Kind.OPERATION_DEFINITION,
+    name: {kind: Kind.NAME, value: 'paginatedQuery'},
+    operation: gql.OperationTypeNode.QUERY,
+    variableDefinitions,
+    selectionSet: node.selectionSet,
+  };
+}
+
+/**
+ * Paginate v2 queries with limit and offsets.
+ */
+export function paginateWithOffsetLimitV2(query: string): PaginatedQuery {
+  const edgesPath: string[] = [];
+  const ast = gql.visit(gql.parse(query), {
+    Document(node) {
+      if (node.definitions.length !== 1) {
+        throw invalidQuery(
+          'document should contain a single query operation definition',
+        );
+      }
+    },
+    OperationDefinition(node) {
+      if (node.operation !== 'query') {
+        throw invalidQuery('only query operations are supported');
+      }
+
+      // Add pagination variables to query operation
+      return createOperationDefinition(
+        node,
+        [['offset', 'Int'], ['limit', 'Int']]
+      );
+    },
+    Field: {
+      enter(node) {
+        if (edgesPath.length) {
+          // Skip rest of nodes once edges path has been set
+          return false;
+        }
+        edgesPath.push(node.name.value);
+        // copy existing where args
+        const existing = (node.arguments ?? []).filter((n) =>
+          ALLOWED_ARG_TYPES.has(n.name.value),
+        );
+        return {
+          ...node,
+          arguments: [
+            ...existing,
+            {
+              kind: 'Argument',
+              name: {kind: 'Name', value: 'offset'},
+              value: {
+                kind: 'Variable',
+                name: {kind: 'Name', value: 'offset'},
+              },
+            },
+            {
+              kind: 'Argument',
+              name: {kind: 'Name', value: 'limit'},
+              value: {
+                kind: 'Variable',
+                name: {kind: 'Name', value: 'limit'},
+              },
+            },
+            {
+              kind: 'Argument',
+              name: {kind: 'Name', value: 'order_by'},
+              value: {
+                kind: 'ObjectValue',
+                fields: [
+                  {
+                    kind: 'ObjectField',
+                    name: {kind: 'Name', value: 'refreshedAt'},
+                    value: {kind: 'EnumValue', value: 'asc'},
+                  },
+                ],
+              },
+            },
+          ],
+        };
+      },
+    },
+  });
+
+  return {
+    query: gql.print(ast),
+    edgesPath,
+    pageInfoPath: [],
   };
 }
 
@@ -992,7 +1072,8 @@ export function createNonIncrementalReaders(
           pageSize,
           graphSchema,
           false,
-          paginatedQueryV2,
+          process.env.GRAPHQL_V2_PAGINATOR === 'relay' ?
+            paginatedQueryV2 : paginateWithOffsetLimitV2,
           flattenV2
         );
       default:
