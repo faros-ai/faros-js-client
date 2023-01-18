@@ -10,6 +10,7 @@ import {VError} from 'verror';
 
 import {FarosClient} from '../client';
 import {PathToModel, Query, Reference} from './types';
+import {VariableDefinitionNode} from 'graphql/language/ast';
 
 export type AnyRecord = Record<string, any>;
 type AsyncOrSyncIterable<T> = AsyncIterable<T> | Iterable<T>;
@@ -177,7 +178,10 @@ export function paginatedQuery(query: string): PaginatedQuery {
       }
 
       // Add pagination variables to query operation
-      return createOperationDefinition(node);
+      return createOperationDefinition(
+        node,
+        [['pageSize', 'Int'], ['cursor', 'Cursor']]
+      );
     },
     Field: {
       enter(node) {
@@ -276,43 +280,6 @@ export function paginatedQuery(query: string): PaginatedQuery {
   };
 }
 
-function createOperationDefinition(
-  node: gql.OperationDefinitionNode,
-  cursorType = 'Cursor'
-): gql.OperationDefinitionNode {
-  return {
-    kind: Kind.OPERATION_DEFINITION,
-    name: {kind: Kind.NAME, value: 'paginatedQuery'},
-    operation: gql.OperationTypeNode.QUERY,
-    variableDefinitions: [
-      {
-        kind: Kind.VARIABLE_DEFINITION,
-        variable: {
-          kind: Kind.VARIABLE,
-          name: {kind: Kind.NAME, value: 'pageSize'},
-        },
-        type: {
-          kind: Kind.NAMED_TYPE,
-          name: {kind: Kind.NAME, value: 'Int'},
-        },
-      },
-      {
-        kind: Kind.VARIABLE_DEFINITION,
-        variable: {
-          kind: Kind.VARIABLE,
-          name: {kind: Kind.NAME, value: 'cursor'},
-        },
-        type: {
-          kind: Kind.NAMED_TYPE,
-          name: {kind: Kind.NAME, value: cursorType},
-        },
-      },
-      ...(node.variableDefinitions || []),
-    ],
-    selectionSet: node.selectionSet,
-  };
-}
-
 /**
  * Paginates v2 graphql queries.
  */
@@ -334,7 +301,10 @@ export function paginatedQueryV2(query: string): PaginatedQuery {
       }
 
       // Add pagination variables to query operation
-      return createOperationDefinition(node, 'String');
+      return createOperationDefinition(
+        node,
+        [['pageSize', 'Int'], ['cursor', 'String']]
+      );
     },
     Field: {
       enter(node) {
@@ -424,38 +394,30 @@ export function paginatedQueryV2(query: string): PaginatedQuery {
   };
 }
 
-function createOffsetLimitOperationDefinition(
+function createOperationDefinition(
   node: gql.OperationDefinitionNode,
+  varDefs: [string, string][]
 ): gql.OperationDefinitionNode {
+  const variableDefinitions: VariableDefinitionNode [] =
+    varDefs.map(([varName, varType]) => {
+      return {
+        kind: Kind.VARIABLE_DEFINITION,
+        variable: {
+          kind: Kind.VARIABLE,
+          name: {kind: Kind.NAME, value: varName},
+        },
+        type: {
+          kind: Kind.NAMED_TYPE,
+          name: {kind: Kind.NAME, value: varType},
+        },
+      };
+    });
+  variableDefinitions.push(...(node.variableDefinitions || []));
   return {
     kind: Kind.OPERATION_DEFINITION,
     name: {kind: Kind.NAME, value: 'paginatedQuery'},
     operation: gql.OperationTypeNode.QUERY,
-    variableDefinitions: [
-      {
-        kind: Kind.VARIABLE_DEFINITION,
-        variable: {
-          kind: Kind.VARIABLE,
-          name: {kind: Kind.NAME, value: 'offset'},
-        },
-        type: {
-          kind: Kind.NAMED_TYPE,
-          name: {kind: Kind.NAME, value: 'Int'},
-        },
-      },
-      {
-        kind: Kind.VARIABLE_DEFINITION,
-        variable: {
-          kind: Kind.VARIABLE,
-          name: {kind: Kind.NAME, value: 'limit'},
-        },
-        type: {
-          kind: Kind.NAMED_TYPE,
-          name: {kind: Kind.NAME, value: 'Int'},
-        },
-      },
-      ...(node.variableDefinitions || []),
-    ],
+    variableDefinitions,
     selectionSet: node.selectionSet,
   };
 }
@@ -479,7 +441,10 @@ export function paginateWithOffsetLimitV2(query: string): PaginatedQuery {
       }
 
       // Add pagination variables to query operation
-      return createOffsetLimitOperationDefinition(node);
+      return createOperationDefinition(
+        node,
+        [['offset', 'Int'], ['limit', 'Int']]
+      );
     },
     Field: {
       enter(node) {
