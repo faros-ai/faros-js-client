@@ -1,6 +1,7 @@
 import {ok} from 'assert';
 import * as gql from 'graphql';
 import {Kind} from 'graphql';
+import {VariableDefinitionNode} from 'graphql/language/ast';
 import {jsonToGraphQLQuery, VariableType} from 'json-to-graphql-query';
 import _ from 'lodash';
 import {plural} from 'pluralize';
@@ -10,7 +11,6 @@ import {VError} from 'verror';
 
 import {FarosClient} from '../client';
 import {PathToModel, Query, Reference} from './types';
-import {VariableDefinitionNode} from 'graphql/language/ast';
 
 export type AnyRecord = Record<string, any>;
 type AsyncOrSyncIterable<T> = AsyncIterable<T> | Iterable<T>;
