@@ -96,20 +96,28 @@ describe('schema', () => {
 
   test('fix timestamp field in operation record', () => {
     const record = {uid: 'abc', createdAt: 123};
-    expect(schema.fixTimestampFields(record, 'ims_Incident__Upsert').createdAt).toEqual(
-      new Date(123)
-    );
-    expect(schema.fixTimestampFields({where: record}, 'ims_Incident__Deletion').where.createdAt).toEqual(
-      new Date(123)
-    );
-    expect(schema.fixTimestampFields({where: record}, 'ims_Incident__Update').where.createdAt).toEqual(
-      new Date(123)
-    );
-    expect(schema.fixTimestampFields({patch: record}, 'ims_Incident__Update').patch.createdAt).toEqual(
-      new Date(123)
-    );
-    expect(schema.fixTimestampFields({mask: record}, 'ims_Incident__Update').mask.createdAt).toEqual(
-      new Date(123)
-    );
+    expect(
+      schema.fixTimestampFields(record, 'ims_Incident__Upsert').createdAt
+    ).toEqual(new Date(123));
+
+    expect(
+      schema.fixTimestampFields({where: record}, 'ims_Incident__Deletion').where
+        .createdAt
+    ).toEqual(new Date(123));
+
+    expect(
+      schema.fixTimestampFields({where: record}, 'ims_Incident__Update').where
+        .createdAt
+    ).toEqual(new Date(123));
+
+    expect(
+      schema.fixTimestampFields({patch: record}, 'ims_Incident__Update').patch
+        .createdAt
+    ).toEqual(new Date(123));
+
+    expect(
+      schema.fixTimestampFields({mask: record}, 'ims_Incident__Update').mask
+        .createdAt
+    ).toEqual(new Date(123));
   });
 });
