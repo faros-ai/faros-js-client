@@ -488,6 +488,11 @@ export function paginateWithOffsetLimitV2(query: string): PaginatedQuery {
                     name: {kind: 'Name', value: 'refreshedAt'},
                     value: {kind: 'EnumValue', value: 'asc'},
                   },
+                  {
+                    kind: 'ObjectField',
+                    name: {kind: 'Name', value: 'id'},
+                    value: {kind: 'EnumValue', value: 'asc'},
+                  },
                 ],
               },
             },

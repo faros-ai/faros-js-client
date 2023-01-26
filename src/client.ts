@@ -322,7 +322,8 @@ export class FarosClient {
               yield edge;
             }
             offset += pageSize;
-            hasNextPage = !isEmpty(edges);
+            // break on partial page
+            hasNextPage = edges.length === pageSize;
           }
         },
       };
