@@ -14,6 +14,7 @@ import {
   Location,
   Model,
   NamedQuery,
+  Phantom,
   SecretName,
   UpdateAccount,
 } from './types';
@@ -32,6 +33,7 @@ enum GraphVersion {
 export class FarosClient {
   private readonly api: AxiosInstance;
   readonly graphVersion: GraphVersion;
+  readonly phantoms: Phantom;
 
   constructor(
     cfg: FarosClientConfig,
@@ -54,6 +56,7 @@ export class FarosClient {
     );
 
     this.graphVersion = cfg.useGraphQLV2 ? GraphVersion.V2 : GraphVersion.V1;
+    this.phantoms = cfg.phantoms || Phantom.IncludeNestedOnly;
   }
 
   async tenant(): Promise<string> {
@@ -178,12 +181,23 @@ export class FarosClient {
     }
   }
 
+  queryParameters(): string | undefined {
+    return this.graphVersion === GraphVersion.V2 ?
+      `phantoms=${this.phantoms}` :
+      undefined;
+  }
+
   /* returns only the data object of a standard qgl response */
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   async gql(graph: string, query: string, variables?: any): Promise<any> {
     try {
       const req = variables ? {query, variables} : {query};
-      const {data} = await this.api.post(`/graphs/${graph}/graphql`, req);
+      const queryParams = this.queryParameters();
+      const urlSuffix = queryParams ? `?${queryParams}` : '';
+      const {data} = await this.api.post(
+        `/graphs/${graph}/graphql${urlSuffix}`,
+        req
+      );
       return data.data;
     } catch (err: any) {
       throw wrapApiError(err, `unable to query graph: ${graph}`);
@@ -195,7 +209,12 @@ export class FarosClient {
   async rawGql(graph: string, query: string, variables?: any): Promise<any> {
     try {
       const req = variables ? {query, variables} : {query};
-      const {data} = await this.api.post(`/graphs/${graph}/graphql`, req);
+      const queryParams = this.queryParameters();
+      const urlSuffix = queryParams ? `?${queryParams}` : '';
+      const {data} = await this.api.post(
+        `/graphs/${graph}/graphql${urlSuffix}`,
+        req
+      );
       return data;
     } catch (err: any) {
       throw wrapApiError(err, `unable to query graph: ${graph}`);

@@ -193,6 +193,29 @@ describe('client', () => {
     mock.done();
   });
 
+  test('gql v2 - default', async () => {
+    const query = `
+      {
+        tms_Task {
+          uid
+        }
+      } `;
+    const mock = nock(apiUrl)
+      .post(
+        '/graphs/g1/graphql',
+        JSON.stringify({query}),
+      )
+      .query({phantoms: 'IncludeNestedOnly'})
+      .reply(200, {data: {result: 'ok'}});
+
+    const clientConfig = {url: apiUrl, apiKey: 'test-key', useGraphQLV2: true};
+    const client = new FarosClient(clientConfig);
+
+    const res = await client.gql('g1', query);
+    mock.done();
+    expect(res).toEqual({result: 'ok'});
+  });
+
   test('gql with variables', async () => {
     const query = `{
       query ($pageSize: Int = 10, $after: Cursor) {

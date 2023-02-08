@@ -2,6 +2,14 @@ export interface FarosClientConfig {
   readonly url: string;
   readonly apiKey: string;
   readonly useGraphQLV2?: boolean;
+  readonly phantoms?: Phantom;
+}
+
+export enum Phantom {
+  Only = 'Only',
+  Exclude = 'Exclude',
+  Include = 'Include',
+  IncludeNestedOnly = 'IncludeNestedOnly',
 }
 
 export interface NamedQuery {
