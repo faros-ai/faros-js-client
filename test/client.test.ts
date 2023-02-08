@@ -2,6 +2,7 @@ import nock from 'nock';
 
 import {FarosClient, Schema} from '../src';
 import {GRAPH_VERSION_HEADER} from '../src/client';
+import {Phantom} from '../src/types';
 
 const apiUrl = 'https://test.faros.ai';
 const clientConfig = {url: apiUrl, apiKey: 'test-key'};
@@ -191,6 +192,29 @@ describe('client', () => {
     const client = new FarosClient(clientConfig);
     await client.gqlSchema('foobar');
     mock.done();
+  });
+
+  test('gql v2 - default', async () => {
+    const query = `
+      {
+        tms_Task {
+          uid
+        }
+      } `;
+    const mock = nock(apiUrl)
+      .post(
+        '/graphs/g1/graphql',
+        JSON.stringify({query}),
+      )
+      .query({phantoms: Phantom.IncludeNestedOnly})
+      .reply(200, {data: {result: 'ok'}});
+
+    const clientConfig = {url: apiUrl, apiKey: 'test-key', useGraphQLV2: true};
+    const client = new FarosClient(clientConfig);
+
+    const res = await client.gql('g1', query);
+    mock.done();
+    expect(res).toEqual({result: 'ok'});
   });
 
   test('gql with variables', async () => {

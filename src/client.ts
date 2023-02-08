@@ -14,6 +14,7 @@ import {
   Location,
   Model,
   NamedQuery,
+  Phantom,
   SecretName,
   UpdateAccount,
 } from './types';
@@ -32,6 +33,7 @@ enum GraphVersion {
 export class FarosClient {
   private readonly api: AxiosInstance;
   readonly graphVersion: GraphVersion;
+  readonly phantoms: Phantom;
 
   constructor(
     cfg: FarosClientConfig,
@@ -54,6 +56,7 @@ export class FarosClient {
     );
 
     this.graphVersion = cfg.useGraphQLV2 ? GraphVersion.V2 : GraphVersion.V1;
+    this.phantoms = cfg.phantoms || Phantom.IncludeNestedOnly;
   }
 
   async tenant(): Promise<string> {
@@ -178,28 +181,42 @@ export class FarosClient {
     }
   }
 
-  /* returns only the data object of a standard qgl response */
-  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-  async gql(graph: string, query: string, variables?: any): Promise<any> {
+  queryParameters(): string | undefined {
+    return this.graphVersion === GraphVersion.V2 ?
+      `phantoms=${this.phantoms}` :
+      undefined;
+  }
+
+  private async doGql(
+    graph: string,
+    query: string,
+    variables?: any,
+  ): Promise<any> {
     try {
       const req = variables ? {query, variables} : {query};
-      const {data} = await this.api.post(`/graphs/${graph}/graphql`, req);
-      return data.data;
+      const queryParams = this.queryParameters();
+      const urlSuffix = queryParams ? `?${queryParams}` : '';
+      const {data} = await this.api.post(
+        `/graphs/${graph}/graphql${urlSuffix}`,
+        req,
+      );
+      return data;
     } catch (err: any) {
       throw wrapApiError(err, `unable to query graph: ${graph}`);
     }
   }
 
+  /* returns only the data object of a standard qgl response */
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  async gql(graph: string, query: string, variables?: any): Promise<any> {
+    const data = await this.doGql(graph, query, variables);
+    return data.data;
+  }
+
   /* returns both data (as res.data) and errors (as res.errors) */
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   async rawGql(graph: string, query: string, variables?: any): Promise<any> {
-    try {
-      const req = variables ? {query, variables} : {query};
-      const {data} = await this.api.post(`/graphs/${graph}/graphql`, req);
-      return data;
-    } catch (err: any) {
-      throw wrapApiError(err, `unable to query graph: ${graph}`);
-    }
+    return await this.doGql(graph, query, variables);
   }
 
   async gqlNoDirectives(
