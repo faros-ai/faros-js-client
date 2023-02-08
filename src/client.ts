@@ -187,17 +187,25 @@ export class FarosClient {
       undefined;
   }
 
+  private async doGql(
+    graph: string,
+    query: string,
+    variables?: any): Promise<any> {
+    const req = variables ? {query, variables} : {query};
+    const queryParams = this.queryParameters();
+    const urlSuffix = queryParams ? `?${queryParams}` : '';
+    const {data} = await this.api.post(
+      `/graphs/${graph}/graphql${urlSuffix}`,
+      req
+    );
+    return data;
+  }
+
   /* returns only the data object of a standard qgl response */
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   async gql(graph: string, query: string, variables?: any): Promise<any> {
     try {
-      const req = variables ? {query, variables} : {query};
-      const queryParams = this.queryParameters();
-      const urlSuffix = queryParams ? `?${queryParams}` : '';
-      const {data} = await this.api.post(
-        `/graphs/${graph}/graphql${urlSuffix}`,
-        req
-      );
+      const data = await this.doGql(graph, query, variables);
       return data.data;
     } catch (err: any) {
       throw wrapApiError(err, `unable to query graph: ${graph}`);
@@ -208,14 +216,7 @@ export class FarosClient {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   async rawGql(graph: string, query: string, variables?: any): Promise<any> {
     try {
-      const req = variables ? {query, variables} : {query};
-      const queryParams = this.queryParameters();
-      const urlSuffix = queryParams ? `?${queryParams}` : '';
-      const {data} = await this.api.post(
-        `/graphs/${graph}/graphql${urlSuffix}`,
-        req
-      );
-      return data;
+      return await this.doGql(graph, query, variables);
     } catch (err: any) {
       throw wrapApiError(err, `unable to query graph: ${graph}`);
     }
