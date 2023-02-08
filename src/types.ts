@@ -6,10 +6,10 @@ export interface FarosClientConfig {
 }
 
 export enum Phantom {
-  Only = 'Only',
-  Exclude = 'Exclude',
-  Include = 'Include',
-  IncludeNestedOnly = 'IncludeNestedOnly',
+  Only = 'only',
+  Exclude = 'exclude',
+  Include = 'include',
+  IncludeNestedOnly = 'include-nested-only',
 }
 
 export interface NamedQuery {

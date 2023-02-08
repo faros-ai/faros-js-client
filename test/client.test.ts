@@ -2,6 +2,7 @@ import nock from 'nock';
 
 import {FarosClient, Schema} from '../src';
 import {GRAPH_VERSION_HEADER} from '../src/client';
+import {Phantom} from '../src/types';
 
 const apiUrl = 'https://test.faros.ai';
 const clientConfig = {url: apiUrl, apiKey: 'test-key'};
@@ -205,7 +206,7 @@ describe('client', () => {
         '/graphs/g1/graphql',
         JSON.stringify({query}),
       )
-      .query({phantoms: 'IncludeNestedOnly'})
+      .query({phantoms: Phantom.IncludeNestedOnly})
       .reply(200, {data: {result: 'ok'}});
 
     const clientConfig = {url: apiUrl, apiKey: 'test-key', useGraphQLV2: true};
