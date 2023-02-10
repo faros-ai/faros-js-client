@@ -51,14 +51,16 @@ export function foreignKeyForArray(rel: ArrayRelationship): string {
 
 export function foreignKeyForReverseObj(
   rel: ObjectRelationship
-): any | undefined {
+): {fkCol: string; sourceTable: string} | undefined {
   if (isManualConfiguration(rel.using)) {
     // for reverse object rel, column_mapping contains one entry
     // mapping literal id to FK on remote table
-    return {
-      fkCol: rel.using.manual_configuration.column_mapping?.id,
-      sourceTable: rel.using.manual_configuration.remote_table?.name
-    };
+    const fkCol = rel.using.manual_configuration.column_mapping?.id;
+    if (fkCol) {
+      const sourceTable = rel.using.manual_configuration.remote_table?.name;
+      ok(sourceTable, `missing remote_table for ${JSON.stringify(rel)}`);
+      return {fkCol, sourceTable};
+    }
   }
   return undefined;
 }

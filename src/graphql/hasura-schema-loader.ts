@@ -120,12 +120,12 @@ export class HasuraSchemaLoader implements SchemaLoader {
       }
       // find array relationship represented as reverse object relationships
       for (const objRel of table.object_relationships || []) {
-        const {fkCol, sourceTable} = foreignKeyForReverseObj(objRel);
-        if (fkCol && sourceTable) {
-          if (!res[sourceTable]) {
-            res[sourceTable] = {};
+        const reverseObjFk = foreignKeyForReverseObj(objRel);
+        if (reverseObjFk) {
+          if (!res[reverseObjFk.sourceTable]) {
+            res[reverseObjFk.sourceTable] = {};
           }
-          res[sourceTable][fkCol] = targetTable;
+          res[reverseObjFk.sourceTable][reverseObjFk.fkCol] = targetTable;
         }
       }
     }
@@ -220,11 +220,11 @@ export class HasuraSchemaLoader implements SchemaLoader {
       const reverseBackRefs: BackReference[] = [];
       (table.object_relationships ?? []).forEach(
         (rel) => {
-          const {fkCol, sourceTable} = foreignKeyForReverseObj(rel);
-          if (fkCol && sourceTable) {
+          const reverseObjFk = foreignKeyForReverseObj(rel);
+          if (reverseObjFk) {
             reverseBackRefs.push({
               field: rel.name,
-              model: sourceTable,
+              model: reverseObjFk.sourceTable,
             });
           }
         },
