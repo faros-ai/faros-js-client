@@ -49,6 +49,20 @@ export function foreignKeyForArray(rel: ArrayRelationship): string {
   return fk;
 }
 
+export function foreignKeyForReverseObj(
+  rel: ObjectRelationship
+): any | undefined {
+  if (isManualConfiguration(rel.using)) {
+    // for reverse object rel, column_mapping contains one entry
+    // mapping literal id to FK on remote table
+    return {
+      fkCol: rel.using.manual_configuration.column_mapping?.id,
+      sourceTable: rel.using.manual_configuration.remote_table?.name
+    };
+  }
+  return undefined;
+}
+
 /**
  * Parse elements of primary key from pkey function definition.
  * e.g. pkey(VARIADIC ARRAY[tenant_id, graph_name, source, uid])
