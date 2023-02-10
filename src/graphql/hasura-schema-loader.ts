@@ -229,7 +229,7 @@ export class HasuraSchemaLoader implements SchemaLoader {
           }
         },
       );
-      backReferences[tableName].concat(reverseBackRefs);
+      backReferences[tableName].push(...reverseBackRefs);
     }
     const modelDeps: [string, string][] = [];
     for (const model of Object.keys(references)) {
