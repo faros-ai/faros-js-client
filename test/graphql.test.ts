@@ -169,10 +169,10 @@ describe('graphql', () => {
     expect(await toArray(flattenedNodes)).toMatchSnapshot();
   });
 
-  test('paginated v2 query', async () => {
+  test('paginated relay v2 query', async () => {
     const query = await loadQueryFile('commits-v2.gql');
     const expectedQuery = await loadQueryFile('paginated-commits-v2.gql');
-    const paginatedQuery = sut.paginatedQueryV2(query);
+    const paginatedQuery = sut.paginatedWithRelayV2(query);
     expect(paginatedQuery.edgesPath).toEqual([
       'vcs_Commit_connection',
       'edges',

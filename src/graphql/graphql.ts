@@ -280,10 +280,15 @@ export function paginatedQuery(query: string): PaginatedQuery {
   };
 }
 
+export function paginatedQueryV2(query: string): PaginatedQuery {
+  return process.env.GRAPHQL_V2_PAGINATOR === 'relay' ?
+    paginatedWithRelayV2(query) : paginateWithOffsetLimitV2(query);
+}
+
 /**
  * Paginates v2 graphql queries.
  */
-export function paginatedQueryV2(query: string): PaginatedQuery {
+export function paginatedWithRelayV2(query: string): PaginatedQuery {
   const edgesPath: string[] = [];
   const pageInfoPath: string[] = [];
   let firstNode = true;
@@ -1077,8 +1082,7 @@ export function createNonIncrementalReaders(
           pageSize,
           graphSchema,
           false,
-          process.env.GRAPHQL_V2_PAGINATOR === 'relay' ?
-            paginatedQueryV2 : paginateWithOffsetLimitV2,
+          paginatedQueryV2,
           flattenV2
         );
       default:
