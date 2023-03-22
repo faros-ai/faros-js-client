@@ -11,6 +11,7 @@ import {Schema} from './graphql/types';
 import {
   Account,
   FarosClientConfig,
+  GraphVersion,
   Location,
   Model,
   NamedQuery,
@@ -23,11 +24,6 @@ import {Utils} from './utils';
 export const DEFAULT_AXIOS_CONFIG: AxiosRequestConfig = {timeout: 60000};
 
 export const GRAPH_VERSION_HEADER = 'x-faros-graph-version';
-
-enum GraphVersion {
-  V1 = 'v1',
-  V2 = 'v2',
-}
 
 /** Faros API client **/
 export class FarosClient {

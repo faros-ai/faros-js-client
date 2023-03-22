@@ -11,6 +11,7 @@ export {
   Address,
   Coordinates,
   FarosClientConfig,
+  GraphVersion,
   Location,
   Model,
   NamedQuery,
