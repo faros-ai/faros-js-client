@@ -5,6 +5,11 @@ export interface FarosClientConfig {
   readonly phantoms?: Phantom;
 }
 
+export enum GraphVersion {
+  V1 = 'v1',
+  V2 = 'v2',
+}
+
 export enum Phantom {
   Only = 'only',
   Exclude = 'exclude',
