@@ -1,12 +1,13 @@
+import {EnumType, jsonToGraphQLQuery} from 'json-to-graphql-query';
 import {Duration} from 'luxon';
 import VError from 'verror';
+
 import {
   ConflictClause,
   Mutation,
   MutationObject,
   MutationReference,
 } from './types';
-import {EnumType, jsonToGraphQLQuery} from 'json-to-graphql-query';
 
 export class Utils {
   static urlWithoutTrailingSlashes(url: string): string {

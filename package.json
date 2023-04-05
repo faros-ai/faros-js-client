@@ -15,7 +15,7 @@
   "scripts": {
     "build": "tsc -p src",
     "clean": "rm -rf lib node_modules out",
-    "fix": "npm run lint -- --fix && npm run pretty",
+    "fix": "npm run lint -- --fix",
     "lint": "eslint 'src/**/*.ts' 'test/**/*.ts'",
     "prepare": "husky install",
     "pretty": "prettier --write 'src/**/*.ts' 'test/**/*.ts'",

@@ -20,7 +20,7 @@ import {
   SecretName,
   UpdateAccount,
 } from './types';
-import {Utils, batchMutation} from './utils';
+import {batchMutation,Utils} from './utils';
 
 export const DEFAULT_AXIOS_CONFIG: AxiosRequestConfig = {timeout: 60000};
 
