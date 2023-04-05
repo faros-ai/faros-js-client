@@ -1,3 +1,5 @@
+import {EnumType} from 'json-to-graphql-query';
+
 export interface FarosClientConfig {
   readonly url: string;
   readonly apiKey: string;
@@ -79,4 +81,29 @@ export interface Model {
   backwardReferences: any;
   keySchema: any;
   dataSchema: any;
+}
+
+export interface Mutation {
+  mutation: {
+    [key: string]: {
+      __args: MutationObject;
+      id: boolean;
+    };
+  };
+}
+
+export interface MutationObject {
+  object?: any;
+  data?: any;
+  on_conflict: ConflictClause;
+}
+
+export interface MutationReference {
+  data: any;
+  on_conflict: ConflictClause;
+}
+
+export interface ConflictClause {
+  constraint: EnumType;
+  update_columns: EnumType[];
 }
