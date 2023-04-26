@@ -1,5 +1,6 @@
-import axios, {AxiosInstance, AxiosRequestConfig} from 'axios';
+import axios, {AxiosError, AxiosInstance, AxiosRequestConfig} from 'axios';
 import axiosRetry, {IAxiosRetryConfig, isRetryableError} from 'axios-retry';
+import isRetryAllowed from 'is-retry-allowed';
 import {Logger} from 'pino';
 
 import {wrapApiError} from './errors';
@@ -31,11 +32,19 @@ export function makeAxiosInstanceWithRetry(
   retries = DEFAULT_RETRIES,
   delay = DEFAULT_RETRY_DELAY
 ): AxiosInstance {
+  const isNetworkError = (error: AxiosError<any>): boolean => {
+    return (
+      !error.response &&
+      Boolean(error.code) && // Prevents retrying cancelled requests
+      isRetryAllowed(error) // Prevents retrying unsafe errors
+    );
+  };
+
   return makeAxiosInstance(config, {
     retries,
     retryCondition: (error) => {
       // Timeouts should be retryable
-      return error.code === 'ECONNABORTED' || isRetryableError(error);
+      return isNetworkError(error) || isRetryableError(error);
     },
     retryDelay: (retryNumber, error) => {
       if (logger) {
@@ -45,6 +54,6 @@ export function makeAxiosInstanceWithRetry(
       }
       return retryNumber * delay;
     },
-    shouldResetTimeout: true
+    shouldResetTimeout: true,
   });
 }
