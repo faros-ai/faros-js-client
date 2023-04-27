@@ -41,6 +41,53 @@ describe('schema', () => {
     );
   });
 
+  test('fix jsonb - array', () => {
+    const record = {
+      uid: 'abc', status: [
+        {
+          'foo': {
+            'category': 'Todo',
+            'detail': 'To Do',
+            'fixAt': 1633751867746,
+            'skippedAt': 'not-interesting'
+          },
+          'changedAt': 1629751867746,
+          'ignoredAt': 'blah',
+        },
+        {
+          'bar': {
+            'category': 'Todo',
+            'fixAt': 1645751867746,
+            'skippedAt': 'not-interesting',
+            'detail': 'Selected for Development',
+          },
+          'changedAt': 1629832560991,
+          'skipAt': 'nothing'
+        },
+      ],
+    };
+    expect(schema.fixTimestampFields(record, 'ims_Incident'))
+      .toMatchSnapshot();
+  });
+
+  test('fix jsonb - object', () => {
+    const record = {
+      uid: 'abc',
+      status: {
+        'foo': {
+          'category': 'Todo',
+          'detail': 'To Do',
+          'brokenAt': 1644751867746,
+          'ackedAt': 'ignore'
+        },
+        'changedAt': 1629751867746,
+        'submittedAt': 'foo'
+      },
+    };
+    expect(schema.fixTimestampFields(record, 'ims_Incident'))
+      .toMatchSnapshot();
+  });
+
   test('fix nested timestamp field', () => {
     const record = {uid: 'abc', timestampObj: {createdAt: new Date(123)}};
     const json = {uid: 'abc', timestampObj: {createdAt: 123}};

@@ -1,0 +1,45 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`schema fix jsonb - array 1`] = `
+Object {
+  "status": Array [
+    Object {
+      "changedAt": "2021-08-23T20:51:07.746Z",
+      "foo": Object {
+        "category": "Todo",
+        "detail": "To Do",
+        "fixAt": "2021-10-09T03:57:47.746Z",
+        "skippedAt": "not-interesting",
+      },
+      "ignoredAt": "blah",
+    },
+    Object {
+      "bar": Object {
+        "category": "Todo",
+        "detail": "Selected for Development",
+        "fixAt": "2022-02-25T01:17:47.746Z",
+        "skippedAt": "not-interesting",
+      },
+      "changedAt": "2021-08-24T19:16:00.991Z",
+      "skipAt": "nothing",
+    },
+  ],
+  "uid": "abc",
+}
+`;
+
+exports[`schema fix jsonb - object 1`] = `
+Object {
+  "status": Object {
+    "changedAt": "2021-08-23T20:51:07.746Z",
+    "foo": Object {
+      "ackedAt": "ignore",
+      "brokenAt": "2022-02-13T11:31:07.746Z",
+      "category": "Todo",
+      "detail": "To Do",
+    },
+    "submittedAt": "foo",
+  },
+  "uid": "abc",
+}
+`;
