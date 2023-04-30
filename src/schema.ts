@@ -5,7 +5,7 @@ import {
   printSchema,
   visit,
 } from 'graphql';
-import {isPlainObject, keyBy, mapValues, toNumber} from 'lodash';
+import {isPlainObject, keyBy, toNumber} from 'lodash';
 import {Dictionary} from 'ts-essentials';
 import {VError} from 'verror';
 
@@ -71,8 +71,6 @@ export class FarosGraphSchema {
           record[field] = toDate(value as string);
         } else if (fieldType.name.value === 'timestamptz') {
           record[field] = toDateAsISOString(value as string);
-        } else if (fieldType.name.value === 'jsonb') {
-          record[field] = replaceAllEpochsEndingInAt(value);
         } else if (this.objectTypeDefs[fieldType.name.value]) {
           this.fixTimestampFields(value, fieldType.name.value);
         }
@@ -141,23 +139,4 @@ function toDateAsISOString(
       throw new VError('Invalid date: %s', val);
     }
   }
-}
-
-function replaceAllEpochsEndingInAt(
-  obj: any,
-): any {
-  const toDateIfNeeded =
-    (_v: any, _k: string): any => {
-      const isEpoch = _k.endsWith('At') && typeof _v === 'number';
-      return isEpoch ? toDateAsISOString(_v) : _v;
-    };
-  if (Array.isArray(obj)) {
-    return obj.map((o) => replaceAllEpochsEndingInAt(o));
-  }
-  return mapValues(obj, (value, key) => {
-    if (isPlainObject(value)) {
-      return replaceAllEpochsEndingInAt(value);
-    }
-    return toDateIfNeeded(value, key);
-  });
 }
