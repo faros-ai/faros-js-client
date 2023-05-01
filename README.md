@@ -37,31 +37,33 @@ The QueryBuilder class is a utility to help construct graphQL mutations from Far
 Example constructing the GraphQL mutation that upserts an application, organization, pipeline, build, application, deployment.
 
 ```ts
-    const qb = new sut.QueryBuilder(ORIGIN);
+    // The QueryBuilder manages origin for you
+    const qb = new QueryBuilder(ORIGIN);
     const mutations: Mutation[] = [];
 
-    const application = {
+    const application: MutationParams = {
       model: 'compute_Application',
       key: {
         name: '<application_name>',
         platform: '<application_platform>',
       },
     };
-    const organization: sut.MutationParams = {
+    const organization: MutationParams = {
       model: 'cicd_Organization',
       key: {
         uid: '<organization_uid>',
         source: '<organization_source>',
       },
     };
-    const pipeline: sut.MutationParams = {
+    // Fields that reference another model need to be refs
+    const pipeline: MutationParams = {
       model: 'cicd_Pipeline',
       key: {
         uid: '<pipeline_uid>',
         organization: qb.ref(organization),
       },
     };
-    const build: sut.MutationParams = {
+    const build: MutationParams = {
       model: 'cicd_Build',
       key: {
         uid: '<cicd_Build>',
@@ -71,7 +73,7 @@ Example constructing the GraphQL mutation that upserts an application, organizat
         name: '<build_name>',
       },
     };
-    const deployment: sut.MutationParams = {
+    const deployment: MutationParams = {
       model: 'cicd_Deployment',
       key: {
         uid: '<deployment_uid',
@@ -95,7 +97,8 @@ Example constructing the GraphQL mutation that upserts an application, organizat
       qb.upsert(deployment)
     );
 
-    const queryString = sut.batchMutation(mutations);
+    // Send your mutations to Faros!
+    client.sendMutations(mutations);
 ```
 
 Please read the [Faros documentation][farosdocs] to learn more.
