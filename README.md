@@ -32,45 +32,19 @@ const data = await client.gql('default', query);
 
 ## GraphQL Query Builder
 
-The QueryBuilder class is a utility to help construct graphQL mutations from Faros models. 
+The QueryBuilder class is a utility to help construct GraphQL mutations from Faros models.
 
-Example constructing the GraphQL mutation that upserts an application, organization, pipeline, build, application, deployment.
+Example constructing the GraphQL mutation that upserts an application and deployment.
 
 ```ts
     // The QueryBuilder manages origin for you
     const qb = new QueryBuilder(ORIGIN);
-    const mutations: Mutation[] = [];
 
     const application: MutationParams = {
       model: 'compute_Application',
       key: {
         name: '<application_name>',
         platform: '<application_platform>',
-      },
-    };
-    const organization: MutationParams = {
-      model: 'cicd_Organization',
-      key: {
-        uid: '<organization_uid>',
-        source: '<organization_source>',
-      },
-    };
-    // Fields that reference another model need to be refs
-    const pipeline: MutationParams = {
-      model: 'cicd_Pipeline',
-      key: {
-        uid: '<pipeline_uid>',
-        organization: qb.ref(organization),
-      },
-    };
-    const build: MutationParams = {
-      model: 'cicd_Build',
-      key: {
-        uid: '<cicd_Build>',
-        pipeline: qb.ref(pipeline),
-      },
-      body: {
-        name: '<build_name>',
       },
     };
     const deployment: MutationParams = {
@@ -80,8 +54,8 @@ Example constructing the GraphQL mutation that upserts an application, organizat
         source: '<deployment_source>',
       },
       body: {
+        // Fields that reference another model need to be refs
         application: qb.ref(application),
-        build: qb.ref(build),
         status: {
           category: 'Success',
           detail: '<status_detail>',
@@ -89,16 +63,13 @@ Example constructing the GraphQL mutation that upserts an application, organizat
       },
     };
 
-    mutations.push(
+    const mutations = [
       qb.upsert(application),
-      qb.upsert(organization),
-      qb.upsert(pipeline),
-      qb.upsert(build),
       qb.upsert(deployment)
-    );
+    ];
 
     // Send your mutations to Faros!
-    client.sendMutations(mutations);
+    await client.sendMutations(mutations);
 ```
 
 Please read the [Faros documentation][farosdocs] to learn more.
