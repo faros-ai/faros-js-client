@@ -7,10 +7,6 @@ type ims_Incident {
   createdAt: Timestamp
   createdAtNonNull: Timestamp!
   array: [ims_TimestampObject!]
-  status(
-    """JSON select path"""
-    path: String
-  ): jsonb
 }
 
 type ims_TimestampObject {
@@ -18,8 +14,6 @@ type ims_TimestampObject {
 }
 
 scalar timestamptz
-
-scalar jsonb
 
 type vcs_Commit {
   uid: ID!
