@@ -80,6 +80,7 @@ export class QueryBuilder {
     for (const [k, v] of Object.entries(cleanObj)) {
       if (v instanceof Ref) {
         mutObj[k] = this.mutationRef(v.params);
+        // ref's key should be suffixed with Id for onConflict field
         fullMask.push(`${k}Id`);
       } else {
         mutObj[k] = v;
