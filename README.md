@@ -37,17 +37,19 @@ The QueryBuilder class is a utility to help construct GraphQL mutations from Far
 Example constructing the GraphQL mutation that upserts an application and deployment.
 
 ```ts
-// The QueryBuilder manages origin for you
+import {QueryBuilder, FarosClient} from "faros-js-client";
+
+// The QueryBuilder manages the origin for you
 const qb = new QueryBuilder('example-origin');
 
-const application: MutationParams = {
+const application = {
   model: 'compute_Application',
   key: {
     name: '<application_name>',
     platform: '<application_platform>',
   },
 };
-const deployment: MutationParams = {
+const deployment = {
   model: 'cicd_Deployment',
   key: {
     uid: '<deployment_uid',
@@ -68,11 +70,12 @@ const mutations = [
   qb.upsert(deployment)
 ];
 
-// Send your mutations to Faros!
 const faros = new FarosClient({
     url: 'https://prod.api.faros.ai',
     apiKey: '<your_faros_api_key>',
 });
+
+// Send your mutations to Faros!
 await faros.sendMutations('default', mutations);
 ```
 
