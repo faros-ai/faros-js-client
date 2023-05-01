@@ -7,6 +7,7 @@ import VError from 'verror';
 import {makeAxiosInstanceWithRetry} from './axios';
 import {wrapApiError} from './errors';
 import {paginatedQuery} from './graphql/graphql';
+import {batchMutation} from './graphql/query-builder';
 import {Schema} from './graphql/types';
 import {
   Account,
@@ -14,6 +15,7 @@ import {
   GraphVersion,
   Location,
   Model,
+  Mutation,
   NamedQuery,
   Phantom,
   SecretName,
@@ -136,7 +138,7 @@ export class FarosClient {
       await this.api.post(`/graphs/${graph}/models`, models, {
         headers: {'content-type': 'application/graphql'},
         params: {
-          ...(schema && {schema})
+          ...(schema && {schema}),
         },
       });
     } catch (err: any) {
@@ -178,15 +180,15 @@ export class FarosClient {
   }
 
   queryParameters(): string | undefined {
-    return this.graphVersion === GraphVersion.V2 ?
-      `phantoms=${this.phantoms}` :
-      undefined;
+    return this.graphVersion === GraphVersion.V2
+      ? `phantoms=${this.phantoms}`
+      : undefined;
   }
 
   private async doGql(
     graph: string,
     query: string,
-    variables?: any,
+    variables?: any
   ): Promise<any> {
     try {
       const req = variables ? {query, variables} : {query};
@@ -194,7 +196,7 @@ export class FarosClient {
       const urlSuffix = queryParams ? `?${queryParams}` : '';
       const {data} = await this.api.post(
         `/graphs/${graph}/graphql${urlSuffix}`,
-        req,
+        req
       );
       return data;
     } catch (err: any) {
@@ -207,6 +209,14 @@ export class FarosClient {
   async gql(graph: string, query: string, variables?: any): Promise<any> {
     const data = await this.doGql(graph, query, variables);
     return data.data;
+  }
+
+  async sendMutations(graph: string, mutations: Mutation[]): Promise<any> {
+    const gql = batchMutation(mutations);
+    if (gql) {
+      return await this.gql(graph, gql);
+    }
+    return undefined;
   }
 
   /* returns both data (as res.data) and errors (as res.errors) */
@@ -321,7 +331,7 @@ export class FarosClient {
     if (isEmpty(pageInfoPath)) {
       // use offset and limit
       return {
-        async* [Symbol.asyncIterator](): AsyncIterator<any> {
+        async *[Symbol.asyncIterator](): AsyncIterator<any> {
           let offset = 0;
           let hasNextPage = true;
           while (hasNextPage) {
