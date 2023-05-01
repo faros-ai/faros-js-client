@@ -26,8 +26,8 @@ export interface MutationParams extends RefParams {
 }
 
 interface CategoryDetail {
-    category: string;
-    detail: string;
+  category: string;
+  detail: string;
 }
 
 export type MutationFieldValue = string | number | CategoryDetail | Ref;
@@ -37,11 +37,11 @@ export class QueryBuilder {
 
   /**
    * Creates an upsert mutation.
-   * @param model       The Faros model
-   * @param key         The object's key fields
-   * @param body        The object's non key fields
-   * @param mask        The column mask of what to update on conflict
-   * @returns           The upsert mutation
+   * @param model   The Faros model
+   * @param key     The object's key fields
+   * @param body    The object's non key fields
+   * @param mask    The column mask of what to update on conflict
+   * @returns       The upsert mutation
    */
   upsert(params: MutationParams): Mutation {
     const {model} = params;
@@ -54,14 +54,22 @@ export class QueryBuilder {
   }
 
   /**
+   * Creates a Ref with the given RefParams that can be used inside the key
+   * or body of an upsert.
+   */
+  ref(params: RefParams): Ref {
+    return new Ref(params);
+  }
+
+  /**
    * Create a mutation object that will update every field unless an explicit
    * mask is provided. If the model contains fields that reference another
    * model, those fields will be recursively turned into MutationReferences.
-   * @param model       The Faros model
-   * @param key         The object's key fields
-   * @param body        The object's fields non reference fields
-   * @param mask        An explicit column mask for onConflict clause
-   * @returns           The mutation object
+   * @param model   The Faros model
+   * @param key     The object's key fields
+   * @param body    The object's fields non reference fields
+   * @param mask    An explicit column mask for onConflict clause
+   * @returns       The mutation object
    */
   private mutationObj(params: MutationParams): MutationObject {
     const {model, key, body, mask} = params;
@@ -87,13 +95,6 @@ export class QueryBuilder {
       object: mutObj,
       on_conflict: this.createConflictClause(model, conflictMask),
     };
-  }
-
-  /**
-   * Creates a MutationRef with the given params
-   */
-  ref(params: RefParams): Ref {
-    return new Ref(params);
   }
 
   /**
