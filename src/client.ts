@@ -7,6 +7,7 @@ import VError from 'verror';
 import {makeAxiosInstanceWithRetry} from './axios';
 import {wrapApiError} from './errors';
 import {paginatedQuery} from './graphql/graphql';
+import {batchMutation} from './graphql/query-builder';
 import {Schema} from './graphql/types';
 import {
   Account,
@@ -20,7 +21,7 @@ import {
   SecretName,
   UpdateAccount,
 } from './types';
-import {batchMutation,Utils} from './utils';
+import {Utils} from './utils';
 
 export const DEFAULT_AXIOS_CONFIG: AxiosRequestConfig = {timeout: 60000};
 

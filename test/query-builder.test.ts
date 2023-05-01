@@ -1,42 +1,10 @@
-[![CI](https://github.com/faros-ai/faros-js-client/actions/workflows/ci.yml/badge.svg)](https://github.com/faros-ai/faros-js-client/actions/workflows/ci.yml)
+import * as sut from '../src/graphql/query-builder';
+import {Mutation} from '../src/types';
 
-# Faros API client for JavaScript/TypeScript
+const ORIGIN = 'test-origin';
 
-## Installation
-```bash
-$ npm i --save faros-js-client
-```
-## Documentation
-
-Usage example:
-```typescript
-import {FarosClient} from 'faros-js-client';
-
-const faros = new FarosClient({
-    url: 'https://prod.api.faros.ai',
-    apiKey: '<your_faros_api_key>',
-});
-
-const query = `{
-  tms {
-    tasks(first: 10) {
-      nodes {
-        uid
-      }
-    }
-  }
-}`;
-
-const data = await client.gql('default', query);
-```
-
-## GraphQL Query Builder
-
-The QueryBuilder class is a utility to help construct graphQL mutations from Faros models. 
-
-Example constructing the GraphQL mutation that upserts an application, organization, pipeline, build, application, deployment.
-
-```ts
+describe('query builder', () => {
+  test('creates mutations', () => {
     const qb = new sut.QueryBuilder(ORIGIN);
     const mutations: Mutation[] = [];
 
@@ -96,8 +64,7 @@ Example constructing the GraphQL mutation that upserts an application, organizat
     );
 
     const queryString = sut.batchMutation(mutations);
-```
 
-Please read the [Faros documentation][farosdocs] to learn more.
-
-[farosdocs]: https://docs.faros.ai
+    expect(queryString).toMatchSnapshot();
+  });
+});
