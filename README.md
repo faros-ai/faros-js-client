@@ -39,6 +39,11 @@ Example constructing the GraphQL mutation that upserts an application and deploy
 ```ts
 import {QueryBuilder, FarosClient} from "faros-js-client";
 
+const faros = new FarosClient({
+    url: 'https://prod.api.faros.ai',
+    apiKey: '<your_faros_api_key>',
+});
+
 // The QueryBuilder manages the origin for you
 const qb = new QueryBuilder('example-origin');
 
@@ -69,11 +74,6 @@ const mutations = [
   qb.upsert(application),
   qb.upsert(deployment)
 ];
-
-const faros = new FarosClient({
-    url: 'https://prod.api.faros.ai',
-    apiKey: '<your_faros_api_key>',
-});
 
 // Send your mutations to Faros!
 await faros.sendMutations('default', mutations);
