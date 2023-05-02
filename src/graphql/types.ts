@@ -75,8 +75,7 @@ export interface Mutation {
 }
 
 export interface MutationObject {
-  object?: any;
-  data?: any;
+  object: any;
   on_conflict: ConflictClause;
 }
 
