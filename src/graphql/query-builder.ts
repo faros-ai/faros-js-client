@@ -5,7 +5,7 @@ import {
   Mutation,
   MutationObject,
   MutationReference,
-} from '../types';
+} from './types';
 
 interface MutationFields {
   [field: string]: MutationFieldValue;
