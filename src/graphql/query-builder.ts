@@ -27,7 +27,7 @@ export interface MutationParams extends RefParams {
 
 interface CategoryDetail {
   category: string;
-  detail: string;
+  detail?: string;
 }
 
 export type MutationFieldValue = string | number | CategoryDetail | Ref;
