@@ -1,5 +1,3 @@
-import {EnumType} from 'json-to-graphql-query';
-
 export interface FarosClientConfig {
   readonly url: string;
   readonly apiKey: string;
