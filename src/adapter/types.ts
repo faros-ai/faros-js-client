@@ -18,7 +18,8 @@ const primitiveTypes = [
   'int',
   'long',
   'string',
-  'timestamp',
+  'epoch_millis',
+  'epoch_millis_string',
 ] as const;
 type PrimitiveType = typeof primitiveTypes[number];
 
@@ -68,7 +69,10 @@ export interface FieldPaths {
   readonly [path: string | symbol]: PathValue;
 }
 
-export function asLeafValueType(type: gql.GraphQLType): LeafValueType {
+export function asLeafValueType(
+  type: gql.GraphQLType,
+  stringifyTimestamps = true
+): LeafValueType {
   function asPrimitiveType(type: gql.GraphQLLeafType): PrimitiveType {
     if (gql.isEnumType(type) || type.name === 'String' || type.name === 'ID') {
       return 'string';
@@ -83,7 +87,10 @@ export function asLeafValueType(type: gql.GraphQLType): LeafValueType {
     } else if (type.name === 'Long') {
       return 'long';
     } else if (type.name === 'Timestamp') {
-      return 'timestamp';
+      if (stringifyTimestamps) {
+        return 'epoch_millis_string';
+      }
+      return 'epoch_millis';
     }
     throw new VError('unknown GraphQL leaf type: %s', type);
   }

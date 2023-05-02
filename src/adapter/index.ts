@@ -159,7 +159,11 @@ export function getFieldPaths(
         } else if (isLeafType(type)) {
           const fieldPath = fieldStack.join('.');
           let newFieldPath = newFieldStack.join('.');
-          let fieldType = asLeafValueType(type);
+          // Timestamps in v1 are always stringified epoch millis, except when
+          // they're inside embedded object lists. In that case, they're stored
+          // as epoch millis.
+          const stringifyTimestamps = !mirrorPaths;
+          let fieldType = asLeafValueType(type, stringifyTimestamps);
           if (mirrorPaths) {
             fieldPaths[fieldPath] = {path: fieldPath, type: fieldType};
             return undefined;
@@ -172,7 +176,7 @@ export function getFieldPaths(
                 // In V2, it's stored and typed like every other timestamp.
                 // We force conversion from ISO 8601 string => epoch millis
                 // string by overriding the type from string to timestamp.
-                fieldType = 'timestamp';
+                fieldType = 'epoch_millis_string';
               }
             } else {
               // Prefix the last field name with the embedded field name
@@ -346,16 +350,15 @@ export class QueryAdapter {
         return `${v2Value}`;
       }
       throw new VError('invalid long: %s', v2Value);
-    } else if (type === 'timestamp') {
-      // A timestamp will be an ISO string in v2, unless it's inside a list of
-      // embedded objects, in which case it will be an epoch millis number
+    } else if (type === 'epoch_millis' || type === 'epoch_millis_string') {
+      const stringify = type === 'epoch_millis_string';
       if (_.isString(v2Value)) {
         const millis = DateTime.fromISO(v2Value).toMillis();
         if (!isNaN(millis)) {
-          return `${millis}`;
+          return stringify ? `${millis}` : millis;
         }
       } else if (_.isNumber(v2Value)) {
-        return v2Value;
+        return stringify ? `${v2Value}` : v2Value;
       }
       throw new VError('invalid timestamp: %s', v2Value);
     }
