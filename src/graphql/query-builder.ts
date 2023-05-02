@@ -7,7 +7,7 @@ import {
   MutationReference,
 } from '../types';
 
-export interface MutationFields {
+interface MutationFields {
   [field: string]: MutationFieldValue;
 }
 
@@ -25,12 +25,7 @@ export interface MutationParams extends RefParams {
   mask?: string[];
 }
 
-interface CategoryDetail {
-  category: string;
-  detail?: string;
-}
-
-export type MutationFieldValue = string | number | CategoryDetail | Ref;
+type MutationFieldValue = string | number | boolean | object | Ref;
 
 export class QueryBuilder {
   constructor(private readonly origin: string) {}
@@ -83,7 +78,7 @@ export class QueryBuilder {
         // ref's key should be suffixed with Id for onConflict field
         fullMask.push(`${k}Id`);
       } else {
-        mutObj[k] = v;
+        mutObj[k] = Array.isArray(v) ? this.arrayLiteral(v) : v;
         fullMask.push(k);
       }
     }
@@ -130,6 +125,23 @@ export class QueryBuilder {
       constraint: new EnumType(`${model}_pkey`),
       update_columns: mask.map((c) => new EnumType(c)),
     };
+  }
+
+  /**
+   * Change string arrays into string literal array.
+   * Leave non-string arrays untouched.
+   */
+  private arrayLiteral(arr: any[]): string | object {
+    for (const item of arr) {
+      if (typeof item !== 'string') {
+        return arr;
+      }
+    }
+
+    return JSON.stringify(arr)
+      .replace('[', '{')
+      .replace(']', '}')
+      .replace(/"/g, '');
   }
 }
 
