@@ -8,14 +8,13 @@ import {makeAxiosInstanceWithRetry} from './axios';
 import {wrapApiError} from './errors';
 import {paginatedQuery} from './graphql/graphql';
 import {batchMutation} from './graphql/query-builder';
-import {Schema} from './graphql/types';
+import {Mutation, Schema} from './graphql/types';
 import {
   Account,
   FarosClientConfig,
   GraphVersion,
   Location,
   Model,
-  Mutation,
   NamedQuery,
   Phantom,
   SecretName,

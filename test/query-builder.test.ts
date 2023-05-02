@@ -1,12 +1,10 @@
 import * as sut from '../src/graphql/query-builder';
-import {Mutation} from '../src/types';
 
 const ORIGIN = 'test-origin';
 
 describe('query builder', () => {
   test('creates mutations', () => {
     const qb = new sut.QueryBuilder(ORIGIN);
-    const mutations: Mutation[] = [];
 
     const application = {
       model: 'compute_Application',
@@ -55,16 +53,36 @@ describe('query builder', () => {
       },
     };
 
-    mutations.push(
+    const mutations = [
       qb.upsert(application),
       qb.upsert(organization),
       qb.upsert(pipeline),
       qb.upsert(build),
-      qb.upsert(deployment)
-    );
-
+      qb.upsert(deployment),
+    ];
     const queryString = sut.batchMutation(mutations);
+    expect(queryString).toMatchSnapshot();
+  });
 
+  test('creates mutations with non-model objects', () => {
+    const qb = new sut.QueryBuilder(ORIGIN);
+
+    const testCase: sut.MutationParams = {
+      model: 'qa_TestCase',
+      key: {
+        uid: '<uid>',
+        source: '<source>',
+      },
+      body: {
+        name: '<name>',
+        before: [{description: '<description>', condition: '<condition>'}],
+        after: [{description: '<description>', condition: '<condition>'}],
+        tags: ['tag1', 'tag2'],
+      },
+    };
+
+    const mutations = [qb.upsert(testCase)];
+    const queryString = sut.batchMutation(mutations);
     expect(queryString).toMatchSnapshot();
   });
 });

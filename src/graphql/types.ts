@@ -1,3 +1,4 @@
+import {EnumType} from 'json-to-graphql-query';
 import {Dictionary} from 'ts-essentials';
 
 export interface Table {
@@ -62,4 +63,28 @@ export interface Query {
 export interface PathToModel {
   readonly path: ReadonlyArray<string>;
   readonly modelName: string;
+}
+
+export interface Mutation {
+  mutation: {
+    [key: string]: {
+      __args: MutationObject;
+      id: boolean;
+    };
+  };
+}
+
+export interface MutationObject {
+  object: any;
+  on_conflict: ConflictClause;
+}
+
+export interface MutationReference {
+  data: any;
+  on_conflict: ConflictClause;
+}
+
+export interface ConflictClause {
+  constraint: EnumType;
+  update_columns: EnumType[];
 }
