@@ -23,6 +23,13 @@ describe('errors', () => {
     );
   });
 
+  test('wraps the non-error without drama', () => {
+    const cause: any = {name: 'not-an-error'};
+    expect(sut.wrapApiError(cause, 'message')).toEqual(
+      new WError(Error(JSON.stringify(cause)), 'message')
+    );
+  });
+
   test('includes info field for axios error', () => {
     const error = createAxiosError('message1');
     const wrappedError: any = sut.wrapApiError(error, 'message');

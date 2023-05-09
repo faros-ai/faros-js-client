@@ -27,8 +27,14 @@ function isAxiosError(error: Error): error is AxiosError {
   return (error as any).isAxiosError;
 }
 
+function isError(error: any): error is Error {
+  return 'name' in error && 'message' in error;
+}
+
 /** Strips verbose properties that libraries like Axios attach to errors */
-export function wrapApiError(error: Error, message?: string): Error {
+export function wrapApiError(maybeError: Error, message?: string): Error {
+  let error = isError(maybeError) ?
+    maybeError : Error(JSON.stringify(maybeError));
   if (!isAxiosError(error)) {
     const cause = VError.cause(error);
     if (cause) {
