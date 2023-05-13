@@ -109,4 +109,10 @@ export class Utils {
     }
     return Duration.fromObject({[unit]: num});
   }
+
+  static sleep(millis: number): Promise<void> {
+    return new Promise((resolve) => {
+      setTimeout(resolve, millis);
+    });
+  }
 }
