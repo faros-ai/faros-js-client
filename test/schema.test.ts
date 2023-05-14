@@ -120,4 +120,9 @@ describe('schema', () => {
         .createdAt
     ).toEqual(new Date(123));
   });
+
+  test('leaves unknown model record untouched', () => {
+    const record = {uid: 'abc'};
+    expect(schema.fixTimestampFields(record, 'unknown_Model')).toEqual(record);
+  });
 });
