@@ -435,8 +435,37 @@ function createOperationDefinition(
   };
 }
 
+function mergeWhereClauses(clauses: any[]): any {
+  // extract individual predicates (e.g. {uid: {_eq: true}})
+  const fields = _.flatMap(clauses, (c) => _.get(c, 'value'));
+  // place within _and clause
+  return {
+    kind: 'Argument',
+    name: {
+      kind: 'Name',
+      value: 'where',
+    },
+    value: {
+      kind: 'ObjectValue',
+      fields: [
+        {
+          kind: 'ObjectField',
+          name: {
+            kind: 'Name',
+            value: '_and',
+          },
+          value: {
+            kind: 'ListValue',
+            values: fields,
+          },
+        },
+      ],
+    },
+  };
+}
+
 /**
- * Paginate v2 queries with where clause on id
+ * Paginate v2 queries with where clause and order by on id
  * https://hasura.io/docs/latest/queries/postgres/pagination/#keyset-cursor-based-pagination
  */
 export function paginateWithKeysetV2(query: string): PaginatedQuery {
@@ -467,48 +496,48 @@ export function paginateWithKeysetV2(query: string): PaginatedQuery {
           return false;
         }
         edgesPath.push(node.name.value);
-        const whereArg = node.arguments?.find(
-          (n) => n.name.value === 'where'
-        )?.value;
         return {
           ...node,
           arguments: [
-            {
-              kind: 'Argument',
-              name: {kind: 'Name', value: 'where'},
-              value: {
-                kind: 'ObjectValue',
-                fields: [
-                  ...whereArg?.kind === 'ObjectValue' ? whereArg.fields : [],
-                  {
-                    kind: 'ObjectField',
-                    name: {
-                      kind: 'Name',
-                      value: 'id',
-                    },
-                    value: {
-                      kind: 'ObjectValue',
-                      fields: [
-                        {
-                          kind: 'ObjectField',
-                          name: {
-                            kind: 'Name',
-                            value: '_gt',
-                          },
-                          value: {
-                            kind: 'Variable',
+            mergeWhereClauses([
+              ...(node.arguments?.filter((n) => n.name.value === 'where') ??
+                []),
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'where'},
+                value: {
+                  kind: 'ObjectValue',
+                  fields: [
+                    {
+                      kind: 'ObjectField',
+                      name: {
+                        kind: 'Name',
+                        value: 'id',
+                      },
+                      value: {
+                        kind: 'ObjectValue',
+                        fields: [
+                          {
+                            kind: 'ObjectField',
                             name: {
                               kind: 'Name',
-                              value: 'id',
+                              value: '_gt',
+                            },
+                            value: {
+                              kind: 'Variable',
+                              name: {
+                                kind: 'Name',
+                                value: 'id',
+                              },
                             },
                           },
-                        },
-                      ],
+                        ],
+                      },
                     },
-                  },
-                ],
+                  ],
+                },
               },
-            },
+            ]),
             {
               kind: 'Argument',
               name: {kind: 'Name', value: 'order_by'},
