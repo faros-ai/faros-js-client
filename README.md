@@ -42,6 +42,7 @@ import {QueryBuilder, FarosClient} from "faros-js-client";
 const faros = new FarosClient({
     url: 'https://prod.api.faros.ai',
     apiKey: '<your_faros_api_key>',
+    useGraphQLV2: true,
 });
 
 // The QueryBuilder manages the origin for you
