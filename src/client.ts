@@ -342,6 +342,9 @@ export class FarosClient {
             for (const edge of edges) {
               yield edge;
               id = traverse(edge, edgeIdPath);
+              if (!id) {
+                break;
+              }
             }
             // break on partial page
             hasNextPage = edges.length === pageSize;
