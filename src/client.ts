@@ -343,7 +343,7 @@ export class FarosClient {
               id = traverse(edge, edgeIdPath);
               unset(edge, edgeIdPath);
               if (!id) {
-                break;
+                return;
               }
               yield edge;
             }
