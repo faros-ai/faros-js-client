@@ -340,12 +340,12 @@ export class FarosClient {
             });
             const edges = traverse(data, edgesPath) || [];
             for (const edge of edges) {
-              yield edge;
               id = traverse(edge, edgeIdPath);
               unset(edge, edgeIdPath);
               if (!id) {
-                break;
+                return;
               }
+              yield edge;
             }
             // break on partial page
             hasNextPage = edges.length === pageSize;
