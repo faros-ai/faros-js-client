@@ -196,6 +196,17 @@ describe('graphql', () => {
     expect(paginatedQuery.pageInfoPath).toBeEmpty();
   });
 
+  test('paginated keyset v2 query', async () => {
+    const query = await loadQueryFile('commits-v2.gql');
+    const paginatedQuery = sut.paginateWithKeysetV2(query);
+    const expectedQuery =
+      await loadQueryFile('paginated-commits-keyset-v2.gql');
+    expect(paginatedQuery.query).toEqual(expectedQuery);
+    expect(paginatedQuery.edgesPath).toEqual(['vcs_Commit']);
+    expect(paginatedQuery.edgeIdPath).toEqual(['_id']);
+    expect(paginatedQuery.pageInfoPath).toBeEmpty();
+  });
+
   test('build incremental V2', () => {
     const type = graphSchemaV2.getType('cicd_Build');
     const query1 = sut.buildIncrementalQueryV2(type as gql.GraphQLObjectType);

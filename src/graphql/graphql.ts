@@ -19,6 +19,8 @@ export type RecordIterable = AsyncOrSyncIterable<AnyRecord>;
 export interface PaginatedQuery {
   readonly query: string;
   readonly edgesPath: ReadonlyArray<string>;
+  // Relative to edge path
+  readonly edgeIdPath?: ReadonlyArray<string>;
   readonly pageInfoPath: ReadonlyArray<string>;
 }
 
@@ -281,8 +283,14 @@ export function paginatedQuery(query: string): PaginatedQuery {
 }
 
 export function paginatedQueryV2(query: string): PaginatedQuery {
-  return process.env.GRAPHQL_V2_PAGINATOR === 'relay' ?
-    paginatedWithRelayV2(query) : paginateWithOffsetLimitV2(query);
+  switch (process.env.GRAPHQL_V2_PAGINATOR) {
+    case 'relay':
+      return paginatedWithRelayV2(query);
+    case 'keyset':
+      return paginateWithKeysetV2(query);
+    default:
+      return paginateWithOffsetLimitV2(query);
+  }
 }
 
 /**
@@ -424,6 +432,156 @@ function createOperationDefinition(
     operation: gql.OperationTypeNode.QUERY,
     variableDefinitions,
     selectionSet: node.selectionSet,
+  };
+}
+
+function mergeWhereClauses(clauses: any[]): any {
+  // extract individual predicates (e.g. {uid: {_eq: true}})
+  const fields = _.flatMap(clauses, (c) => _.get(c, 'value'));
+  // place within _and clause
+  return {
+    kind: 'Argument',
+    name: {
+      kind: 'Name',
+      value: 'where',
+    },
+    value: {
+      kind: 'ObjectValue',
+      fields: [
+        {
+          kind: 'ObjectField',
+          name: {
+            kind: 'Name',
+            value: '_and',
+          },
+          value: {
+            kind: 'ListValue',
+            values: fields,
+          },
+        },
+      ],
+    },
+  };
+}
+
+/**
+ * Paginate v2 queries with where clause and order by on id
+ * https://hasura.io/docs/latest/queries/postgres/pagination/#keyset-cursor-based-pagination
+ */
+export function paginateWithKeysetV2(query: string): PaginatedQuery {
+  const edgesPath: string[] = [];
+  const ast = gql.visit(gql.parse(query), {
+    Document(node) {
+      if (node.definitions.length !== 1) {
+        throw invalidQuery(
+          'document should contain a single query operation definition'
+        );
+      }
+    },
+    OperationDefinition(node) {
+      if (node.operation !== 'query') {
+        throw invalidQuery('only query operations are supported');
+      }
+
+      // Add pagination variables to query operation
+      return createOperationDefinition(node, [
+        ['id', 'String'],
+        ['limit', 'Int'],
+      ]);
+    },
+    Field: {
+      enter(node) {
+        if (edgesPath.length) {
+          // Skip rest of nodes once edges path has been set
+          return false;
+        }
+        edgesPath.push(node.name.value);
+        return {
+          ...node,
+          arguments: [
+            mergeWhereClauses([
+              ...(node.arguments?.filter((n) => n.name.value === 'where') ??
+                []),
+              {
+                kind: 'Argument',
+                name: {kind: 'Name', value: 'where'},
+                value: {
+                  kind: 'ObjectValue',
+                  fields: [
+                    {
+                      kind: 'ObjectField',
+                      name: {
+                        kind: 'Name',
+                        value: 'id',
+                      },
+                      value: {
+                        kind: 'ObjectValue',
+                        fields: [
+                          {
+                            kind: 'ObjectField',
+                            name: {
+                              kind: 'Name',
+                              value: '_gt',
+                            },
+                            value: {
+                              kind: 'Variable',
+                              name: {
+                                kind: 'Name',
+                                value: 'id',
+                              },
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              },
+            ]),
+            {
+              kind: 'Argument',
+              name: {kind: 'Name', value: 'order_by'},
+              value: {
+                kind: 'ObjectValue',
+                fields: [
+                  {
+                    kind: 'ObjectField',
+                    name: {kind: 'Name', value: 'id'},
+                    value: {kind: 'EnumValue', value: 'asc'},
+                  },
+                ],
+              },
+            },
+            {
+              kind: 'Argument',
+              name: {kind: 'Name', value: 'limit'},
+              value: {
+                kind: 'Variable',
+                name: {kind: 'Name', value: 'limit'},
+              },
+            },
+          ],
+          selectionSet: {
+            kind: 'SelectionSet',
+            selections: [
+              {
+                kind: 'Field',
+                alias: {kind: 'Name', value: '_id'},
+                name: {kind: 'Name', value: 'id'},
+              },
+              ...(node.selectionSet?.selections ?? []),
+            ],
+          },
+        };
+      },
+    },
+  });
+
+  return {
+    query: gql.print(ast),
+    edgesPath,
+    edgeIdPath: ['_id'],
+    pageInfoPath: [],
   };
 }
 
