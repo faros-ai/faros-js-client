@@ -324,10 +324,31 @@ export class FarosClient {
     paginator = paginatedQuery,
     args: Map<string, any> = new Map<string, any>()
   ): AsyncIterable<any> {
-    const {query, edgesPath, pageInfoPath} = paginator(rawQuery);
+    const {query, edgesPath, edgeIdPath, pageInfoPath} = paginator(rawQuery);
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
-    if (isEmpty(pageInfoPath)) {
+    if (edgeIdPath?.length) {
+      return {
+        async *[Symbol.asyncIterator](): AsyncIterator<any> {
+          let id = '';
+          let hasNextPage = true;
+          while (hasNextPage) {
+            const data = await self.gqlNoDirectives(graph, query, {
+              limit: pageSize,
+              id,
+              ...Object.fromEntries(args.entries()),
+            });
+            const edges = traverse(data, edgesPath) || [];
+            for (const edge of edges) {
+              yield edge;
+              id = traverse(edge, edgeIdPath);
+            }
+            // break on partial page
+            hasNextPage = edges.length === pageSize;
+          }
+        },
+      };
+    } else if (isEmpty(pageInfoPath)) {
       // use offset and limit
       return {
         async *[Symbol.asyncIterator](): AsyncIterator<any> {

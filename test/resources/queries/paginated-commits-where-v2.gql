@@ -1,0 +1,11 @@
+query paginatedQuery($id: String, $limit: Int, $from: timestamptz, $to: timestamptz) {
+  vcs_Commit(where: {refreshedAt: {_gte: $from, _lt: $to}, id: {_gt: $id}}, order_by: {id: asc}
+, limit: $limit) {
+    _id: id,
+    id
+    author {
+      ownerId: id
+    }
+  }
+}
+
