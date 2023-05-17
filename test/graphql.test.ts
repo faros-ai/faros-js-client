@@ -196,11 +196,11 @@ describe('graphql', () => {
     expect(paginatedQuery.pageInfoPath).toBeEmpty();
   });
 
-  test('paginated where v2 query', async () => {
+  test('paginated keyset v2 query', async () => {
     const query = await loadQueryFile('commits-v2.gql');
-    const paginatedQuery = sut.paginateWithWhereV2(query);
+    const paginatedQuery = sut.paginateWithKeysetV2(query);
     const expectedQuery =
-      await loadQueryFile('paginated-commits-where-v2.gql');
+      await loadQueryFile('paginated-commits-keyset-v2.gql');
     expect(paginatedQuery.query).toEqual(expectedQuery);
     expect(paginatedQuery.edgesPath).toEqual(['vcs_Commit']);
     expect(paginatedQuery.edgeIdPath).toEqual(['_id']);

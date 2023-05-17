@@ -286,8 +286,8 @@ export function paginatedQueryV2(query: string): PaginatedQuery {
   switch (process.env.GRAPHQL_V2_PAGINATOR) {
     case 'relay':
       return paginatedWithRelayV2(query);
-    case 'where':
-      return paginateWithWhereV2(query);
+    case 'keyset':
+      return paginateWithKeysetV2(query);
     default:
       return paginateWithOffsetLimitV2(query);
   }
@@ -437,8 +437,9 @@ function createOperationDefinition(
 
 /**
  * Paginate v2 queries with where clause on id
+ * https://hasura.io/docs/latest/queries/postgres/pagination/#keyset-cursor-based-pagination
  */
-export function paginateWithWhereV2(query: string): PaginatedQuery {
+export function paginateWithKeysetV2(query: string): PaginatedQuery {
   const edgesPath: string[] = [];
   const ast = gql.visit(gql.parse(query), {
     Document(node) {

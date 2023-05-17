@@ -1,6 +1,6 @@
 import {AxiosInstance, AxiosRequestConfig} from 'axios';
 import * as gql from 'graphql';
-import {get as traverse, isEmpty} from 'lodash';
+import {get as traverse, isEmpty, unset} from 'lodash';
 import pino, {Logger} from 'pino';
 import VError from 'verror';
 
@@ -342,6 +342,7 @@ export class FarosClient {
             for (const edge of edges) {
               yield edge;
               id = traverse(edge, edgeIdPath);
+              unset(edge, edgeIdPath);
               if (!id) {
                 break;
               }
