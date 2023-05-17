@@ -197,6 +197,17 @@ describe('graphql', () => {
   });
 
   test('paginated keyset v2 query', async () => {
+    const query = await loadQueryFile('incidents-v2.gql');
+    const paginatedQuery = sut.paginateWithKeysetV2(query);
+    const expectedQuery =
+      await loadQueryFile('paginated-incidents-keyset-v2.gql');
+    expect(paginatedQuery.query).toEqual(expectedQuery);
+    expect(paginatedQuery.edgesPath).toEqual(['ims_Incident']);
+    expect(paginatedQuery.edgeIdPath).toEqual(['_id']);
+    expect(paginatedQuery.pageInfoPath).toBeEmpty();
+  });
+
+  test('paginated keyset v2 query with existing where clause', async () => {
     const query = await loadQueryFile('commits-v2.gql');
     const paginatedQuery = sut.paginateWithKeysetV2(query);
     const expectedQuery =

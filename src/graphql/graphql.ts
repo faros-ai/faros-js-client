@@ -496,48 +496,56 @@ export function paginateWithKeysetV2(query: string): PaginatedQuery {
           return false;
         }
         edgesPath.push(node.name.value);
+
+        const existingWhereArgs = node.arguments?.filter(
+          (n) => n.name.value === 'where'
+        ) ?? [];
+        let whereArgs: gql.ArgumentNode[] = [
+          ...existingWhereArgs,
+          {
+            kind: gql.Kind.ARGUMENT,
+            name: {kind: gql.Kind.NAME, value: 'where'},
+            value: {
+              kind: gql.Kind.OBJECT,
+              fields: [
+                {
+                  kind: gql.Kind.OBJECT_FIELD,
+                  name: {
+                    kind: gql.Kind.NAME,
+                    value: 'id',
+                  },
+                  value: {
+                    kind: gql.Kind.OBJECT,
+                    fields: [
+                      {
+                        kind: gql.Kind.OBJECT_FIELD,
+                        name: {
+                          kind: gql.Kind.NAME,
+                          value: '_gt',
+                        },
+                        value: {
+                          kind: gql.Kind.VARIABLE,
+                          name: {
+                            kind: gql.Kind.NAME,
+                            value: 'id',
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ];
+        if (whereArgs.length > 1) {
+          whereArgs = [mergeWhereClauses(whereArgs)];
+        }
+
         return {
           ...node,
           arguments: [
-            mergeWhereClauses([
-              ...(node.arguments?.filter((n) => n.name.value === 'where') ??
-                []),
-              {
-                kind: 'Argument',
-                name: {kind: 'Name', value: 'where'},
-                value: {
-                  kind: 'ObjectValue',
-                  fields: [
-                    {
-                      kind: 'ObjectField',
-                      name: {
-                        kind: 'Name',
-                        value: 'id',
-                      },
-                      value: {
-                        kind: 'ObjectValue',
-                        fields: [
-                          {
-                            kind: 'ObjectField',
-                            name: {
-                              kind: 'Name',
-                              value: '_gt',
-                            },
-                            value: {
-                              kind: 'Variable',
-                              name: {
-                                kind: 'Name',
-                                value: 'id',
-                              },
-                            },
-                          },
-                        ],
-                      },
-                    },
-                  ],
-                },
-              },
-            ]),
+            ...whereArgs,
             {
               kind: 'Argument',
               name: {kind: 'Name', value: 'order_by'},
