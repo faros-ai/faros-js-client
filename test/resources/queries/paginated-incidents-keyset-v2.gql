@@ -1,0 +1,11 @@
+query paginatedQuery($id: String, $limit: Int) {
+  ims_Incident(where: {id: {_gt: $id}}, order_by: {id: asc}, limit: $limit) {
+    _id: id
+    incidentUid: uid
+    impactedApplications {
+      application {
+        applicationName: name
+      }
+    }
+  }
+}
