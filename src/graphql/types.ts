@@ -75,12 +75,8 @@ export interface Mutation {
 }
 
 export interface MutationObject {
-  object: any;
-  on_conflict: ConflictClause;
-}
-
-export interface MutationReference {
-  data: any;
+  object?: any;
+  data?: any;
   on_conflict: ConflictClause;
 }
 

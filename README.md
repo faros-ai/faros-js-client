@@ -48,32 +48,24 @@ const faros = new FarosClient({
 // The QueryBuilder manages the origin for you
 const qb = new QueryBuilder('example-origin');
 
-const application = {
-  model: 'compute_Application',
-  key: {
-    name: '<application_name>',
-    platform: '<application_platform>',
-  },
+const compute_Application = {
+  name: '<application_name>',
+  platform: '<application_platform>'
 };
-const deployment = {
-  model: 'cicd_Deployment',
-  key: {
-    uid: '<deployment_uid',
-    source: '<deployment_source>',
-  },
-  body: {
-    // Fields that reference another model need to be refs
-    application: qb.ref(application),
-    status: {
-      category: 'Success',
-      detail: '<status_detail>',
-    },
-  },
+const cicd_Deployment = {
+  uid: '<deployment_uid',
+  source: '<deployment_source>',
+  // Fields that reference another model need to be refs
+  application: qb.ref(application),
+  status: {
+    category: 'Success',
+    detail: '<status_detail>',
+  }
 };
 
 const mutations = [
-  qb.upsert(application),
-  qb.upsert(deployment)
+  qb.upsert({compute_Application}),
+  qb.upsert({cicd_Deployment})
 ];
 
 // Send your mutations to Faros!

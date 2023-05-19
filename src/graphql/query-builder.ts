@@ -1,122 +1,88 @@
 import {EnumType, jsonToGraphQLQuery} from 'json-to-graphql-query';
 
-import {
-  ConflictClause,
-  Mutation,
-  MutationObject,
-  MutationReference,
-} from './types';
+import {ConflictClause, Mutation, MutationObject} from './types';
+
+type MutationFieldValue =
+  | string
+  | number
+  | boolean
+  | any[]
+  | {category: string; detail: string}
+  | Ref;
 
 interface MutationFields {
   [field: string]: MutationFieldValue;
 }
 
+export interface FarosModel {
+  [modelName: string]: MutationFields;
+}
+
 export class Ref {
-  constructor(readonly params: RefParams) {}
+  constructor(readonly model: FarosModel) {}
 }
-
-export interface RefParams {
-  model: string;
-  key: MutationFields;
-}
-
-export interface MutationParams extends RefParams {
-  body?: MutationFields;
-  mask?: string[];
-}
-
-type MutationFieldValue = string | number | boolean | object | Ref;
 
 export class QueryBuilder {
   constructor(private readonly origin: string) {}
 
   /**
-   * Creates an upsert mutation.
+   * Creates an upsert mutation for the provided Faros model.
    * @param model   The Faros model
-   * @param key     The object's key fields
-   * @param body    The object's non key fields
-   * @param mask    The column mask of what to update on conflict
    * @returns       The upsert mutation
    */
-  upsert(params: MutationParams): Mutation {
-    const {model} = params;
-    const mutationObj = this.mutationObj(params);
+  upsert(model: FarosModel): Mutation {
+    const mutationObj = this.mutationObj(model);
+    const modelName = Object.keys(model)[0];
     return {
       mutation: {
-        [`insert_${model}_one`]: {__args: mutationObj, id: true},
+        [`insert_${modelName}_one`]: {__args: mutationObj, id: true},
       },
     };
   }
 
   /**
-   * Creates a Ref with the given RefParams that can be used inside the key
-   * or body of an upsert.
+   * Creates a Ref that can be used in another Faros Model.
    */
-  ref(params: RefParams): Ref {
-    return new Ref(params);
+  ref(model: FarosModel): Ref {
+    return new Ref(model);
   }
 
   /**
-   * Create a mutation object that will update every field unless an explicit
-   * mask is provided. If the model contains fields that reference another
+   * Creates a mutation object that will update every field of the Faros Model.
+   * If the model contains fields that reference another
    * model, those fields will be recursively turned into MutationReferences.
    * @param model   The Faros model
-   * @param key     The object's key fields
-   * @param body    The object's fields non reference fields
-   * @param mask    An explicit column mask for onConflict clause
+   * @param ref     If the mutationObj should be a reference
    * @returns       The mutation object
    */
-  private mutationObj(params: MutationParams): MutationObject {
-    const {model, key, body, mask} = params;
-    const cleanObj = removeUndefinedProperties({...key, ...body} ?? {});
-
+  private mutationObj(model: FarosModel, ref = false): MutationObject {
+    const [modelName, fields] = Object.entries(model)[0];
+    const cleanObj = removeUndefinedProperties(fields ?? {});
     const mutObj: any = {};
-    const fullMask = [];
+    const mask = ['refreshedAt'];
+
     for (const [k, v] of Object.entries(cleanObj)) {
+      let maskKey = k;
       if (v instanceof Ref) {
-        mutObj[k] = this.mutationRef(v.params);
+        mutObj[k] = this.mutationObj(v.model, true);
         // ref's key should be suffixed with Id for onConflict field
-        fullMask.push(`${k}Id`);
+        maskKey += 'Id';
       } else {
         mutObj[k] = Array.isArray(v) ? this.arrayLiteral(v) : v;
-        fullMask.push(k);
+      }
+      if (!ref) {
+        mask.push(maskKey);
       }
     }
 
-    const conflictMask = mask ?? fullMask;
-    mutObj.origin = this.origin;
-    conflictMask.push('origin');
-
-    return {
-      object: mutObj,
-      on_conflict: this.createConflictClause(model, conflictMask),
-    };
-  }
-
-  /**
-   * Creates a reference to an object. The object is unchanged if it exists.
-   * If the object does not exist already, then a phantom node is created
-   * using the models key fields and null origin. Recursively turns any
-   * fields that are references into MutationReferences.
-   * @param model   The Faros model
-   * @param key     An object containing the model's key fields
-   * @returns       The mutation reference
-   */
-  private mutationRef(params: RefParams): MutationReference {
-    const {model, key} = params;
-
-    const mutData: any = {};
-    for (const [k, v] of Object.entries(key)) {
-      if (v instanceof Ref) {
-        mutData[k] = this.mutationRef(v.params);
-      } else {
-        mutData[k] = v;
-      }
+    if (!ref) {
+      mutObj.origin = this.origin;
+      mask.push('origin');
     }
 
     return {
-      data: mutData,
-      on_conflict: this.createConflictClause(model, ['refreshedAt']),
+      [!ref ? 'object' : 'data']: mutObj,
+      on_conflict: this.createConflictClause(modelName, mask),
     };
   }
 
