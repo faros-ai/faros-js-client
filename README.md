@@ -56,7 +56,7 @@ const cicd_Deployment = {
   uid: '<deployment_uid',
   source: '<deployment_source>',
   // Fields that reference another model need to be refs
-  application: qb.ref(application),
+  application: qb.ref({compute_Application}),
   status: {
     category: 'Success',
     detail: '<status_detail>',
