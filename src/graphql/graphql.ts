@@ -286,10 +286,10 @@ export function paginatedQueryV2(query: string): PaginatedQuery {
   switch (process.env.GRAPHQL_V2_PAGINATOR) {
     case 'relay':
       return paginatedWithRelayV2(query);
-    case 'keyset':
-      return paginateWithKeysetV2(query);
-    default:
+    case 'offset-limit':
       return paginateWithOffsetLimitV2(query);
+    default:
+      return paginateWithKeysetV2(query);
   }
 }
 
