@@ -101,7 +101,6 @@ describe('axios', () => {
     mock.done();
   });
 
-
   test('give up after a retry', async () => {
     const mock = nock(apiUrl).get('/hi').reply(502).get('/hi').reply(404);
     const client = sut.makeAxiosInstanceWithRetry(
