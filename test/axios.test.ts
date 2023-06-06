@@ -87,6 +87,21 @@ describe('axios', () => {
     mock.done();
   });
 
+  test('post non-graphql with 409 should fail', async () => {
+    const mock = nock(apiUrl).post('/hi').reply(409);
+    const client = sut.makeAxiosInstanceWithRetry(
+      {baseURL: apiUrl},
+      undefined,
+      3,
+      100
+    );
+    await expect(client.post('/hi')).rejects.toThrowError(
+      'Request failed with status code 409'
+    );
+    mock.done();
+  });
+
+
   test('give up after a retry', async () => {
     const mock = nock(apiUrl).get('/hi').reply(502).get('/hi').reply(404);
     const client = sut.makeAxiosInstanceWithRetry(
