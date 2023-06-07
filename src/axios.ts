@@ -1,6 +1,7 @@
 import axios, {AxiosError, AxiosInstance, AxiosRequestConfig} from 'axios';
 import axiosRetry, {IAxiosRetryConfig, isRetryableError} from 'axios-retry';
 import isRetryAllowed from 'is-retry-allowed';
+import {isNil} from 'lodash';
 import {Logger} from 'pino';
 
 import {wrapApiError} from './errors';
@@ -43,8 +44,13 @@ export function makeAxiosInstanceWithRetry(
   return makeAxiosInstance(config, {
     retries,
     retryCondition: (error) => {
+      const isGraphQLEndpoint = !isNil(error.config.url)
+        && error.config.url.endsWith('graphql')
+        && error.config.method === 'post';
       // Timeouts should be retryable
-      return isNetworkError(error) || isRetryableError(error);
+      // 409 is an edit conflict error, which is retryable for GraphQL endpoints
+      return isNetworkError(error) || isRetryableError(error)
+        || isGraphQLEndpoint && error.response?.status === 409;
     },
     retryDelay: (retryNumber, error) => {
       if (logger) {
