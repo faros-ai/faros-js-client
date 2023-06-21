@@ -61,4 +61,21 @@ describe('query builder', () => {
     const queryString = sut.batchMutation(mutations);
     expect(queryString).toMatchSnapshot();
   });
+
+  test('creates mutations with undefined and null fields', () => {
+    const qb = new sut.QueryBuilder(ORIGIN);
+
+    const qa_TestCase = {
+      uid: '<uid>',
+      source: '<source>',
+      name: '<name>',
+      before: null,
+      after: undefined,
+      tags: ['tag1', 'tag2'],
+    };
+
+    const mutations = [qb.upsert({qa_TestCase})];
+    const queryString = sut.batchMutation(mutations);
+    expect(queryString).toMatchSnapshot();
+  });
 });

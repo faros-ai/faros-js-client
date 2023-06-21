@@ -1,4 +1,5 @@
 import {EnumType, jsonToGraphQLQuery} from 'json-to-graphql-query';
+import {isNil} from 'lodash';
 
 import {ConflictClause, Mutation, MutationObject} from './types';
 
@@ -8,7 +9,9 @@ type MutationFieldValue =
   | boolean
   | any[]
   | {category: string; detail: string}
-  | Ref;
+  | Ref
+  | undefined
+  | null;
 
 interface MutationFields {
   [field: string]: MutationFieldValue;
@@ -57,13 +60,14 @@ export class QueryBuilder {
    */
   private mutationObj(model: FarosModel, ref = false): MutationObject {
     const [modelName, fields] = Object.entries(model)[0];
-    const cleanObj = removeUndefinedProperties(fields ?? {});
     const mutObj: any = {};
     const mask = ['refreshedAt'];
 
-    for (const [k, v] of Object.entries(cleanObj)) {
+    for (const [k, v] of Object.entries(fields ?? {})) {
       let maskKey = k;
-      if (v instanceof Ref) {
+      if (isNil(v)) {
+        mutObj[k] = null;
+      } else if (v instanceof Ref) {
         mutObj[k] = this.mutationObj(v.model, true);
         // ref's key should be suffixed with Id for onConflict field
         maskKey += 'Id';
@@ -112,15 +116,7 @@ export class QueryBuilder {
 }
 
 export function mask(object: any): string[] {
-  return Object.keys(removeUndefinedProperties(object));
-}
-
-function removeUndefinedProperties(object: MutationFields): MutationFields {
-  const result = {...object};
-  Object.keys(result).forEach(
-    (key) => result[key] === undefined && delete result[key]
-  );
-  return result;
+  return Object.keys(object);
 }
 
 /**
