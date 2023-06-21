@@ -64,7 +64,7 @@ export class QueryBuilder {
 
     for (const [k, v] of Object.entries(fields ?? {})) {
       let maskKey = k;
-      if (v === undefined) {
+      if (isNil(v)) {
         mutObj[k] = null;
       } else if (v instanceof Ref) {
         mutObj[k] = this.mutationObj(v.model, true);
