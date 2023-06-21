@@ -1,4 +1,5 @@
 import {EnumType, jsonToGraphQLQuery} from 'json-to-graphql-query';
+import {isNil} from 'lodash';
 
 import {ConflictClause, Mutation, MutationObject} from './types';
 
