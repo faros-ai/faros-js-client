@@ -201,8 +201,7 @@ export class FarosClient {
         try {
           const input = Buffer.from(JSON.stringify(req), 'utf8');
           req = await gzip(input);
-          // TODO: replace with debug
-          this.logger.info(
+          this.logger.debug(
             `Compressed graphql request from ${input.length} `
               + `to ${req.length} bytes`
           );
