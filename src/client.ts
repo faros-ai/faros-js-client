@@ -199,12 +199,12 @@ export class FarosClient {
         && Buffer.byteLength(query, 'utf8') > 10 * 1024; // 10KB
       if (doCompression) {
         try {
-          const input = JSON.stringify(req);
+          const input = Buffer.from(JSON.stringify(req), 'utf8');
           req = await gzip(input);
           // TODO: replace with debug
           this.logger.info(
-            `compressed graphql request from ${Buffer.byteLength(input)} \
-              to ${req.length} bytes`
+            `Compressed graphql request from ${input.length} `
+              + `to ${req.length} bytes`
           );
         } catch (e) {
           // gzip failed, send uncompressed
@@ -214,10 +214,15 @@ export class FarosClient {
       }
       const queryParams = this.queryParameters();
       const urlSuffix = queryParams ? `?${queryParams}` : '';
+      const headers: any = {};
+      if (doCompression) {
+        headers['content-encoding'] = 'gzip';
+        headers['content-type'] = 'application/json';
+      }
       const {data} = await this.api.post(
         `/graphs/${graph}/graphql${urlSuffix}`,
         req,
-        {...(doCompression && {headers: {'content-encoding': 'gzip'}})}
+        {headers}
       );
       return data;
     } catch (err: any) {
