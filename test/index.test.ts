@@ -101,11 +101,11 @@ describe('index', () => {
     expect(mockPost).toHaveBeenNthCalledWith(1, '/graphs/graph/graphql', {
       query: expectedQuery,
       variables: {pageSize: 1},
-    });
+    }, expect.anything());
     expect(mockPost).toHaveBeenNthCalledWith(2, '/graphs/graph/graphql', {
       query: expectedQuery,
       variables: {cursor: 'abc', pageSize: 1},
-    });
+    }, expect.anything());
   });
 
   test('query with invalid operation', async () => {
