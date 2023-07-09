@@ -2,7 +2,9 @@ import {AxiosInstance, AxiosRequestConfig} from 'axios';
 import * as gql from 'graphql';
 import {get as traverse, isEmpty, unset} from 'lodash';
 import pino, {Logger} from 'pino';
+import {promisify} from 'util';
 import VError from 'verror';
+import * as zlib from 'zlib';
 
 import {makeAxiosInstanceWithRetry} from './axios';
 import {wrapApiError} from './errors';
@@ -22,6 +24,8 @@ import {
 } from './types';
 import {Utils} from './utils';
 
+const gzip = promisify(zlib.gzip);
+
 export const DEFAULT_AXIOS_CONFIG: AxiosRequestConfig = {timeout: 60000};
 
 export const GRAPH_VERSION_HEADER = 'x-faros-graph-version';
@@ -34,7 +38,7 @@ export class FarosClient {
 
   constructor(
     cfg: FarosClientConfig,
-    logger: Logger = pino({name: 'faros-client'}),
+    readonly logger: Logger = pino({name: 'faros-client'}),
     axiosConfig: AxiosRequestConfig = DEFAULT_AXIOS_CONFIG
   ) {
     const url = Utils.urlWithoutTrailingSlashes(cfg.url);
@@ -190,12 +194,34 @@ export class FarosClient {
     variables?: any
   ): Promise<any> {
     try {
-      const req = variables ? {query, variables} : {query};
+      let req: any = variables ? {query, variables} : {query};
+      let doCompression = this.graphVersion === GraphVersion.V2
+        && Buffer.byteLength(query, 'utf8') > 10 * 1024; // 10KB
+      if (doCompression) {
+        try {
+          const input = Buffer.from(JSON.stringify(req), 'utf8');
+          req = await gzip(input);
+          this.logger.debug(
+            `Compressed graphql request from ${input.length} `
+              + `to ${req.length} bytes`
+          );
+        } catch (e) {
+          // gzip failed, send uncompressed
+          this.logger.warn(e, 'failed to compress graphql request');
+          doCompression = false;
+        }
+      }
       const queryParams = this.queryParameters();
       const urlSuffix = queryParams ? `?${queryParams}` : '';
+      const headers: any = {};
+      if (doCompression) {
+        headers['content-encoding'] = 'gzip';
+        headers['content-type'] = 'application/json';
+      }
       const {data} = await this.api.post(
         `/graphs/${graph}/graphql${urlSuffix}`,
-        req
+        req,
+        {headers}
       );
       return data;
     } catch (err: any) {
