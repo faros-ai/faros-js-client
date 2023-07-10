@@ -439,7 +439,8 @@ export class FarosClient {
     } catch (err: any) {
       throw wrapApiError(
         err,
-        `unable to update status for webhook: ${status.webhookId}, event: ${status.eventId}`
+        `unable to update status for webhook: ${status.webhookId}` +
+          `, event: ${status.eventId}`
       );
     }
   }
