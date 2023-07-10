@@ -52,6 +52,8 @@ export class FarosClient {
           authorization: cfg.apiKey,
           ...(cfg.useGraphQLV2 && {[GRAPH_VERSION_HEADER]: 'v2'}),
         },
+        maxBodyLength: Infinity, // rely on server to enforce request body size
+        maxContentLength: Infinity // accept any response size
       },
       logger
     );
