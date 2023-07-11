@@ -21,6 +21,7 @@ import {
   Phantom,
   SecretName,
   UpdateAccount,
+  WebhookEventStatus,
 } from './types';
 import {Utils} from './utils';
 
@@ -53,7 +54,7 @@ export class FarosClient {
           ...(cfg.useGraphQLV2 && {[GRAPH_VERSION_HEADER]: 'v2'}),
         },
         maxBodyLength: Infinity, // rely on server to enforce request body size
-        maxContentLength: Infinity // accept any response size
+        maxContentLength: Infinity, // accept any response size
       },
       logger
     );
@@ -197,15 +198,16 @@ export class FarosClient {
   ): Promise<any> {
     try {
       let req: any = variables ? {query, variables} : {query};
-      let doCompression = this.graphVersion === GraphVersion.V2
-        && Buffer.byteLength(query, 'utf8') > 10 * 1024; // 10KB
+      let doCompression =
+        this.graphVersion === GraphVersion.V2 &&
+        Buffer.byteLength(query, 'utf8') > 10 * 1024; // 10KB
       if (doCompression) {
         try {
           const input = Buffer.from(JSON.stringify(req), 'utf8');
           req = await gzip(input);
           this.logger.debug(
-            `Compressed graphql request from ${input.length} `
-              + `to ${req.length} bytes`
+            `Compressed graphql request from ${input.length} ` +
+              `to ${req.length} bytes`
           );
         } catch (e) {
           // gzip failed, send uncompressed
@@ -423,5 +425,23 @@ export class FarosClient {
         }
       },
     };
+  }
+
+  async updateWebhookEventStatus(status: WebhookEventStatus): Promise<void> {
+    try {
+      await this.api.patch(
+        `/webhooks/${status.webhookId}/events/${status.eventId}`,
+        {
+          status: status.status,
+          error: status.error,
+        }
+      );
+    } catch (err: any) {
+      throw wrapApiError(
+        err,
+        `unable to update status for webhook: ${status.webhookId}` +
+          `, event: ${status.eventId}`
+      );
+    }
   }
 }

@@ -34,10 +34,15 @@ export {
   Schema,
   PathToModel,
   Query,
-  Mutation
+  Mutation,
 } from './graphql/types';
 export {HasuraSchemaLoader} from './graphql/hasura-schema-loader';
-export {QueryBuilder, mask, batchMutation} from './graphql/query-builder';
+export {
+  FarosModel,
+  QueryBuilder,
+  mask,
+  batchMutation,
+} from './graphql/query-builder';
 export {
   AnyRecord,
   FlattenContext,

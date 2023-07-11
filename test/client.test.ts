@@ -141,7 +141,7 @@ describe('client', () => {
         owner: {
           field: 'cal_User',
           model: 'cal_User',
-          foreignKey: 'user'
+          foreignKey: 'user',
         },
       },
     },
@@ -202,10 +202,7 @@ describe('client', () => {
         }
       } `;
     const mock = nock(apiUrl)
-      .post(
-        '/graphs/g1/graphql',
-        JSON.stringify({query}),
-      )
+      .post('/graphs/g1/graphql', JSON.stringify({query}))
       .query({phantoms: Phantom.IncludeNestedOnly})
       .reply(200, {data: {result: 'ok'}});
 
@@ -419,5 +416,19 @@ describe('client', () => {
     const res = await client.geocode(...locations);
     mock.done();
     expect(res).toStrictEqual(locationsRes);
+  });
+
+  test('update webhook event status', async () => {
+    const mock = nock(apiUrl)
+      .patch('/webhooks/testWebhookId/events/testEventId')
+      .reply(204);
+
+    await client.updateWebhookEventStatus({
+      webhookId: 'testWebhookId',
+      eventId: 'testEventId',
+      status: 'error',
+      error: {message: 'error message', details: {detail1: 'abc'}},
+    });
+    mock.done();
   });
 });
