@@ -9,6 +9,7 @@ type MutationFieldValue =
   | boolean
   | any[]
   | {category: string; detail: string}
+  | {[field: string] : string | number | boolean }
   | Ref
   | undefined
   | null;
