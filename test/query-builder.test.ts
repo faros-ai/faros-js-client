@@ -55,6 +55,13 @@ describe('query builder', () => {
       before: [{description: '<description>', condition: '<condition>'}],
       after: [{description: '<description>', condition: '<condition>'}],
       tags: ['tag1', 'tag2'],
+      qa_DeviceInfo: {
+        name: 'name',
+        os: 'os',
+        browser: 'browser',
+        isSupported: true,
+        size: 10
+      }
     };
 
     const mutations = [qb.upsert({qa_TestCase})];
