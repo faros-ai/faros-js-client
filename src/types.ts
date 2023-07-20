@@ -85,5 +85,5 @@ export interface WebhookEventStatus {
   webhookId: string;
   eventId: string;
   status: string;
-  error?: {message: string; details: any};
+  error?: string;
 }
