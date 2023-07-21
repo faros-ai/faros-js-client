@@ -427,7 +427,7 @@ describe('client', () => {
       webhookId: 'testWebhookId',
       eventId: 'testEventId',
       status: 'error',
-      error: {message: 'error message', details: {detail1: 'abc'}},
+      error: 'error message',
     });
     mock.done();
   });
