@@ -54,7 +54,12 @@ export class QueryBuilder {
     const modelName = Object.keys(model)[0];
     return {
       mutation: {
-        [`delete_${modelName}`]: {__args: deleteObj, id: true},
+        [`delete_${modelName}`]: {
+          __args: deleteObj,
+          returning: {
+            id: true,
+          }
+        },
       },
     };
   }

@@ -1,5 +1,5 @@
 import {EnumType} from 'json-to-graphql-query';
-import {Dictionary} from 'ts-essentials';
+import {Dictionary, XOR} from 'ts-essentials';
 
 export interface Table {
   schema: string;
@@ -65,12 +65,21 @@ export interface PathToModel {
   readonly modelName: string;
 }
 
+interface MutationOneResponse {
+  readonly id: boolean;
+}
+
+interface MutationManyResponse {
+  readonly returning: {id: boolean};
+}
+
+type MutationResponse = XOR<MutationOneResponse, MutationManyResponse>;
+
 export interface Mutation {
   mutation: {
     [key: string]: {
       __args: MutationObject;
-      id: boolean;
-    };
+    } & MutationResponse;
   };
 }
 
@@ -81,7 +90,7 @@ export interface UpsertMutationObject {
 }
 
 export interface DeleteMutationObject {
-  [key: string]: any;
+  readonly [key: string]: any;
 }
 
 type MutationObject = UpsertMutationObject | DeleteMutationObject;
