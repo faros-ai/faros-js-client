@@ -92,7 +92,7 @@ describe('query builder', () => {
       tags: ['tag1', 'tag2'],
     };
 
-    const mutations = [qb.upsert({qa_TestCase})];
+    const mutations = [qb.delete({qa_TestCase})];
     const queryString = sut.batchMutation(mutations);
     expect(queryString).toMatchSnapshot();
   });
