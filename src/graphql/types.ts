@@ -74,11 +74,17 @@ export interface Mutation {
   };
 }
 
-export interface MutationObject {
+export interface UpsertMutationObject {
   object?: any;
   data?: any;
   on_conflict: ConflictClause;
 }
+
+export interface DeleteMutationObject {
+  [key: string]: any;
+}
+
+type MutationObject = UpsertMutationObject | DeleteMutationObject;
 
 export interface ConflictClause {
   constraint: EnumType;

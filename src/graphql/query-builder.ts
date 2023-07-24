@@ -1,7 +1,12 @@
 import {EnumType, jsonToGraphQLQuery} from 'json-to-graphql-query';
 import {isNil} from 'lodash';
 
-import {ConflictClause, Mutation, MutationObject} from './types';
+import {
+  ConflictClause,
+  DeleteMutationObject,
+  Mutation,
+  UpsertMutationObject,
+} from './types';
 
 type MutationFieldValue =
   | string
@@ -35,11 +40,21 @@ export class QueryBuilder {
    * @returns       The upsert mutation
    */
   upsert(model: FarosModel): Mutation {
-    const mutationObj = this.mutationObj(model);
+    const mutationObj = this.upsertMutationObj(model);
     const modelName = Object.keys(model)[0];
     return {
       mutation: {
         [`insert_${modelName}_one`]: {__args: mutationObj, id: true},
+      },
+    };
+  }
+
+  delete(model: FarosModel): Mutation {
+    const deleteObj = this.deleteMutationObj(model);
+    const modelName = Object.keys(model)[0];
+    return {
+      mutation: {
+        [`delete_${modelName}`]: {__args: deleteObj, id: true},
       },
     };
   }
@@ -59,7 +74,10 @@ export class QueryBuilder {
    * @param ref     If the mutationObj should be a reference
    * @returns       The mutation object
    */
-  private mutationObj(model: FarosModel, ref = false): MutationObject {
+  private upsertMutationObj(
+    model: FarosModel,
+    ref = false
+  ): UpsertMutationObject {
     const [modelName, fields] = Object.entries(model)[0];
     const mutObj: any = {};
     const mask = ['refreshedAt'];
@@ -69,7 +87,7 @@ export class QueryBuilder {
       if (isNil(v)) {
         mutObj[k] = null;
       } else if (v instanceof Ref) {
-        mutObj[k] = this.mutationObj(v.model, true);
+        mutObj[k] = this.upsertMutationObj(v.model, true);
         // ref's key should be suffixed with Id for onConflict field
         maskKey += 'Id';
       } else {
@@ -89,6 +107,35 @@ export class QueryBuilder {
       [!ref ? 'object' : 'data']: mutObj,
       on_conflict: this.createConflictClause(modelName, mask),
     };
+  }
+
+  /**
+   * Creates a delete mutation object that will create _eq keys for every field
+   * for the Faros Model.
+   *
+   * @param model   The Faros model
+   * @param ref     If the DeleteMutationObject is a reference
+   * @returns       The mutation object
+   */
+  private deleteMutationObj(
+    model: FarosModel,
+    ref = false
+  ): DeleteMutationObject {
+    const fields = Object.values(model)[0];
+    const mutObj: any = {};
+
+    for (const [k, v] of Object.entries(fields ?? {})) {
+      if (isNil(v)) {
+        mutObj[k] = null;
+      } else if (v instanceof Ref) {
+        mutObj[k] = this.deleteMutationObj(v.model, true);
+      } else {
+        const value = Array.isArray(v) ? this.arrayLiteral(v) : v;
+        mutObj[k] = {_eq: value};
+      }
+    }
+
+    return !ref ? {where: mutObj} : mutObj;
   }
 
   private createConflictClause(model: string, mask: string[]): ConflictClause {
