@@ -36,6 +36,7 @@ export class FarosClient {
   private readonly api: AxiosInstance;
   readonly graphVersion: GraphVersion;
   readonly phantoms: Phantom;
+  readonly visibility?: string;
 
   constructor(
     cfg: FarosClientConfig,
@@ -61,6 +62,7 @@ export class FarosClient {
 
     this.graphVersion = cfg.useGraphQLV2 ? GraphVersion.V2 : GraphVersion.V1;
     this.phantoms = cfg.phantoms || Phantom.IncludeNestedOnly;
+    this.visibility = cfg.visibility;
   }
 
   async tenant(): Promise<string> {
@@ -186,9 +188,14 @@ export class FarosClient {
   }
 
   queryParameters(): string | undefined {
-    return this.graphVersion === GraphVersion.V2
-      ? `phantoms=${this.phantoms}`
-      : undefined;
+    const params = [];
+    if (this.graphVersion === GraphVersion.V2) {
+        params.push(`phantoms=${this.phantoms}`);
+        if (this.visibility) {
+            params.push(`visibility=${this.visibility}`);
+        }
+    }
+    return params.length ? params.join('&') : undefined;
   }
 
   private async doGql(
