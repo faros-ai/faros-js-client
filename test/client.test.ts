@@ -1,6 +1,6 @@
 import nock from 'nock';
 
-import {FarosClient, Schema} from '../src';
+import {FarosClient, FarosClientConfig, Schema} from '../src';
 import {GRAPH_VERSION_HEADER} from '../src/client';
 import {Phantom} from '../src/types';
 
@@ -179,19 +179,69 @@ describe('client', () => {
   });
 
   test('check v2 header value', async () => {
+    await expectV2Request({
+      url: apiUrl,
+      apiKey: 'test-key',
+      useGraphQLV2: true,
+    }, true);
+  });
+
+  async function expectV2Request(
+    cfg: FarosClientConfig,
+    expected: true | URLSearchParams
+  ) {
+    expect(cfg.useGraphQLV2).toBeTruthy();
     const mock = nock(apiUrl, {
       reqheaders: {
         // use literal to be sure as variable requires []'s
         'x-faros-graph-version': /v2/i,
       },
     })
-      .get('/graphs/foobar/graphql/schema')
-      .reply(200, gqlSchema);
-
-    const clientConfig = {url: apiUrl, apiKey: 'test-key', useGraphQLV2: true};
-    const client = new FarosClient(clientConfig);
-    await client.gqlSchema('foobar');
+      .post('/graphs/foobar/graphql')
+      .query(expected)
+      .reply(200, {});
+    const client = new FarosClient(cfg);
+    await client.gql('foobar', 'query { __schema { types { name } } }');
     mock.done();
+  }
+
+  test('v2 query parameters - visibility', async () => {
+    const expected = new URLSearchParams({
+      phantoms: Phantom.IncludeNestedOnly,
+      visibility: 'foobar',
+    });
+    const clientConfig = {
+      url: apiUrl,
+      apiKey: 'test-key',
+      useGraphQLV2: true,
+      visibility: 'foobar',
+    };
+    await expectV2Request(clientConfig, expected);
+  });
+
+  test('v2 query parameters - default', async () => {
+    const expected = new URLSearchParams({
+        phantoms: Phantom.IncludeNestedOnly,
+      });
+    const clientConfig = {
+      url: apiUrl,
+      apiKey: 'test-key',
+      useGraphQLV2: true,
+    };
+    await expectV2Request(clientConfig, expected);
+  });
+
+  test('v2 query parameters - custom phantoms', async () => {
+    const expected = new URLSearchParams({
+        phantoms: Phantom.Exclude,
+      });
+    const clientConfig = {
+      url: apiUrl,
+      apiKey: 'test-key',
+      useGraphQLV2: true,
+      phantoms: Phantom.Exclude,
+    };
+    await expectV2Request(clientConfig, expected);
   });
 
   test('gql v2 - default', async () => {
@@ -232,7 +282,7 @@ describe('client', () => {
     const mock = nock(apiUrl)
       .post(
         '/graphs/g1/graphql',
-        JSON.stringify({query, variables: {pageSize: 100, after: 'abc'}})
+        JSON.stringify({query, variables: {pageSize: 100, after: 'abc'}}),
       )
       .reply(200, {
         data: {tms: {tasks: {edges: [{node: {uid: '1'}}, {node: {uid: '2'}}]}}},

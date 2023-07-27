@@ -3,6 +3,7 @@ export interface FarosClientConfig {
   readonly apiKey: string;
   readonly useGraphQLV2?: boolean;
   readonly phantoms?: Phantom;
+  readonly visibility?: string;
 }
 
 export enum GraphVersion {

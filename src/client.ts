@@ -2,6 +2,7 @@ import {AxiosInstance, AxiosRequestConfig} from 'axios';
 import * as gql from 'graphql';
 import {get as traverse, isEmpty, unset} from 'lodash';
 import pino, {Logger} from 'pino';
+import {Dictionary} from 'ts-essentials';
 import {promisify} from 'util';
 import VError from 'verror';
 import * as zlib from 'zlib';
@@ -36,6 +37,7 @@ export class FarosClient {
   private readonly api: AxiosInstance;
   readonly graphVersion: GraphVersion;
   readonly phantoms: Phantom;
+  readonly visibility?: string;
 
   constructor(
     cfg: FarosClientConfig,
@@ -61,6 +63,7 @@ export class FarosClient {
 
     this.graphVersion = cfg.useGraphQLV2 ? GraphVersion.V2 : GraphVersion.V1;
     this.phantoms = cfg.phantoms || Phantom.IncludeNestedOnly;
+    this.visibility = cfg.visibility;
   }
 
   async tenant(): Promise<string> {
@@ -185,10 +188,15 @@ export class FarosClient {
     }
   }
 
-  queryParameters(): string | undefined {
-    return this.graphVersion === GraphVersion.V2
-      ? `phantoms=${this.phantoms}`
-      : undefined;
+  queryParameters(): Dictionary<any> {
+    const result: Dictionary<any> = {};
+    if (this.graphVersion === GraphVersion.V2) {
+        result.phantoms = this.phantoms;
+        if (this.visibility) {
+            result.visibility = this.visibility;
+        }
+    }
+    return result;
   }
 
   private async doGql(
@@ -215,17 +223,16 @@ export class FarosClient {
           doCompression = false;
         }
       }
-      const queryParams = this.queryParameters();
-      const urlSuffix = queryParams ? `?${queryParams}` : '';
+      const params = this.queryParameters();
       const headers: any = {};
       if (doCompression) {
         headers['content-encoding'] = 'gzip';
         headers['content-type'] = 'application/json';
       }
       const {data} = await this.api.post(
-        `/graphs/${graph}/graphql${urlSuffix}`,
+        `/graphs/${graph}/graphql`,
         req,
-        {headers}
+        {headers, params}
       );
       return data;
     } catch (err: any) {
