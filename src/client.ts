@@ -2,6 +2,7 @@ import {AxiosInstance, AxiosRequestConfig} from 'axios';
 import * as gql from 'graphql';
 import {get as traverse, isEmpty, unset} from 'lodash';
 import pino, {Logger} from 'pino';
+import {Dictionary} from 'ts-essentials';
 import {promisify} from 'util';
 import VError from 'verror';
 import * as zlib from 'zlib';
@@ -187,15 +188,15 @@ export class FarosClient {
     }
   }
 
-  queryParameters(): string | undefined {
-    const params = [];
+  queryParameters(): Dictionary<any> {
+    const result: Dictionary<any> = {};
     if (this.graphVersion === GraphVersion.V2) {
-        params.push(`phantoms=${this.phantoms}`);
+        result.phantoms = this.phantoms;
         if (this.visibility) {
-            params.push(`visibility=${this.visibility}`);
+            result.visibility = this.visibility;
         }
     }
-    return params.length ? params.join('&') : undefined;
+    return result;
   }
 
   private async doGql(
@@ -222,17 +223,16 @@ export class FarosClient {
           doCompression = false;
         }
       }
-      const queryParams = this.queryParameters();
-      const urlSuffix = queryParams ? `?${queryParams}` : '';
+      const params = this.queryParameters();
       const headers: any = {};
       if (doCompression) {
         headers['content-encoding'] = 'gzip';
         headers['content-type'] = 'application/json';
       }
       const {data} = await this.api.post(
-        `/graphs/${graph}/graphql${urlSuffix}`,
+        `/graphs/${graph}/graphql`,
         req,
-        {headers}
+        {headers, params}
       );
       return data;
     } catch (err: any) {
