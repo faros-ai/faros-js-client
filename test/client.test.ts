@@ -488,7 +488,7 @@ describe('client', () => {
     const now = new Date();
     const mockReplyEvent: WebhookEvent = {
       id: eventId,
-      webhookId: webhookId,
+      webhookId,
       event: {
         eventType: 'push',
         commit: {
@@ -500,8 +500,8 @@ describe('client', () => {
       createdAt: now,
       receivedAt: now,
       updatedAt: now,
-    }
-    
+    };
+
     const mock = nock(apiUrl)
       .get(`/webhooks/${webhookId}/events/${eventId}`)
       .reply(200, mockReplyEvent);

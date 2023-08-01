@@ -435,7 +435,9 @@ export class FarosClient {
     };
   }
 
-  async updateWebhookEventStatus(status: UpdateWebhookEventStatus): Promise<void> {
+  async updateWebhookEventStatus(
+    status: UpdateWebhookEventStatus
+  ): Promise<void> {
     try {
       await this.api.patch(
         `/webhooks/${status.webhookId}/events/${status.eventId}`,
@@ -452,10 +454,15 @@ export class FarosClient {
       );
     }
   }
-  
-  async getWebhookEvent(webhookId: string, eventId: string): Promise<WebhookEvent> {
+
+  async getWebhookEvent(
+    webhookId: string,
+    eventId: string
+  ): Promise<WebhookEvent> {
     try {
-      const response = await this.api.get(`/webhooks/${webhookId}/events/${eventId}`);
+      const response = await this.api.get(
+        `/webhooks/${webhookId}/events/${eventId}`
+      );
       let event = response.data;
       event = {
         ...event,
