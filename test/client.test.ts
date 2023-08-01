@@ -2,7 +2,7 @@ import nock from 'nock';
 
 import {FarosClient, FarosClientConfig, Schema} from '../src';
 import {GRAPH_VERSION_HEADER} from '../src/client';
-import {Phantom} from '../src/types';
+import {Phantom, WebhookEvent, WebhookEventStatus} from '../src/types';
 
 const apiUrl = 'https://test.faros.ai';
 const clientConfig = {url: apiUrl, apiKey: 'test-key'};
@@ -479,6 +479,35 @@ describe('client', () => {
       status: 'error',
       error: 'error message',
     });
+    mock.done();
+  });
+
+  test('get webhook event', async () => {
+    const webhookId = 'testWebhookId';
+    const eventId = 'testEventId';
+    const now = new Date();
+    const mockReplyEvent: WebhookEvent = {
+      id: eventId,
+      webhookId,
+      event: {
+        eventType: 'push',
+        commit: {
+          sha: '0xdeadbeef'
+        }
+      },
+      name: 'push',
+      status: WebhookEventStatus.Pending,
+      createdAt: now,
+      receivedAt: now,
+      updatedAt: now,
+    };
+
+    const mock = nock(apiUrl)
+      .get(`/webhooks/${webhookId}/events/${eventId}`)
+      .reply(200, mockReplyEvent);
+
+    const event = await client.getWebhookEvent(webhookId, eventId);
+    expect(event).toEqual(mockReplyEvent);
     mock.done();
   });
 });
