@@ -82,9 +82,27 @@ export interface Model {
   dataSchema: any;
 }
 
-export interface WebhookEventStatus {
+export interface UpdateWebhookEventStatus {
   webhookId: string;
   eventId: string;
   status: string;
   error?: string;
+}
+
+export interface WebhookEvent {
+  id: string;
+  name: string;
+  webhookId: string;
+  event: any;
+  status: WebhookEventStatus;
+  error?: string;
+  createdAt?: Date;
+  receivedAt: Date;
+  updatedAt: Date;
+}
+
+export enum WebhookEventStatus {
+  Pending = 'Pending',
+  Ok = 'OK',
+  Error = 'Error',
 }

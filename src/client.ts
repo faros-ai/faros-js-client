@@ -22,7 +22,8 @@ import {
   Phantom,
   SecretName,
   UpdateAccount,
-  WebhookEventStatus,
+  UpdateWebhookEventStatus,
+  WebhookEvent,
 } from './types';
 import {Utils} from './utils';
 
@@ -434,7 +435,7 @@ export class FarosClient {
     };
   }
 
-  async updateWebhookEventStatus(status: WebhookEventStatus): Promise<void> {
+  async updateWebhookEventStatus(status: UpdateWebhookEventStatus): Promise<void> {
     try {
       await this.api.patch(
         `/webhooks/${status.webhookId}/events/${status.eventId}`,
@@ -448,6 +449,25 @@ export class FarosClient {
         err,
         `unable to update status for webhook: ${status.webhookId}` +
           `, event: ${status.eventId}`
+      );
+    }
+  }
+  
+  async getWebhookEvent(webhookId: string, eventId: string): Promise<WebhookEvent> {
+    try {
+      const response = await this.api.get(`/webhooks/${webhookId}/events/${eventId}`);
+      let event = response.data;
+      event = {
+        ...event,
+        createdAt: event.createdAt ? new Date(event.createdAt) : undefined,
+        receivedAt: new Date(event.receivedAt),
+        updatedAt: new Date(event.updatedAt),
+      };
+      return event as WebhookEvent;
+    } catch (err: any) {
+      throw wrapApiError(
+        err,
+        `unable to retrieve event: ${eventId} for webhook: ${webhookId}`
       );
     }
   }
