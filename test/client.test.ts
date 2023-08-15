@@ -5,7 +5,7 @@ import {GRAPH_VERSION_HEADER} from '../src/client';
 import {Phantom, WebhookEvent, WebhookEventStatus} from '../src/types';
 
 const apiUrl = 'https://test.faros.ai';
-const clientConfig = {url: apiUrl, apiKey: 'test-key'};
+const clientConfig = {url: apiUrl, apiKey: 'test-key', useGraphQLV2: false};
 const client = new FarosClient(clientConfig);
 
 describe('client', () => {
