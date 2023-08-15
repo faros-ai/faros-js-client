@@ -47,6 +47,8 @@ export class FarosClient {
   ) {
     const url = Utils.urlWithoutTrailingSlashes(cfg.url);
 
+    const useGraphQLV2 = cfg.useGraphQLV2 ?? true;
+
     this.api = makeAxiosInstanceWithRetry(
       {
         ...axiosConfig,
@@ -54,7 +56,7 @@ export class FarosClient {
         headers: {
           ...axiosConfig?.headers,
           authorization: cfg.apiKey,
-          ...(cfg.useGraphQLV2 && {[GRAPH_VERSION_HEADER]: 'v2'}),
+          ...(useGraphQLV2 && {[GRAPH_VERSION_HEADER]: 'v2'}),
         },
         maxBodyLength: Infinity, // rely on server to enforce request body size
         maxContentLength: Infinity, // accept any response size
@@ -62,7 +64,7 @@ export class FarosClient {
       logger
     );
 
-    this.graphVersion = cfg.useGraphQLV2 ? GraphVersion.V2 : GraphVersion.V1;
+    this.graphVersion = useGraphQLV2 ? GraphVersion.V2 : GraphVersion.V1;
     this.phantoms = cfg.phantoms || Phantom.IncludeNestedOnly;
     this.visibility = cfg.visibility;
   }
