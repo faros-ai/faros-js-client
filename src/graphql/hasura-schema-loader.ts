@@ -133,6 +133,13 @@ export class HasuraSchemaLoader implements SchemaLoader {
   }
 
   async loadSchema(): Promise<Schema> {
+    // Unwraps type from its wrapping type (non-null and list containers)
+    function unwrapType(type: any): any {
+      if (type.kind === 'LIST' || type.kind === 'NON_NULL') {
+        return unwrapType(type.ofType);
+      }
+      return type;
+    }
     const primaryKeysFromDb = await this.fetchPrimaryKeys();
     const source = await this.fetchDbSource();
     const targetTableByFk = HasuraSchemaLoader.indexFkTargetModels(source);
@@ -157,12 +164,12 @@ export class HasuraSchemaLoader implements SchemaLoader {
       if (!type?.fields) {
         continue;
       }
+
       const scalarTypes: any[] = type.fields.filter(
-        (t: any) =>
-          (t.type.kind === 'SCALAR' ||
-            (t.type.kind === 'NON_NULL' && t.type.ofType.kind === 'SCALAR')) &&
-          t.description !== 'generated'
+        (t: any) => unwrapType(t.type).kind === 'SCALAR'
+          && t.description !== 'generated'
       );
+
       const tableScalars: Dictionary<string> = {};
       for (const scalar of scalarTypes) {
         if (!MULTI_TENANT_COLUMNS.has(snakeCase(scalar.name))) {
