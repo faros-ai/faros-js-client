@@ -158,16 +158,13 @@ export class HasuraSchemaLoader implements SchemaLoader {
         continue;
       }
       const scalarTypes: any[] = type.fields.filter(
-        (t: any) =>
-          (t.type.kind === 'SCALAR' ||
-            (t.type.kind === 'NON_NULL' && t.type.ofType.kind === 'SCALAR')) &&
-          t.description !== 'generated'
+        (t: any) => this.unwrapType(t.type).kind === 'SCALAR'
+          && t.description !== 'generated'
       );
       const tableScalars: Dictionary<string> = {};
       for (const scalar of scalarTypes) {
         if (!MULTI_TENANT_COLUMNS.has(snakeCase(scalar.name))) {
-          tableScalars[scalar.name] =
-            scalar.type.ofType?.name ?? scalar.type.name;
+          tableScalars[scalar.name] = this.unwrapType(scalar.type).name;
         }
       }
       scalars[tableName] = tableScalars;
@@ -249,6 +246,14 @@ export class HasuraSchemaLoader implements SchemaLoader {
       sortedModelDependencies,
       tableNames,
     };
+  }
+
+  // Unwraps type from its wrapping type (non-null and list containers)
+  private unwrapType(type: any): any {
+    if (type.kind === 'LIST' || type.kind === 'NON_NULL') {
+      return this.unwrapType(type.ofType);
+    }
+    return type;
   }
 }
 
