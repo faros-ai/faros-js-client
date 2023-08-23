@@ -157,19 +157,16 @@ export class HasuraSchemaLoader implements SchemaLoader {
       if (!type?.fields) {
         continue;
       }
-
       const scalarTypes: any[] = type.fields.filter(
         (t: any) => this.unwrapType(t.type).kind === 'SCALAR'
           && t.description !== 'generated'
       );
-
       const tableScalars: Dictionary<string> = {};
       for (const scalar of scalarTypes) {
         if (!MULTI_TENANT_COLUMNS.has(snakeCase(scalar.name))) {
           tableScalars[scalar.name] = this.unwrapType(scalar.type).name;
         }
       }
-
       scalars[tableName] = tableScalars;
       if (type.description) {
         try {
