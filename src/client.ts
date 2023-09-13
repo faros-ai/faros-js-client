@@ -481,7 +481,7 @@ export class FarosClient {
   }
 
   /**
-   * General-purpose method for making requests to the Faros API.
+   * Generic method for making requests to the Faros API.
    * @param method HTTP request method
    * @param path endpoint path
    * @param data request body
