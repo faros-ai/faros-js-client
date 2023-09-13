@@ -480,6 +480,14 @@ export class FarosClient {
     }
   }
 
+  /**
+   * General-purpose method for making requests to the Faros API.
+   * @param method HTTP request method
+   * @param path endpoint path
+   * @param data request body
+   * @param params request query params
+   * @returns response body
+   */
   async request<T>(
     method: Method,
     path: string,
