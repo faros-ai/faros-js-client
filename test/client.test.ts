@@ -179,11 +179,14 @@ describe('client', () => {
   });
 
   test('check v2 header value', async () => {
-    await expectV2Request({
-      url: apiUrl,
-      apiKey: 'test-key',
-      useGraphQLV2: true,
-    }, true);
+    await expectV2Request(
+      {
+        url: apiUrl,
+        apiKey: 'test-key',
+        useGraphQLV2: true,
+      },
+      true
+    );
   });
 
   async function expectV2Request(
@@ -221,8 +224,8 @@ describe('client', () => {
 
   test('v2 query parameters - default', async () => {
     const expected = new URLSearchParams({
-        phantoms: Phantom.IncludeNestedOnly,
-      });
+      phantoms: Phantom.IncludeNestedOnly,
+    });
     const clientConfig = {
       url: apiUrl,
       apiKey: 'test-key',
@@ -233,8 +236,8 @@ describe('client', () => {
 
   test('v2 query parameters - custom phantoms', async () => {
     const expected = new URLSearchParams({
-        phantoms: Phantom.Exclude,
-      });
+      phantoms: Phantom.Exclude,
+    });
     const clientConfig = {
       url: apiUrl,
       apiKey: 'test-key',
@@ -282,7 +285,7 @@ describe('client', () => {
     const mock = nock(apiUrl)
       .post(
         '/graphs/g1/graphql',
-        JSON.stringify({query, variables: {pageSize: 100, after: 'abc'}}),
+        JSON.stringify({query, variables: {pageSize: 100, after: 'abc'}})
       )
       .reply(200, {
         data: {tms: {tasks: {edges: [{node: {uid: '1'}}, {node: {uid: '2'}}]}}},
@@ -492,8 +495,8 @@ describe('client', () => {
       event: {
         eventType: 'push',
         commit: {
-          sha: '0xdeadbeef'
-        }
+          sha: '0xdeadbeef',
+        },
       },
       name: 'push',
       status: WebhookEventStatus.Pending,
@@ -508,6 +511,16 @@ describe('client', () => {
 
     const event = await client.getWebhookEvent(webhookId, eventId);
     expect(event).toEqual(mockReplyEvent);
+    mock.done();
+  });
+
+  test('generic request', async () => {
+    const path = `/prefix/endpoint`;
+    const body = {foo: 'bar'};
+    const responseBody = {result: 'ok'};
+    const mock = nock(apiUrl).post(path, body).reply(200, responseBody);
+    const response = await client.request('POST', path, body);
+    expect(response).toEqual(responseBody);
     mock.done();
   });
 });
