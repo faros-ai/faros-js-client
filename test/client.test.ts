@@ -515,7 +515,7 @@ describe('client', () => {
   });
 
   test('generic request', async () => {
-    const path = `/prefix/endpoint`;
+    const path = '/prefix/endpoint';
     const body = {foo: 'bar'};
     const responseBody = {result: 'ok'};
     const mock = nock(apiUrl).post(path, body).reply(200, responseBody);
