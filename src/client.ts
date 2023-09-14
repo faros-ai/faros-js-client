@@ -506,4 +506,12 @@ export class FarosClient {
       throw wrapApiError(err, `unable to perform request: ${path}`);
     }
   }
+
+  /**
+   * Sets the API key to use for requests.
+   * @param apiKey API key to use for requests
+   */
+  setApiKey(apiKey: string): void {
+    this.api.defaults.headers.authorization = apiKey;
+  }
 }
