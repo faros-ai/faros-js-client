@@ -523,4 +523,20 @@ describe('client', () => {
     expect(response).toEqual(responseBody);
     mock.done();
   });
+
+  test('set api key', async () => {
+    const mock = nock(apiUrl)
+      .get('/users/me')
+      .matchHeader('authorization', 'test-key')
+      .reply(200, {tenantId: '1'})
+      .get('/users/me')
+      .matchHeader('authorization', 'test-key-2')
+      .reply(200, {tenantId: '2'});
+    const res1 = await client.tenant();
+    expect(res1).toBe('1');
+    client.setApiKey('test-key-2');
+    const res2 = await client.tenant();
+    expect(res2).toBe('2');
+    mock.done();
+  });
 });
