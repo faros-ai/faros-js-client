@@ -107,3 +107,12 @@ describe('query builder', () => {
     expect(queryString).toMatchSnapshot();
   });
 });
+
+describe('arrayLiteral', () => {
+  test('strings', () => {
+    expect(sut.arrayLiteral(['a', 'b', 'c'])).toEqual('{"a","b","c"}');
+    expect(sut.arrayLiteral(['"a', 'b"', '"c"'])).toEqual(
+      '{"a","b","c"}'
+    );
+  });
+});
