@@ -115,4 +115,27 @@ export class Utils {
       setTimeout(resolve, millis);
     });
   }
+
+static toCategoryDetail<EnumType extends {Custom: any}>(
+    enumObject: EnumType & Record<string, any>,
+    category: string,
+    categoryMapping: Record<string, string> = {}
+  ): {
+    category: EnumType[keyof EnumType];
+    detail: string;
+  } {
+    const enumSymbol =
+      enumObject[category] ?? enumObject[categoryMapping[category]];
+    if (enumSymbol) {
+      return {
+        category: enumSymbol,
+        detail: category,
+      };
+    }
+
+    return {
+      category: enumObject.Custom,
+      detail: category,
+    };
+  }
 }

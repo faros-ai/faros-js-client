@@ -150,4 +150,64 @@ describe('parse primary keys', () => {
       true)
     ).toEqual(['lat', 'lon']);
   });
+
+  describe('to category detail converter', () => {
+    enum Example {
+      Option1 = 'Option1',
+      Option2 = 'Option2',
+      Custom = 'Custom',
+    }
+
+    test('category matches enum symbol', () => {
+      expect(
+        sut.Utils.toCategoryDetail(Example, 'Option1')
+      ).toEqual({
+        category: Example.Option1,
+        detail: 'Option1',
+      });
+    });
+
+    test('mapped category matches enum symbol', () => {
+      const sourceCategory = 'Option One';
+      const questionCategoryMapping = {
+        [sourceCategory]: 'Option1',
+      };
+
+      expect(
+        sut.Utils.toCategoryDetail(
+          Example,
+          sourceCategory,
+          questionCategoryMapping
+        )
+      ).toEqual({
+        category: Example.Option1,
+        detail: sourceCategory,
+      });
+    });
+
+    test('unmatched category', () => {
+      const sourceCategory = 'Option One';
+      const questionCategoryMapping = {
+        [sourceCategory]: 'NotARealCategory',
+      };
+
+      expect(
+        sut.Utils.toCategoryDetail(
+          Example,
+          sourceCategory,
+          questionCategoryMapping
+        )
+      ).toEqual({
+        category: Example.Custom,
+        detail: sourceCategory,
+      });
+
+      expect(
+        sut.Utils.toCategoryDetail(Example, sourceCategory)
+      ).toEqual({
+        category: Example.Custom,
+        detail: sourceCategory,
+      });
+    });
+  });
 });
