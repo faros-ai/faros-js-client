@@ -210,4 +210,13 @@ describe('parse primary keys', () => {
       });
     });
   });
+
+  describe('clean and truncate', () => {
+    test('should truncate strings', () => {
+      const str = 'abc123😍\u0000';
+      expect(sut.Utils.cleanAndTruncate(str)).toEqual('abc123😍');
+      expect(sut.Utils.cleanAndTruncate(str, 3)).toEqual('abc');
+      expect(sut.Utils.cleanAndTruncate(str, 7)).toEqual('abc123😍');
+    });
+  });
 });
