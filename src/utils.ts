@@ -153,7 +153,8 @@ export class Utils {
     if (str.length <= length) {
       result = str;
     } else {
-      // If the last character is part of a unicode surrogate pair, include the next character
+      // If the last character is part of a unicode surrogate pair, 
+      // include the next character
       const lastChar = str.codePointAt(length - 1) ?? 0;
       result =
         lastChar > 65535
