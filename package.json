@@ -32,7 +32,7 @@
     "node": ">=16"
   },
   "dependencies": {
-    "axios": "^0.21.4",
+    "axios": "^1.6.2",
     "axios-retry": "^3.2.5",
     "commander": "^9.3.0",
     "fs-extra": "^9.1.0",
@@ -92,7 +92,10 @@
     "testPathIgnorePatterns": [
       ".d.ts"
     ],
-    "testTimeout": 5000
+    "testTimeout": 5000,
+    "moduleNameMapper": {
+      "^axios$": "axios/dist/node/axios.cjs"
+    }
   },
   "prettier": {
     "bracketSpacing": false,
