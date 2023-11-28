@@ -1,28 +1,28 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`graphql build incremental V1 1`] = `
-Object {
+{
   "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { builds (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid pipeline { pipelineId: id } metadata { refreshedAt } } } } }",
   "name": "cicd_Build",
 }
 `;
 
 exports[`graphql build incremental V1 2`] = `
-Object {
+{
   "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { builds (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid pipeline { id } metadata { refreshedAt } } } } }",
   "name": "cicd_Build",
 }
 `;
 
 exports[`graphql build incremental V2 1`] = `
-Object {
+{
   "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id createdAt endedAt name number origin pipeline { pipelineId: id } refreshedAt startedAt status statusCategory statusDetail uid url } }",
   "name": "cicd_Build",
 }
 `;
 
 exports[`graphql build incremental V2 2`] = `
-Object {
+{
   "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id createdAt endedAt name number origin pipeline { id } refreshedAt startedAt status statusCategory statusDetail uid url } }",
   "name": "cicd_Build",
 }
@@ -125,56 +125,56 @@ exports[`graphql convert to incremental V2 2`] = `
 `;
 
 exports[`graphql create incremental queries V1 1`] = `
-Array [
-  Object {
+[
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { deployments (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid url requestedAt startedAt endedAt application { applicationId: id } build { buildId: id } metadata { refreshedAt } } } } }",
     "name": "cicd_Deployment",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { deploymentChangesets (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id deployment { deploymentId: id } commit { commitId: id } metadata { refreshedAt } } } } }",
     "name": "cicd_DeploymentChangeset",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { vcs { commits (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id sha metadata { refreshedAt } } } } }",
     "name": "vcs_Commit",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { builds (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid pipeline { pipelineId: id } metadata { refreshedAt } } } } }",
     "name": "cicd_Build",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { pipelines (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid metadata { refreshedAt } } } } }",
     "name": "cicd_Pipeline",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { compute { applications (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id name metadata { refreshedAt } } } } }",
     "name": "compute_Application",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { tms { tasks (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid creator { creatorId: id } metadata { refreshedAt } } } } }",
     "name": "tms_Task",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { tms { taskProjectRelationships (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id task { taskId: id } project { projectId: id } metadata { refreshedAt } } } } }",
     "name": "tms_TaskProjectRelationship",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { tms { projects (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid metadata { refreshedAt } } } } }",
     "name": "tms_Project",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { tms { taskBoardProjectRelationships (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id board { boardId: id } project { projectId: id } metadata { refreshedAt } } } } }",
     "name": "tms_TaskBoardProjectRelationship",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { tms { taskBoards (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid metadata { refreshedAt } } } } }",
     "name": "tms_TaskBoard",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { tms { users (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid metadata { refreshedAt } } } } }",
     "name": "tms_User",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { tms { taskAssignments (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id assignedAt task { taskId: id } assignee { assigneeId: id } metadata { refreshedAt } } } } }",
     "name": "tms_TaskAssignment",
   },
@@ -182,56 +182,56 @@ Array [
 `;
 
 exports[`graphql create incremental queries V1 2`] = `
-Array [
-  Object {
+[
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { deployments (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid url requestedAt startedAt endedAt application { id } build { id } metadata { refreshedAt } } } } }",
     "name": "cicd_Deployment",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { deploymentChangesets (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id deployment { id } commit { id } metadata { refreshedAt } } } } }",
     "name": "cicd_DeploymentChangeset",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { vcs { commits (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id sha metadata { refreshedAt } } } } }",
     "name": "vcs_Commit",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { builds (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid pipeline { id } metadata { refreshedAt } } } } }",
     "name": "cicd_Build",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { pipelines (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid metadata { refreshedAt } } } } }",
     "name": "cicd_Pipeline",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { compute { applications (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id name metadata { refreshedAt } } } } }",
     "name": "compute_Application",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { tms { tasks (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid creator { id } metadata { refreshedAt } } } } }",
     "name": "tms_Task",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { tms { taskProjectRelationships (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id task { id } project { id } metadata { refreshedAt } } } } }",
     "name": "tms_TaskProjectRelationship",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { tms { projects (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid metadata { refreshedAt } } } } }",
     "name": "tms_Project",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { tms { taskBoardProjectRelationships (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id board { id } project { id } metadata { refreshedAt } } } } }",
     "name": "tms_TaskBoardProjectRelationship",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { tms { taskBoards (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid metadata { refreshedAt } } } } }",
     "name": "tms_TaskBoard",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { tms { users (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid metadata { refreshedAt } } } } }",
     "name": "tms_User",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { tms { taskAssignments (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id assignedAt task { id } assignee { id } metadata { refreshedAt } } } } }",
     "name": "tms_TaskAssignment",
   },
@@ -239,28 +239,28 @@ Array [
 `;
 
 exports[`graphql create incremental queries V1 with embedded fields 1`] = `
-Array [
-  Object {
+[
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { fake { models (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id deep { env { category detail } envs { category detail } name topics } person { name contact { email phone } } metadata { refreshedAt } } } } }",
     "name": "fake_Model",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { deployments (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid source env { category detail } envs { category detail } application { applicationId: id } build { buildId: id } metadata { refreshedAt } } } } }",
     "name": "cicd_Deployment",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { compute { applications (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id name displayName platform metadata { refreshedAt } } } } }",
     "name": "compute_Application",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { builds (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name number pipeline { pipelineId: id } metadata { refreshedAt } } } } }",
     "name": "cicd_Build",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { pipelines (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name organization { organizationId: id } metadata { refreshedAt } } } } }",
     "name": "cicd_Pipeline",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { organizations (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name source metadata { refreshedAt } } } } }",
     "name": "cicd_Organization",
   },
@@ -268,28 +268,28 @@ Array [
 `;
 
 exports[`graphql create incremental queries V1 with embedded fields 2`] = `
-Array [
-  Object {
+[
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { fake { models (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id deep { env { category detail } envs { category detail } name topics } person { name contact { email phone } } metadata { refreshedAt } } } } }",
     "name": "fake_Model",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { deployments (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid source env { category detail } envs { category detail } application { id } build { id } metadata { refreshedAt } } } } }",
     "name": "cicd_Deployment",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { compute { applications (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id name displayName platform metadata { refreshedAt } } } } }",
     "name": "compute_Application",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { builds (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name number pipeline { id } metadata { refreshedAt } } } } }",
     "name": "cicd_Build",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { pipelines (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name organization { id } metadata { refreshedAt } } } } }",
     "name": "cicd_Pipeline",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { organizations (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name source metadata { refreshedAt } } } } }",
     "name": "cicd_Organization",
   },
@@ -297,24 +297,24 @@ Array [
 `;
 
 exports[`graphql create incremental queries V1 with primary keys info 1`] = `
-Array [
-  Object {
+[
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { deployments (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid source application { applicationId: id } build { buildId: pipeline { organization { source uid } uid } uid } metadata { refreshedAt } } } } }",
     "name": "cicd_Deployment",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { compute { applications (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id name displayName platform metadata { refreshedAt } } } } }",
     "name": "compute_Application",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { builds (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name number pipeline { pipelineId: organization { source uid } uid } metadata { refreshedAt } } } } }",
     "name": "cicd_Build",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { pipelines (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name organization { organizationId: source uid } metadata { refreshedAt } } } } }",
     "name": "cicd_Pipeline",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { organizations (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name source metadata { refreshedAt } } } } }",
     "name": "cicd_Organization",
   },
@@ -322,24 +322,24 @@ Array [
 `;
 
 exports[`graphql create incremental queries V1 with primary keys info 2`] = `
-Array [
-  Object {
+[
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { deployments (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid source application { id } build { pipeline { organization { source uid } uid } uid } metadata { refreshedAt } } } } }",
     "name": "cicd_Deployment",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { compute { applications (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id name displayName platform metadata { refreshedAt } } } } }",
     "name": "compute_Application",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { builds (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name number pipeline { organization { source uid } uid } metadata { refreshedAt } } } } }",
     "name": "cicd_Build",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { pipelines (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name organization { source uid } metadata { refreshedAt } } } } }",
     "name": "cicd_Pipeline",
   },
-  Object {
+  {
     "gql": "query ($from: builtin_BigInt!, $to: builtin_BigInt!) { cicd { organizations (filter: {refreshedAtMillis: {greaterThanOrEqualTo: $from, lessThan: $to}}) { nodes { id uid name source metadata { refreshedAt } } } } }",
     "name": "cicd_Organization",
   },
@@ -347,12 +347,12 @@ Array [
 `;
 
 exports[`graphql create incremental queries V2 1`] = `
-Array [
-  Object {
+[
+  {
     "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id createdAt endedAt name number origin pipeline { pipelineId: id } refreshedAt startedAt status statusCategory statusDetail uid url } }",
     "name": "cicd_Build",
   },
-  Object {
+  {
     "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id } }",
     "name": "cicd_Pipeline",
   },
@@ -360,12 +360,12 @@ Array [
 `;
 
 exports[`graphql create incremental queries V2 2`] = `
-Array [
-  Object {
+[
+  {
     "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id createdAt endedAt name number origin pipeline { id } refreshedAt startedAt status statusCategory statusDetail uid url } }",
     "name": "cicd_Build",
   },
-  Object {
+  {
     "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id } }",
     "name": "cicd_Pipeline",
   },
@@ -375,24 +375,24 @@ Array [
 exports[`graphql create incremental queries V2 when missing expected field 2`] = `"expected missing_field to be a reference field of cicd_Pipeline (foreign key to cicd_Organization)"`;
 
 exports[`graphql create incremental queries V2 with primary keys/references 1`] = `
-Array [
-  Object {
+[
+  {
     "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id name pipeline { organization { source uid } uid } uid url } }",
     "name": "cicd_Build",
   },
-  Object {
+  {
     "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id name organization { source uid } uid url } }",
     "name": "cicd_Pipeline",
   },
-  Object {
+  {
     "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Organization (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id description name origin source uid url } }",
     "name": "cicd_Organization",
   },
-  Object {
+  {
     "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Repository (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id description name organization { source uid } origin uid url } }",
     "name": "cicd_Repository",
   },
-  Object {
+  {
     "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Deployment (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id source statusCategory statusDetail uid url } }",
     "name": "cicd_Deployment",
   },
@@ -400,12 +400,12 @@ Array [
 `;
 
 exports[`graphql excludes foreign key (scalar) identifier from selection 1`] = `
-Array [
-  Object {
+[
+  {
     "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id name organization { source uid } uid url } }",
     "name": "cicd_Pipeline",
   },
-  Object {
+  {
     "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Organization (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id description name origin source uid url } }",
     "name": "cicd_Organization",
   },
@@ -413,15 +413,15 @@ Array [
 `;
 
 exports[`graphql flatten nodes V2 with lists within lists 1`] = `
-Array [
-  Object {
+[
+  {
     "author_identity_name": "roma",
     "author_level": "ninja",
     "author_uid": "Roma-Kyrnis",
     "number": 37,
     "repository_name": "airbyte-connectors",
   },
-  Object {
+  {
     "author_identity_name": "matthew",
     "author_level": "master",
     "author_uid": "tovbinm",
