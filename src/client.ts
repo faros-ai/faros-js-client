@@ -1,4 +1,4 @@
-import {AxiosInstance, AxiosRequestConfig} from 'axios';
+import {AxiosInstance, AxiosRequestConfig, Method} from 'axios';
 import * as gql from 'graphql';
 import {get as traverse, isEmpty, unset} from 'lodash';
 import pino, {Logger} from 'pino';
@@ -194,10 +194,10 @@ export class FarosClient {
   queryParameters(): Dictionary<any> {
     const result: Dictionary<any> = {};
     if (this.graphVersion === GraphVersion.V2) {
-        result.phantoms = this.phantoms;
-        if (this.visibility) {
-            result.visibility = this.visibility;
-        }
+      result.phantoms = this.phantoms;
+      if (this.visibility) {
+        result.visibility = this.visibility;
+      }
     }
     return result;
   }
@@ -232,11 +232,10 @@ export class FarosClient {
         headers['content-encoding'] = 'gzip';
         headers['content-type'] = 'application/json';
       }
-      const {data} = await this.api.post(
-        `/graphs/${graph}/graphql`,
-        req,
-        {headers, params}
-      );
+      const {data} = await this.api.post(`/graphs/${graph}/graphql`, req, {
+        headers,
+        params,
+      });
       return data;
     } catch (err: any) {
       throw wrapApiError(err, `unable to query graph: ${graph}`);
@@ -479,5 +478,40 @@ export class FarosClient {
         `unable to retrieve event: ${eventId} for webhook: ${webhookId}`
       );
     }
+  }
+
+  /**
+   * Generic method for making requests to the Faros API.
+   * @param method HTTP request method
+   * @param path endpoint path
+   * @param data request body
+   * @param params request query params
+   * @returns response body
+   */
+  async request<T>(
+    method: Method,
+    path: string,
+    data?: any,
+    params?: any
+  ): Promise<T> {
+    try {
+      const response = await this.api.request({
+        method,
+        url: path,
+        data,
+        params,
+      });
+      return response.data;
+    } catch (err: any) {
+      throw wrapApiError(err, `unable to perform request: ${path}`);
+    }
+  }
+
+  /**
+   * Sets the API key to use for requests.
+   * @param apiKey API key to use for requests
+   */
+  setApiKey(apiKey: string): void {
+    this.api.defaults.headers.authorization = apiKey;
   }
 }

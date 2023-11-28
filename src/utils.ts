@@ -1,6 +1,8 @@
 import {Duration} from 'luxon';
 import VError from 'verror';
 
+// Max length for free-form description text fields such as issue body
+const MAX_TEXT_LENGTH = 1000;
 
 export class Utils {
   static urlWithoutTrailingSlashes(url: string): string {
@@ -114,5 +116,52 @@ export class Utils {
     return new Promise((resolve) => {
       setTimeout(resolve, millis);
     });
+  }
+
+  static toCategoryDetail<EnumType extends {Custom: any}>(
+    enumObject: EnumType & Record<string, any>,
+    category: string,
+    categoryMapping: Record<string, string> = {}
+  ): {
+    category: EnumType[keyof EnumType];
+    detail: string;
+  } {
+    const enumSymbol =
+      enumObject[category] ?? enumObject[categoryMapping[category]];
+    if (enumSymbol) {
+      return {
+        category: enumSymbol,
+        detail: category,
+      };
+    }
+
+    return {
+      category: enumObject.Custom,
+      detail: category,
+    };
+  }
+
+  static cleanAndTruncate(
+    str?: string,
+    maxLength?: number
+  ): string | null | undefined {
+    if (!str) {
+      return str;
+    }
+    const length = maxLength ?? MAX_TEXT_LENGTH;
+    let result: string;
+    if (str.length <= length) {
+      result = str;
+    } else {
+      // If the last character is part of a unicode surrogate pair,
+      // include the next character
+      const lastChar = str.codePointAt(length - 1) ?? 0;
+      result =
+        lastChar > 65535
+          ? str.substring(0, length + 1)
+          : str.substring(0, length);
+    }
+    // eslint-disable-next-line no-control-regex
+    return result.replace(/\u0000/g, '');
   }
 }

@@ -96,7 +96,7 @@ export class QueryBuilder {
         // ref's key should be suffixed with Id for onConflict field
         maskKey += 'Id';
       } else {
-        mutObj[k] = Array.isArray(v) ? this.arrayLiteral(v) : v;
+        mutObj[k] = Array.isArray(v) ? arrayLiteral(v) : v;
       }
       if (!ref) {
         mask.push(maskKey);
@@ -135,7 +135,7 @@ export class QueryBuilder {
       } else if (v instanceof Ref) {
         mutObj[k] = this.deleteMutationObj(v.model, true);
       } else {
-        const value = Array.isArray(v) ? this.arrayLiteral(v) : v;
+        const value = Array.isArray(v) ? arrayLiteral(v) : v;
         mutObj[k] = {_eq: value};
       }
     }
@@ -149,23 +149,25 @@ export class QueryBuilder {
       update_columns: mask.map((c) => new EnumType(c)),
     };
   }
+}
 
-  /**
-   * Change string arrays into string literal array.
-   * Leave non-string arrays untouched.
-   */
-  private arrayLiteral(arr: any[]): string | object {
-    for (const item of arr) {
-      if (typeof item !== 'string') {
-        return arr;
-      }
+/**
+ * Convert string arrays into postgres literal array.
+ * Leave non-string arrays untouched.
+ */
+export function arrayLiteral(arr: any[]): string | object {
+  for (const item of arr) {
+    if (typeof item !== 'string') {
+      return arr;
     }
-
-    return JSON.stringify(arr)
-      .replace('[', '{')
-      .replace(']', '}')
-      .replace(/"/g, '');
   }
+  return `{${arr
+    .map((s) => {
+      const pre = s.startsWith('"') ? '' : '"';
+      const suf = s.endsWith('"') ? '' : '"';
+      return `${pre}${s}${suf}`;
+    })
+    .join(',')}}`;
 }
 
 export function mask(object: any): string[] {
