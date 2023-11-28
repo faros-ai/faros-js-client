@@ -45,8 +45,7 @@ export function makeAxiosInstanceWithRetry(
     retries,
     retryCondition: (error) => {
       const isGraphQLEndpoint =
-        !isNil(error.config?.url) &&
-        Boolean(error?.config?.url.endsWith('graphql')) &&
+        Boolean(error?.config?.url?.endsWith('graphql')) &&
         error?.config?.method === 'post';
       // Timeouts should be retryable
       // 409 is an edit conflict error, which is retryable for GraphQL endpoints

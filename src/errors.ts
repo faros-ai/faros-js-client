@@ -48,11 +48,7 @@ export function wrapApiError(maybeError: Error, message?: string): Error {
   const prefix = message ? `${message}: ` : '';
   const res = error.response;
   const info = {
-    req: error.request
-      ? formatRequest({...error.config, ...error.request})
-      : error.config
-      ? formatRequest(error.config)
-      : undefined,
+    req: formatRequest({...error.config, ...error.request}),
     res: res ? formatResponse(res) : undefined,
   };
   if (!res) {
@@ -65,8 +61,7 @@ export function wrapApiError(maybeError: Error, message?: string): Error {
   }
   const {data, status} = res;
   let msg = `${prefix}API responded with status ${status}`;
-  const causeMsg =
-    typeof data == 'string' ? data : (data as any)?.error?.message;
+  const causeMsg = typeof data == 'string' ? data : error.message;
   if (causeMsg) {
     msg += `: ${causeMsg}`;
   }
