@@ -1,7 +1,6 @@
 import axios, {AxiosError, AxiosInstance, AxiosRequestConfig} from 'axios';
 import axiosRetry, {IAxiosRetryConfig, isRetryableError} from 'axios-retry';
 import isRetryAllowed from 'is-retry-allowed';
-import {isNil} from 'lodash';
 import {Logger} from 'pino';
 
 import {wrapApiError} from './errors';
