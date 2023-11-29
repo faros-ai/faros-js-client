@@ -2,14 +2,13 @@ import axios from 'axios';
 import fs from 'fs-extra';
 import * as gql from 'graphql';
 import path from 'path';
-import {mocked} from 'ts-jest/utils';
 
 import {FarosClient} from '../src/client';
 
 jest.mock('axios');
 jest.mock('axios-retry');
 
-const mockedAxios = mocked(axios, true);
+const mockedAxios = jest.mocked(axios);
 
 describe('index', () => {
   async function loadQueryFile(name: string): Promise<string> {
@@ -98,14 +97,24 @@ describe('index', () => {
     expect(nodeUids).toEqual(['deployment1', 'deployment2']);
 
     const expectedQuery = await loadQueryFile('paginated-deployments.gql');
-    expect(mockPost).toHaveBeenNthCalledWith(1, '/graphs/graph/graphql', {
-      query: expectedQuery,
-      variables: {pageSize: 1},
-    }, expect.anything());
-    expect(mockPost).toHaveBeenNthCalledWith(2, '/graphs/graph/graphql', {
-      query: expectedQuery,
-      variables: {cursor: 'abc', pageSize: 1},
-    }, expect.anything());
+    expect(mockPost).toHaveBeenNthCalledWith(
+      1,
+      '/graphs/graph/graphql',
+      {
+        query: expectedQuery,
+        variables: {pageSize: 1},
+      },
+      expect.anything()
+    );
+    expect(mockPost).toHaveBeenNthCalledWith(
+      2,
+      '/graphs/graph/graphql',
+      {
+        query: expectedQuery,
+        variables: {cursor: 'abc', pageSize: 1},
+      },
+      expect.anything()
+    );
   });
 
   test('query with invalid operation', async () => {

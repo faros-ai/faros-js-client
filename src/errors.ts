@@ -33,8 +33,9 @@ function isError(error: any): error is Error {
 
 /** Strips verbose properties that libraries like Axios attach to errors */
 export function wrapApiError(maybeError: Error, message?: string): Error {
-  let error = isError(maybeError) ?
-    maybeError : Error(JSON.stringify(maybeError));
+  let error = isError(maybeError)
+    ? maybeError
+    : Error(JSON.stringify(maybeError));
   if (!isAxiosError(error)) {
     const cause = VError.cause(error);
     if (cause) {
@@ -45,11 +46,12 @@ export function wrapApiError(maybeError: Error, message?: string): Error {
   }
 
   const prefix = message ? `${message}: ` : '';
-  const res = error.response;
+  const res: AxiosResponse<any, any> | undefined = error.response;
   const info = {
-    req: error.request
-      ? formatRequest({...error.config, ...error.request})
-      : formatRequest(error.config),
+    req:
+      error.config || error.request
+        ? formatRequest({...error.config, ...error.request})
+        : undefined,
     res: res ? formatResponse(res) : undefined,
   };
   if (!res) {
