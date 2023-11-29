@@ -79,7 +79,7 @@
   "jest": {
     "coverageDirectory": "out/coverage",
     "transform": {
-      "^.+\\.ts$": [ "ts-jest", {
+      "\\.[jt]sx?$": [ "ts-jest", {
         "tsconfig": "test/tsconfig.json"
       }]
     },
