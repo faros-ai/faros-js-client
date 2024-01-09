@@ -882,6 +882,22 @@ describe('query adapter', () => {
   });
 
   test('query with nested nodes', async () => {
+    const v2Nodes = [
+      {
+        uid: 'u1',
+        tasks: [
+          {task: {uid: 'u1a', createdAt: '2022-11-08T01:32:25.261Z'}},
+          {task: {uid: 'u1b', createdAt: '2022-11-08T01:32:25.261Z'}}
+        ],
+      },
+      {
+        uid: 'u2',
+        tasks: [
+          {task: {uid: 'u2a', createdAt: '2022-11-08T01:32:25.261Z'}},
+          {task: {uid: 'u2b', createdAt: '2022-11-08T01:32:25.261Z'}}
+        ]
+      }
+    ];
     const v1Nodes = asV1Nodes({
       v1Query: `
         {
@@ -902,22 +918,20 @@ describe('query adapter', () => {
           }
         }
       `,
-      v2Nodes: [
+      v2Query: `
         {
-          uid: 'u1',
-          tasks: [
-            {task: {uid: 'u1a', createdAt: '2022-11-08T01:32:25.261Z'}},
-            {task: {uid: 'u1b', createdAt: '2022-11-08T01:32:25.261Z'}}
-          ],
-        },
-        {
-          uid: 'u2',
-          tasks: [
-            {task: {uid: 'u2a', createdAt: '2022-11-08T01:32:25.261Z'}},
-            {task: {uid: 'u2b', createdAt: '2022-11-08T01:32:25.261Z'}}
-          ]
+          tms_Project {
+            uid
+            tasks {
+              task {
+                uid
+                createdAt
+              }
+            }
+          }
         }
-      ]
+      `,
+      v2Nodes
     });
     await expect(toArray(v1Nodes.v1)).resolves.toEqual([
       {
@@ -939,9 +953,28 @@ describe('query adapter', () => {
         }
       }
     ]);
+    if (v1Nodes.v2) {
+      await expect(toArray(v1Nodes.v2)).resolves.toEqual(v2Nodes);
+    } else {
+      fail('v2 query was not run');
+    }
   });
 
   test('query with metadata', async () => {
+    const v2Nodes = [
+      {
+        uid: 'u1',
+        origin: 'o1',
+        isPhantom: true,
+        refreshedAt: '2022-11-08T01:32:25.261Z'
+      },
+      {
+        uid: 'u2',
+        origin: 'o2',
+        isPhantom: false,
+        refreshedAt: '2022-11-08T01:32:25.261Z'
+      }
+    ];
     const v1Nodes = asV1Nodes({
       v1Query: `
         {
@@ -959,20 +992,17 @@ describe('query adapter', () => {
           }
         }
       `,
-      v2Nodes: [
+      v2Query: `
         {
-          uid: 'u1',
-          origin: 'o1',
-          isPhantom: true,
-          refreshedAt: '2022-11-08T01:32:25.261Z'
-        },
-        {
-          uid: 'u2',
-          origin: 'o2',
-          isPhantom: false,
-          refreshedAt: '2022-11-08T01:32:25.261Z'
+          tms_Task {
+            uid
+            origin
+            isPhantom
+            refreshedAt
+          }
         }
-      ]
+      `,
+      v2Nodes
     });
     await expect(toArray(v1Nodes.v1)).resolves.toEqual([
       {
@@ -992,9 +1022,18 @@ describe('query adapter', () => {
         }
       }
     ]);
+    if (v1Nodes.v2) {
+      await expect(toArray(v1Nodes.v2)).resolves.toEqual(v2Nodes);
+    } else {
+      fail('v2 query was not run');
+    }
   });
 
   test('query with primitive list', async () => {
+    const v2Nodes = [
+      {topics: ['t1a', 't1b']},
+      {topics: ['t2a', 't2b']}
+    ];
     const v1Nodes = asV1Nodes({
       v1Query: `
         {
@@ -1007,15 +1046,24 @@ describe('query adapter', () => {
           }
         }
       `,
-      v2Nodes: [
-        {topics: ['t1a', 't1b']},
-        {topics: ['t2a', 't2b']}
-      ]
+      v2Query: `
+        {
+          vcs_Repository {
+            topics
+          }
+        }
+      `,
+      v2Nodes
     });
     await expect(toArray(v1Nodes.v1)).resolves.toEqual([
       {topics: ['t1a', 't1b']},
       {topics: ['t2a', 't2b']},
     ]);
+    if (v1Nodes.v2) {
+      await expect(toArray(v1Nodes.v2)).resolves.toEqual(v2Nodes);
+    } else {
+      fail('v2 query was not run');
+    }
   });
 
   test('query with timestamp type', async () => {

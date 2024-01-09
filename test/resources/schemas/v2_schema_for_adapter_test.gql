@@ -78,6 +78,14 @@ type query_root {
     """limit the number of rows returned"""
     limit: Int
   ): [tms_Project!]!
+
+  """
+  fetch data from the table: "vcs_Repository"
+  """
+  vcs_Repository(
+    """limit the number of rows returned"""
+    limit: Int
+  ): [vcs_Repository!]!
 }
 
 type tms_Project {
@@ -152,6 +160,7 @@ type tms_Task {
 
   uid: String!
   origin: String
+  isPhantom: Boolean
   refreshedAt: timestamptz!
   createdAt: timestamptz
   parent: tms_Task
@@ -408,6 +417,7 @@ type org_Employee {
 
 type vcs_Repository {
   name: String
+  topics: [String!]
 }
 
 """
