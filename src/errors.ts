@@ -46,7 +46,7 @@ export function wrapApiError(maybeError: Error, message?: string): Error {
   }
 
   const prefix = message ? `${message}: ` : '';
-  const res: AxiosResponse<any, any> | undefined = error.response;
+  const res: AxiosResponse<any> | undefined = error.response;
   const info = {
     req:
       error.config || error.request

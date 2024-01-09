@@ -1,4 +1,5 @@
 import * as gql from 'graphql';
+import {Maybe} from 'graphql/jsutils/Maybe';
 import _ from 'lodash';
 import {DateTime} from 'luxon';
 import {singular} from 'pluralize';
@@ -305,7 +306,8 @@ export function asV2AST(ast: gql.ASTNode, typeInfo: gql.TypeInfo): gql.ASTNode {
 export class QueryAdapter {
   constructor(
     private readonly faros: FarosClient,
-    private readonly v1Schema: gql.GraphQLSchema
+    private readonly v1Schema: gql.GraphQLSchema,
+    private readonly v2Schema: Maybe<gql.GraphQLSchema> = undefined
   ) {
     if (faros.graphVersion !== 'v2') {
       throw new VError(
@@ -427,7 +429,7 @@ export class QueryAdapter {
     const v1TypeInfo = new gql.TypeInfo(this.v1Schema);
     const nodePaths = this.nodePaths(v1AST, v1TypeInfo);
     let v2Query: string;
-    if (validationErrors.length > 0) {
+    if (this.v2Schema && validationErrors.length > 0) {
       const v2ValidationErrors = gql.validate(this.v2Schema, v1AST);
       if (v2ValidationErrors.length > 0) {
         throw new VError(
