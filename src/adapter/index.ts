@@ -1,4 +1,5 @@
 import * as gql from 'graphql';
+import {Maybe} from 'graphql/jsutils/Maybe';
 import _ from 'lodash';
 import {DateTime} from 'luxon';
 import {singular} from 'pluralize';
@@ -304,7 +305,8 @@ export function asV2AST(ast: gql.ASTNode, typeInfo: gql.TypeInfo): gql.ASTNode {
 export class QueryAdapter {
   constructor(
     private readonly faros: FarosClient,
-    private readonly v1Schema: gql.GraphQLSchema
+    private readonly v1Schema: gql.GraphQLSchema,
+    private readonly v2Schema: Maybe<gql.GraphQLSchema> = undefined
   ) {
     if (faros.graphVersion !== 'v2') {
       throw new VError(
@@ -404,7 +406,10 @@ export class QueryAdapter {
   }
 
   /** Returns paths relative to the initial nodes path */
-  private nodePaths(v1AST: gql.ASTNode, v1TypeInfo: gql.TypeInfo): FieldPaths {
+  private nodePathsV1(
+    v1AST: gql.ASTNode,
+    v1TypeInfo: gql.TypeInfo
+    ): FieldPaths {
     const fieldPaths = getFieldPaths(v1AST, v1TypeInfo);
     const [pathValue] = Object.values(fieldPaths);
     if (isNestedValue(pathValue)) {
@@ -413,18 +418,64 @@ export class QueryAdapter {
     throw new VError('invalid path value: %s', pathValue);
   }
 
+  private nodePathsV2(
+    v2AST: gql.ASTNode,
+    v2TypeInfo: gql.TypeInfo
+  ): FieldPaths {
+    const fieldPaths = getFieldPaths(v2AST, v2TypeInfo);
+    console.log(fieldPaths);
+    const [pathValue] = Object.values(fieldPaths);
+    if (isNestedValue(pathValue)) {
+      return pathValue.nestedPaths;
+    }
+    console.log(pathValue);
+    throw new VError('invalid path value: %s', pathValue);
+  }
+
   nodes(
     graph: string,
-    v1Query: string,
+    query: string,
     pageSize = 100,
     args: Map<string, any> = new Map<string, any>(),
     postProcessV2Query: (v2Query: string) => string = _.identity
   ): AsyncIterable<any> {
-    const v1AST = gql.parse(v1Query);
+        // Returns an object with a default async iterator
+    // We try gql validation against v2 schema if v1 schema fails
+    const queryAST = gql.parse(query);
+    const v1ValidationErrors = gql.validate(this.v1Schema, queryAST);
+    let v2Nodes: AsyncIterable<any>;
+    if (this.v2Schema && v1ValidationErrors.length > 0) {
+      const v2ValidationErrors = gql.validate(this.v2Schema, queryAST);
+      if (v2ValidationErrors.length > 0) {
+        throw new VError(
+          'invalid query: %s\nValidation errors: %s',
+          query,
+          v1ValidationErrors.map((err) => err.message).join(', ') +
+            v2ValidationErrors.map((err) => err.message).join(', ')
+        );
+      }
+      v2Nodes = this.faros.nodeIterable(
+        graph,
+        query,
+        pageSize,
+        paginatedQueryV2,
+        args
+      );
+      return {
+        async *[Symbol.asyncIterator](): AsyncIterator<any> {
+          for await (const v2Node of v2Nodes) {
+            yield v2Node;
+          }
+        },
+      };
+    }
+
     const v1TypeInfo = new gql.TypeInfo(this.v1Schema);
-    const nodePaths = this.nodePaths(v1AST, v1TypeInfo);
-    const v2Query = postProcessV2Query(gql.print(asV2AST(v1AST, v1TypeInfo)));
-    const v2Nodes = this.faros.nodeIterable(
+    const v2Query = postProcessV2Query(
+      gql.print(asV2AST(queryAST, v1TypeInfo))
+    );
+    const nodePaths = this.nodePathsV1(queryAST, v1TypeInfo);
+    v2Nodes = this.faros.nodeIterable(
       graph,
       v2Query,
       pageSize,
@@ -438,7 +489,7 @@ export class QueryAdapter {
         for await (const v2Node of v2Nodes) {
           yield self.v1Node(v2Node, nodePaths);
         }
-      }
+      },
     };
   }
 }

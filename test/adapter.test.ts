@@ -48,19 +48,18 @@ describe('AST utilities', () => {
   }
 
   function expectConversion(assertion: ConversionAssertion): void {
-    const message = assertion.failureMessage;
     const v1TypeInfo = new gql.TypeInfo(v1Schema);
     const v1AST = normalizeAST(gql.parse(assertion.v1Query));
     const v2AST = normalizeAST(gql.parse(assertion.v2Query));
     const actualV2AST = normalizeAST(
       sut.asV2AST(v1AST, v1TypeInfo) as gql.DocumentNode
     );
-    expect(gql.validate(v1Schema, v1AST), message).toBeEmpty();
-    expect(gql.validate(v2Schema, v2AST), message).toBeEmpty();
-    expect(gql.print(actualV2AST), message).toEqual(gql.print(v2AST));
+    expect(gql.validate(v1Schema, v1AST)).toBeEmpty();
+    expect(gql.validate(v2Schema, v2AST)).toBeEmpty();
+    expect(gql.print(actualV2AST)).toEqual(gql.print(v2AST));
     const fieldPaths = assertion.fieldPaths;
     if (fieldPaths) {
-      expect(sut.getFieldPaths(v1AST, v1TypeInfo), message).toEqual(fieldPaths);
+      expect(sut.getFieldPaths(v1AST, v1TypeInfo)).toEqual(fieldPaths);
     }
   }
 
@@ -640,16 +639,30 @@ describe('AST utilities', () => {
 });
 
 describe('query adapter', () => {
-  interface RunV1Query {
+  interface RunQuery {
     readonly v1Query: string;
     readonly v2Nodes: any[];
+    readonly v2Query?: string;
   }
 
-  function asV1Nodes(run: RunV1Query): AsyncIterable<any> {
+  interface RunQueryResult {
+    v1: AsyncIterable<any>;
+    v2?: AsyncIterable<any>;
+  }
+
+  function asV1Nodes(run: RunQuery): RunQueryResult {
     const nodeIterable = () => toIterator(run.v2Nodes);
     const faros: FarosClient = {graphVersion: 'v2', nodeIterable} as any;
     const adapter = new sut.QueryAdapter(faros, v1Schema);
-    return adapter.nodes('default', run.v1Query);
+    const result: RunQueryResult = {
+      v1: adapter.nodes('default', run.v1Query)
+    };
+    if (run.v2Query) {
+      console.log('Running v2');
+      const adapter = new sut.QueryAdapter(faros, v1Schema, v2Schema);
+      result.v2 = adapter.nodes('default', run.v2Query);
+    }
+    return result;
   }
 
   test('invalid faros client fails', () => {
@@ -659,6 +672,10 @@ describe('query adapter', () => {
   });
 
   test('query', async () => {
+    const v2Nodes = [
+      {deployment: {uid: 'u1'}, commit: {sha: 's1'}},
+      {deployment: {uid: 'u2'}, commit: {sha: 's2'}}
+    ];
     const v1Nodes = asV1Nodes({
       v1Query: `
         {
@@ -676,18 +693,42 @@ describe('query adapter', () => {
           }
         }
       `,
-      v2Nodes: [
-        {deployment: {uid: 'u1'}, commit: {sha: 's1'}},
-        {deployment: {uid: 'u2'}, commit: {sha: 's2'}}
-      ]
+      v2Query: `
+        {
+          cicd_DeploymentChangeset {
+            deployment {
+              uid
+            }
+            commit {
+              sha
+            }
+          }
+        }
+      `,
+      v2Nodes
     });
-    await expect(toArray(v1Nodes)).resolves.toEqual([
-      {deployment: {uid: 'u1'}, commit: {sha: 's1'}},
-      {deployment: {uid: 'u2'}, commit: {sha: 's2'}}
-    ]);
+    await expect(toArray(v1Nodes.v1)).resolves.toEqual(v2Nodes);
+    if (v1Nodes.v2) {
+      await expect(toArray(v1Nodes.v2)).resolves.toEqual(v2Nodes);
+    } else {
+      fail('v2 query was not run');
+    }
+
   });
 
   test('query with embedded fields', async () => {
+    const v2Nodes = [
+            {
+              uid: 'u1',
+              envCategory: 'c1',
+              envDetail: 'd1'
+            },
+            {
+              uid: 'u2',
+              envCategory: 'c2',
+              envDetail: 'd2'
+            },
+          ];
     const v1Nodes = asV1Nodes({
       v1Query: `
         {
@@ -704,50 +745,30 @@ describe('query adapter', () => {
           }
         }
       `,
-      v2Nodes: [
-        {
-          uid: 'u1',
-          envCategory: 'c1',
-          envDetail: 'd1'
-        },
-        {
-          uid: 'u2',
-          envCategory: 'c2',
-          envDetail: 'd2'
-        },
-      ]
+      v2Query: `
+      {
+        cicd_Deployment {
+          uid
+          envCategory
+          envDetail
+        }
+      }
+    `,
+      v2Nodes
     });
-    await expect(toArray(v1Nodes)).resolves.toEqual([
+    await expect(toArray(v1Nodes.v1)).resolves.toEqual([
       {uid: 'u1', env: {category: 'c1', detail: 'd1'}},
       {uid: 'u2', env: {category: 'c2', detail: 'd2'}},
     ]);
+    if (v1Nodes.v2) {
+      await expect(toArray(v1Nodes.v2)).resolves.toEqual(v2Nodes);
+    } else {
+      fail('v2 query was not run');
+    }
   });
 
   test('query with embedded object list fields', async () => {
-    const v1Nodes = asV1Nodes({
-      v1Query: `
-        {
-          tms {
-            tasks {
-              nodes {
-                uid
-                additionalFields {
-                  name
-                  value
-                }
-                statusChangelog {
-                  changedAt
-                  status {
-                    category
-                    detail
-                  }
-                }
-              }
-            }
-          }
-        }
-      `,
-      v2Nodes: [
+      const v2Nodes = [
         {
           uid: 'u1',
           additionalFields: [
@@ -782,9 +803,42 @@ describe('query adapter', () => {
             }
           ]
         },
-      ]
+      ];
+    const v1Nodes = asV1Nodes({
+      v1Query: `
+        {
+          tms {
+            tasks {
+              nodes {
+                uid
+                additionalFields {
+                  name
+                  value
+                }
+                statusChangelog {
+                  changedAt
+                  status {
+                    category
+                    detail
+                  }
+                }
+              }
+            }
+          }
+        }
+      `,
+      v2Query: `
+      {
+        tms_Task {
+          uid
+          additionalFields 
+          statusChangelog 
+        }
+      }
+      `,
+      v2Nodes
     });
-    await expect(toArray(v1Nodes)).resolves.toEqual([
+    await expect(toArray(v1Nodes.v1)).resolves.toEqual([
       {
         uid: 'u1',
         additionalFields: [
@@ -820,6 +874,11 @@ describe('query adapter', () => {
         ]
       },
     ]);
+    if (v1Nodes.v2) {
+      await expect(toArray(v1Nodes.v2)).resolves.toEqual(v2Nodes);
+    } else {
+      fail('v2 query was not run');
+    }
   });
 
   test('query with nested nodes', async () => {
@@ -860,7 +919,7 @@ describe('query adapter', () => {
         }
       ]
     });
-    await expect(toArray(v1Nodes)).resolves.toEqual([
+    await expect(toArray(v1Nodes.v1)).resolves.toEqual([
       {
         uid: 'u1',
         tasks: {
@@ -915,7 +974,7 @@ describe('query adapter', () => {
         }
       ]
     });
-    await expect(toArray(v1Nodes)).resolves.toEqual([
+    await expect(toArray(v1Nodes.v1)).resolves.toEqual([
       {
         uid: 'u1',
         metadata: {
@@ -953,7 +1012,7 @@ describe('query adapter', () => {
         {topics: ['t2a', 't2b']}
       ]
     });
-    await expect(toArray(v1Nodes)).resolves.toEqual([
+    await expect(toArray(v1Nodes.v1)).resolves.toEqual([
       {topics: ['t1a', 't1b']},
       {topics: ['t2a', 't2b']},
     ]);
@@ -974,7 +1033,7 @@ describe('query adapter', () => {
       `,
       v2Nodes: [{startedAt: '2022-11-08T01:32:25.261Z'}],
     });
-    await expect(toArray(v1Nodes)).resolves.toEqual([
+    await expect(toArray(v1Nodes.v1)).resolves.toEqual([
       {startedAt: '1667871145261'},
     ]);
   });
@@ -994,7 +1053,9 @@ describe('query adapter', () => {
       `,
       v2Nodes: [{startedAt: 'invalid'}],
     });
-    return expect(() => toArray(v1Nodes)).rejects.toThrow(/failed to convert/);
+    return expect(
+      () => toArray(v1Nodes.v1)
+      ).rejects.toThrow(/failed to convert/);
   });
 
   test('query with double type', async () => {
@@ -1016,7 +1077,7 @@ describe('query adapter', () => {
         {lat: '41.8839113', lon: '-87.6340954'}
       ]
     });
-    await expect(toArray(v1Nodes)).resolves.toEqual([
+    await expect(toArray(v1Nodes.v1)).resolves.toEqual([
       {lat: 1.23456789, lon: 1.23456789},
       {lat: 41.8839113, lon: -87.6340954}
     ]);
@@ -1040,7 +1101,9 @@ describe('query adapter', () => {
         {lat: '1.23456789', lon: 'invalid'},
       ]
     });
-    return expect(() => toArray(v1Nodes)).rejects.toThrow(/failed to convert/);
+    return expect(
+      () => toArray(v1Nodes.v1)
+      ).rejects.toThrow(/failed to convert/);
   });
 
   test('query with long type', async () => {
@@ -1058,7 +1121,7 @@ describe('query adapter', () => {
       `,
       v2Nodes: [{durationMs: '123456789'}],
     });
-    await expect(toArray(v1Nodes)).resolves.toEqual([
+    await expect(toArray(v1Nodes.v1)).resolves.toEqual([
       {durationMs: '123456789'},
     ]);
   });
@@ -1078,7 +1141,9 @@ describe('query adapter', () => {
       `,
       v2Nodes: [{durationMs: 'invalid'}],
     });
-    return expect(() => toArray(v1Nodes)).rejects.toThrow(/failed to convert/);
+    return expect(
+      () => toArray(v1Nodes.v1)
+      ).rejects.toThrow(/failed to convert/);
   });
 
   test('edge case for v1 long and v2 int', async () => {
@@ -1096,7 +1161,7 @@ describe('query adapter', () => {
       `,
       v2Nodes: [{number: 123456789}],
     });
-    await expect(toArray(v1Nodes)).resolves.toEqual([
+    await expect(toArray(v1Nodes.v1)).resolves.toEqual([
       {number: '123456789'},
     ]);
   });
