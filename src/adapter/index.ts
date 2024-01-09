@@ -300,6 +300,7 @@ export function asV2AST(ast: gql.ASTNode, typeInfo: gql.TypeInfo): gql.ASTNode {
   }));
 }
 
+
 /** Shim that retrieves data from a V2 graph using a V1 query */
 export class QueryAdapter {
   constructor(
@@ -420,10 +421,28 @@ export class QueryAdapter {
     args: Map<string, any> = new Map<string, any>(),
     postProcessV2Query: (v2Query: string) => string = _.identity
   ): AsyncIterable<any> {
+    // Returns an object with a default async iterator
     const v1AST = gql.parse(v1Query);
+    const validationErrors = gql.validate(this.v1Schema, v1AST);
     const v1TypeInfo = new gql.TypeInfo(this.v1Schema);
     const nodePaths = this.nodePaths(v1AST, v1TypeInfo);
-    const v2Query = postProcessV2Query(gql.print(asV2AST(v1AST, v1TypeInfo)));
+    let v2Query: string;
+    if (validationErrors.length > 0) {
+      const v2ValidationErrors = gql.validate(this.v2Schema, v1AST);
+      if (v2ValidationErrors.length > 0) {
+        throw new VError(
+          'invalid query: %s\nValidation errors: %s',
+          v1Query,
+          validationErrors.map((err) => err.message).join(', ') +
+          v2ValidationErrors.map((err) => err.message).join(', ')
+        );
+      }
+      // Errors means the query is likely already a V2 query
+      v2Query = v1Query;
+
+    } else {
+      v2Query = postProcessV2Query(gql.print(asV2AST(v1AST, v1TypeInfo)));
+    }
     const v2Nodes = this.faros.nodeIterable(
       graph,
       v2Query,
