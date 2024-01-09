@@ -446,17 +446,13 @@ export class QueryAdapter {
     args: Map<string, any> = new Map<string, any>(),
     postProcessV2Query: (v2Query: string) => string = _.identity
   ): AsyncIterable<any> {
-    console.log('Start of nodes func');
     // Returns an object with a default async iterator
-    // We try validation against both schemas
+    // We try gql validation against v2 schema if v1 schema fails
     const queryAST = gql.parse(query);
     const v1ValidationErrors = gql.validate(this.v1Schema, queryAST);
     let v2Nodes: AsyncIterable<any>;
     if (this.v2Schema && v1ValidationErrors.length > 0) {
-      console.log('Inside v2');
       const v2ValidationErrors = gql.validate(this.v2Schema, queryAST);
-      console.log('v2ValidationErrors');
-      console.log(v2ValidationErrors);
       if (v2ValidationErrors.length > 0) {
         throw new VError(
           'invalid query: %s\nValidation errors: %s',
@@ -465,7 +461,6 @@ export class QueryAdapter {
             v2ValidationErrors.map((err) => err.message).join(', ')
         );
       }
-      console.log('running nodePaths');
       v2Nodes = this.faros.nodeIterable(
         graph,
         query,
@@ -473,11 +468,9 @@ export class QueryAdapter {
         paginatedQueryV2,
         args
       );
-      console.log('v2Nodes');
       return {
         async *[Symbol.asyncIterator](): AsyncIterator<any> {
           for await (const v2Node of v2Nodes) {
-            console.log(v2Node);
             yield v2Node;
           }
         },

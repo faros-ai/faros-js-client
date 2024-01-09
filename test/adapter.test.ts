@@ -48,19 +48,19 @@ describe('AST utilities', () => {
   }
 
   function expectConversion(assertion: ConversionAssertion): void {
-    const message = assertion.failureMessage;
+    // const message = assertion.failureMessage;
     const v1TypeInfo = new gql.TypeInfo(v1Schema);
     const v1AST = normalizeAST(gql.parse(assertion.v1Query));
     const v2AST = normalizeAST(gql.parse(assertion.v2Query));
     const actualV2AST = normalizeAST(
       sut.asV2AST(v1AST, v1TypeInfo) as gql.DocumentNode
     );
-    expect(gql.validate(v1Schema, v1AST), message).toBeEmpty();
-    expect(gql.validate(v2Schema, v2AST), message).toBeEmpty();
-    expect(gql.print(actualV2AST), message).toEqual(gql.print(v2AST));
+    expect(gql.validate(v1Schema, v1AST)).toBeEmpty();
+    expect(gql.validate(v2Schema, v2AST)).toBeEmpty();
+    expect(gql.print(actualV2AST)).toEqual(gql.print(v2AST));
     const fieldPaths = assertion.fieldPaths;
     if (fieldPaths) {
-      expect(sut.getFieldPaths(v1AST, v1TypeInfo), message).toEqual(fieldPaths);
+      expect(sut.getFieldPaths(v1AST, v1TypeInfo)).toEqual(fieldPaths);
     }
   }
 
@@ -670,7 +670,7 @@ describe('query adapter', () => {
       .toThrowError('query adapter only works with v2 clients');
   });
 
-  test.only('query', async () => {
+  test('query', async () => {
     const v1Nodes = asV1Nodes({
       v1Query: `
         {
@@ -699,7 +699,7 @@ describe('query adapter', () => {
     ]);
   });
 
-  test.only('query v2', async () => {
+  test('query v2', async () => {
     const v2Nodes = asV2Nodes({
       v2Query: `
         {
@@ -718,9 +718,7 @@ describe('query adapter', () => {
         {deployment: {uid: 'u2'}, commit: {sha: 's2'}}
       ]
     });
-    const res = await toArray(v2Nodes);
-    console.log(res);
-    expect(res).toEqual([
+    await expect(toArray(v2Nodes)).resolves.toEqual([
       {deployment: {uid: 'u1'}, commit: {sha: 's1'}},
       {deployment: {uid: 'u2'}, commit: {sha: 's2'}}
     ]);
@@ -759,6 +757,36 @@ describe('query adapter', () => {
     await expect(toArray(v1Nodes)).resolves.toEqual([
       {uid: 'u1', env: {category: 'c1', detail: 'd1'}},
       {uid: 'u2', env: {category: 'c2', detail: 'd2'}},
+    ]);
+  });
+
+  test('query with embedded fields v2', async () => {
+    const v2Nodes = asV2Nodes({
+      v2Query: `
+        {
+          cicd_Deployment {
+            uid
+            envCategory
+            envDetail
+          }
+        }
+      `,
+      v2Nodes: [
+        {
+          uid: 'u1',
+          envCategory: 'c1',
+          envDetail: 'd1'
+        },
+        {
+          uid: 'u2',
+          envCategory: 'c2',
+          envDetail: 'd2'
+        },
+      ]
+    });
+    await expect(toArray(v2Nodes)).resolves.toEqual([
+      {uid: 'u1', envCategory: 'c1', envDetail: 'd1'},
+      {uid: 'u2', envCategory: 'c2', envDetail: 'd2'},
     ]);
   });
 
@@ -854,6 +882,92 @@ describe('query adapter', () => {
           },
           {
             changedAt: 1667871145261,
+            status: {category: 'c2b', detail: 'd2b'}
+          }
+        ]
+      },
+    ]);
+  });
+
+  test('query with embedded object list fields v2', async () => {
+    const v2Nodes = asV2Nodes({
+      v2Query: `
+      {
+        tms_Task {
+          uid
+          additionalFields 
+          statusChangelog 
+        }
+      }
+      `,
+      v2Nodes: [
+        {
+          uid: 'u1',
+          additionalFields: [
+            {name: 'n1a', value: 'v1a'},
+            {name: 'n1b', value: 'v1b'},
+          ],
+          statusChangelog: [
+            {
+              changedAt: 1667871145261,
+              status: {category: 'c1a', detail: 'd1a'}
+            },
+            {
+              changedAt: '2022-11-08T01:32:25.261Z',
+              status: {category: 'c1b', detail: 'd1b'}
+            }
+          ]
+        },
+        {
+          uid: 'u2',
+          additionalFields: [
+            {name: 'n2a', value: 'v2a'},
+            {name: 'n2b', value: 'v2b'},
+          ],
+          statusChangelog: [
+            {
+              changedAt: 1667871145261,
+              status: {category: 'c2a', detail: 'd2a'}
+            },
+            {
+              changedAt: '2022-11-08T01:32:25.261Z',
+              status: {category: 'c2b', detail: 'd2b'}
+            }
+          ]
+        },
+      ]
+    });
+    await expect(toArray(v2Nodes)).resolves.toEqual([
+      {
+        uid: 'u1',
+        additionalFields: [
+          {name: 'n1a', value: 'v1a'},
+          {name: 'n1b', value: 'v1b'},
+        ],
+        statusChangelog: [
+          {
+            changedAt: 1667871145261,
+            status: {category: 'c1a', detail: 'd1a'}
+          },
+          {
+            changedAt: '2022-11-08T01:32:25.261Z',
+            status: {category: 'c1b', detail: 'd1b'}
+          }
+        ]
+      },
+      {
+        uid: 'u2',
+        additionalFields: [
+          {name: 'n2a', value: 'v2a'},
+          {name: 'n2b', value: 'v2b'},
+        ],
+        statusChangelog: [
+          {
+            changedAt: 1667871145261,
+            status: {category: 'c2a', detail: 'd2a'}
+          },
+          {
+            changedAt: '2022-11-08T01:32:25.261Z',
             status: {category: 'c2b', detail: 'd2b'}
           }
         ]
