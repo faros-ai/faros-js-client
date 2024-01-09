@@ -418,19 +418,6 @@ export class QueryAdapter {
     throw new VError('invalid path value: %s', pathValue);
   }
 
-  private nodePathsV2(
-    v2AST: gql.ASTNode,
-    v2TypeInfo: gql.TypeInfo
-  ): FieldPaths {
-    const fieldPaths = getFieldPaths(v2AST, v2TypeInfo);
-    console.log(fieldPaths);
-    const [pathValue] = Object.values(fieldPaths);
-    if (isNestedValue(pathValue)) {
-      return pathValue.nestedPaths;
-    }
-    console.log(pathValue);
-    throw new VError('invalid path value: %s', pathValue);
-  }
 
   nodes(
     graph: string,
@@ -439,7 +426,7 @@ export class QueryAdapter {
     args: Map<string, any> = new Map<string, any>(),
     postProcessV2Query: (v2Query: string) => string = _.identity
   ): AsyncIterable<any> {
-        // Returns an object with a default async iterator
+    // Returns an object with a default async iterator
     // We try gql validation against v2 schema if v1 schema fails
     const queryAST = gql.parse(query);
     const v1ValidationErrors = gql.validate(this.v1Schema, queryAST);
