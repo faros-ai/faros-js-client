@@ -15,7 +15,7 @@ import {
   METADATA,
   NODES,
   paginatedQueryV2,
-  REFRESHED_AT
+  REFRESHED_AT,
 } from '../graphql/graphql';
 import {
   asLeafValueType,
@@ -75,8 +75,8 @@ function nestedFields(
         ...selection,
         name: {
           kind: gql.Kind.NAME,
-          value: rename ? rename(name) : name
-        }
+          value: rename ? rename(name) : name,
+        },
       });
     }
   }
@@ -114,88 +114,91 @@ export function getFieldPaths(
   }
 
   const fieldPaths: Writable<FieldPaths> = {};
-  gql.visit(ast, gql.visitWithTypeInfo(typeInfo, {
-    Field: {
-      enter(node) {
-        let type = typeInfo.getType();
-        const parentType = typeInfo.getParentType();
-        if (gql.isNonNullType(type)) {
-          type = type.ofType;
-        }
-        if (!type) {
-          throw new VError(
-            'unable to determine type of field: %s',
-            fieldStack.join('.')
-          );
-        }
+  gql.visit(
+    ast,
+    gql.visitWithTypeInfo(typeInfo, {
+      Field: {
+        enter(node) {
+          let type = typeInfo.getType();
+          const parentType = typeInfo.getParentType();
+          if (gql.isNonNullType(type)) {
+            type = type.ofType;
+          }
+          if (!type) {
+            throw new VError(
+              'unable to determine type of field: %s',
+              fieldStack.join('.')
+            );
+          }
 
-        const fieldName = node.name.value;
-        pushField(fieldName, type);
-        if (isModelQuery(parentType, type)) {
-          // Convert the V1 query namespace to a V2 query namespace
-          // For example: vcs { commits { ...} } => vcs_Commit { ... }
-          newFieldStack.shift();
-          newFieldStack.shift();
-          const [namespace, name] = fieldStack;
-          newFieldStack.unshift(queryNamespace(namespace, name));
-        } else if (isObjectListType(type)) {
-          // Recursive call to next object list
-          const nextNode = node.selectionSet;
-          if (nextNode) {
-            const newFieldPath = newFieldStack.join('.');
-            const fieldPath = fieldStack.join('.');
-            typeInfo.enter(nextNode);
-            fieldPaths[newFieldPath] = {
-              path: fieldPath,
-              nestedPaths: getFieldPaths(
-                nextNode,
-                typeInfo,
-                mirrorPaths || isEmbeddedObjectType(type.ofType)
-              )
-            };
-            typeInfo.leave(nextNode);
-            popField(fieldName);
-            return false;
-          }
-        } else if (isLeafType(type)) {
-          const fieldPath = fieldStack.join('.');
-          let newFieldPath = newFieldStack.join('.');
-          // Timestamps in v1 are always stringified epoch millis, except when
-          // they're inside embedded object lists. In that case, they're stored
-          // as epoch millis.
-          const stringifyTimestamps = !mirrorPaths;
-          let fieldType = asLeafValueType(type, stringifyTimestamps);
-          if (mirrorPaths) {
-            fieldPaths[fieldPath] = {path: fieldPath, type: fieldType};
-            return undefined;
-          } else if (isEmbeddedObjectType(parentType)) {
-            const parentName = fieldStack[fieldStack.length - 2];
-            if (parentName === METADATA) {
-              if (fieldName === REFRESHED_AT) {
-                // Hack: While V1 serializes "refreshedAt" the same as other
-                // timestamps (epoch millis string), it types it as a string.
-                // In V2, it's stored and typed like every other timestamp.
-                // We force conversion from ISO 8601 string => epoch millis
-                // string by overriding the type from string to timestamp.
-                fieldType = 'epoch_millis_string';
-              }
-            } else {
-              // Prefix the last field name with the embedded field name
-              newFieldPath = [
-                ...newFieldStack.slice(0, -1),
-                embeddedName(parentName, fieldName)
-              ].join('.');
+          const fieldName = node.name.value;
+          pushField(fieldName, type);
+          if (isModelQuery(parentType, type)) {
+            // Convert the V1 query namespace to a V2 query namespace
+            // For example: vcs { commits { ...} } => vcs_Commit { ... }
+            newFieldStack.shift();
+            newFieldStack.shift();
+            const [namespace, name] = fieldStack;
+            newFieldStack.unshift(queryNamespace(namespace, name));
+          } else if (isObjectListType(type)) {
+            // Recursive call to next object list
+            const nextNode = node.selectionSet;
+            if (nextNode) {
+              const newFieldPath = newFieldStack.join('.');
+              const fieldPath = fieldStack.join('.');
+              typeInfo.enter(nextNode);
+              fieldPaths[newFieldPath] = {
+                path: fieldPath,
+                nestedPaths: getFieldPaths(
+                  nextNode,
+                  typeInfo,
+                  mirrorPaths || isEmbeddedObjectType(type.ofType)
+                ),
+              };
+              typeInfo.leave(nextNode);
+              popField(fieldName);
+              return false;
             }
+          } else if (isLeafType(type)) {
+            const fieldPath = fieldStack.join('.');
+            let newFieldPath = newFieldStack.join('.');
+            // Timestamps in v1 are always stringified epoch millis, except when
+            // they're inside embedded object lists. In that case, they're
+            // stored as epoch millis.
+            const stringifyTimestamps = !mirrorPaths;
+            let fieldType = asLeafValueType(type, stringifyTimestamps);
+            if (mirrorPaths) {
+              fieldPaths[fieldPath] = {path: fieldPath, type: fieldType};
+              return undefined;
+            } else if (isEmbeddedObjectType(parentType)) {
+              const parentName = fieldStack[fieldStack.length - 2];
+              if (parentName === METADATA) {
+                if (fieldName === REFRESHED_AT) {
+                  // Hack: While V1 serializes "refreshedAt" the same as other
+                  // timestamps (epoch millis string), it types it as a string.
+                  // In V2, it's stored and typed like every other timestamp.
+                  // We force conversion from ISO 8601 string => epoch millis
+                  // string by overriding the type from string to timestamp.
+                  fieldType = 'epoch_millis_string';
+                }
+              } else {
+                // Prefix the last field name with the embedded field name
+                newFieldPath = [
+                  ...newFieldStack.slice(0, -1),
+                  embeddedName(parentName, fieldName),
+                ].join('.');
+              }
+            }
+            fieldPaths[newFieldPath] = {path: fieldPath, type: fieldType};
           }
-          fieldPaths[newFieldPath] = {path: fieldPath, type: fieldType};
-        }
-        return undefined;
+          return undefined;
+        },
+        leave(node) {
+          popField(node.name.value);
+        },
       },
-      leave(node) {
-        popField(node.name.value);
-      }
-    }
-  }));
+    })
+  );
   return fieldPaths;
 }
 
@@ -229,78 +232,81 @@ export function getFieldPaths(
  *    deployments(first: 1) { uid } => deployments(limit: 1) { uid }
  */
 export function asV2AST(ast: gql.ASTNode, typeInfo: gql.TypeInfo): gql.ASTNode {
-  return gql.visit(ast, gql.visitWithTypeInfo(typeInfo, {
-    Field: {
-      // Handles rule (1)
-      leave(node, key, parent, path, ancestors) {
-        const grandparent = ancestors[ancestors.length - 2];
-        if (isTypedArray<gql.ASTNode>(grandparent)) {
-          return undefined;
-        } else if (grandparent.kind !== 'OperationDefinition') {
-          return undefined;
-        } else if (grandparent.operation !== 'query') {
-          throw new Error('only queries can be converted');
-        }
-
-        const modelField = node.selectionSet?.selections?.[0];
-        if (!modelField || modelField.kind !== 'Field') {
-          throw new Error('query does not select a model');
-        }
-        const modelNamespace = node.name.value;
-        const model = modelField.name.value;
-        return {
-          ...modelField,
-          name: {
-            kind: gql.Kind.NAME,
-            value: queryNamespace(modelNamespace, model)
-          },
-        };
-      }
-    },
-    // Handles rules (2), (3) and (4)
-    SelectionSet: {
-      leave(node) {
-        const newSelections: gql.SelectionNode[] = [];
-        for (const selection of node.selections) {
-          typeInfo.enter(selection);
-          const selectionType = typeInfo.getType();
-          if (selection.kind === 'Field') {
-            if (
-              selection.name.value === NODES ||
-              selection.name.value === METADATA
-            ) {
-              // Rule (2): flatten nodes and metadata fields
-              newSelections.push(...nestedFields(selection));
-            } else if (isEmbeddedObjectType(selectionType)) {
-              // Rule (3): flatten embedded fields and rename them
-              const prefix = selection.name.value;
-              newSelections.push(...nestedFields(
-                selection,
-                (name) => embeddedName(prefix, name)
-              ));
-            } else if (isEmbeddedObjectListType(selectionType)) {
-              // Rule (4): omit fields from embedded object lists
-              newSelections.push(_.omit(selection, 'selectionSet'));
-            } else {
-              // Otherwise, leave the nested fields alone
-              newSelections.push(selection);
-            }
+  return gql.visit(
+    ast,
+    gql.visitWithTypeInfo(typeInfo, {
+      Field: {
+        // Handles rule (1)
+        leave(node, key, parent, path, ancestors) {
+          const grandparent = ancestors[ancestors.length - 2];
+          if (isTypedArray<gql.ASTNode>(grandparent)) {
+            return undefined;
+          } else if (grandparent.kind !== 'OperationDefinition') {
+            return undefined;
+          } else if (grandparent.operation !== 'query') {
+            throw new Error('only queries can be converted');
           }
-          typeInfo.leave(selection);
-        }
-        return {kind: gql.Kind.SELECTION_SET, selections: newSelections};
-      }
-    },
-    // Handles rule (5)
-    Argument(node) {
-      if (node.name.value === 'first') {
-        return {...node, name: {kind: gql.Kind.NAME, value: 'limit'}};
-      }
-      return undefined;
-    }
-  }));
-}
 
+          const modelField = node.selectionSet?.selections?.[0];
+          if (!modelField || modelField.kind !== 'Field') {
+            throw new Error('query does not select a model');
+          }
+          const modelNamespace = node.name.value;
+          const model = modelField.name.value;
+          return {
+            ...modelField,
+            name: {
+              kind: gql.Kind.NAME,
+              value: queryNamespace(modelNamespace, model),
+            },
+          };
+        },
+      },
+      // Handles rules (2), (3) and (4)
+      SelectionSet: {
+        leave(node) {
+          const newSelections: gql.SelectionNode[] = [];
+          for (const selection of node.selections) {
+            typeInfo.enter(selection);
+            const selectionType = typeInfo.getType();
+            if (selection.kind === 'Field') {
+              if (
+                selection.name.value === NODES ||
+                selection.name.value === METADATA
+              ) {
+                // Rule (2): flatten nodes and metadata fields
+                newSelections.push(...nestedFields(selection));
+              } else if (isEmbeddedObjectType(selectionType)) {
+                // Rule (3): flatten embedded fields and rename them
+                const prefix = selection.name.value;
+                newSelections.push(
+                  ...nestedFields(selection, (name) =>
+                    embeddedName(prefix, name)
+                  )
+                );
+              } else if (isEmbeddedObjectListType(selectionType)) {
+                // Rule (4): omit fields from embedded object lists
+                newSelections.push(_.omit(selection, 'selectionSet'));
+              } else {
+                // Otherwise, leave the nested fields alone
+                newSelections.push(selection);
+              }
+            }
+            typeInfo.leave(selection);
+          }
+          return {kind: gql.Kind.SELECTION_SET, selections: newSelections};
+        },
+      },
+      // Handles rule (5)
+      Argument(node) {
+        if (node.name.value === 'first') {
+          return {...node, name: {kind: gql.Kind.NAME, value: 'limit'}};
+        }
+        return undefined;
+      },
+    })
+  );
+}
 
 /** Shim that retrieves data from a V2 graph using a V1 query */
 export class QueryAdapter {
@@ -379,8 +385,8 @@ export class QueryAdapter {
         } catch (err: any) {
           throw new VError(
             err,
-            'failed to convert value in v2 field \'%s\' into value in v1 ' +
-              'field \'%s\' of type \'%s\'',
+            'failed to convert value in v2 field "%s" into value in v1 ' +
+              'field "%s" of type "%s"',
             v2Path,
             v1Path.path,
             isPrimitiveListType(v1Path.type)
@@ -407,7 +413,10 @@ export class QueryAdapter {
   }
 
   /** Returns paths relative to the initial nodes path */
-  private nodePaths(v1AST: gql.ASTNode, v1TypeInfo: gql.TypeInfo): FieldPaths {
+  private nodePathsV1(
+    v1AST: gql.ASTNode,
+    v1TypeInfo: gql.TypeInfo
+  ): FieldPaths {
     const fieldPaths = getFieldPaths(v1AST, v1TypeInfo);
     const [pathValue] = Object.values(fieldPaths);
     if (isNestedValue(pathValue)) {
@@ -416,36 +425,73 @@ export class QueryAdapter {
     throw new VError('invalid path value: %s', pathValue);
   }
 
+  private nodePathsV2(
+    v2AST: gql.ASTNode,
+    v2TypeInfo: gql.TypeInfo
+  ): FieldPaths {
+    const fieldPaths = getFieldPaths(v2AST, v2TypeInfo);
+    console.log(fieldPaths);
+    const [pathValue] = Object.values(fieldPaths);
+    if (isNestedValue(pathValue)) {
+      return pathValue.nestedPaths;
+    }
+    console.log(pathValue);
+    throw new VError('invalid path value: %s', pathValue);
+  }
+
   nodes(
     graph: string,
-    v1Query: string,
+    query: string,
     pageSize = 100,
     args: Map<string, any> = new Map<string, any>(),
     postProcessV2Query: (v2Query: string) => string = _.identity
   ): AsyncIterable<any> {
+    console.log('Start of nodes func');
     // Returns an object with a default async iterator
-    const v1AST = gql.parse(v1Query);
-    const validationErrors = gql.validate(this.v1Schema, v1AST);
-    const v1TypeInfo = new gql.TypeInfo(this.v1Schema);
-    const nodePaths = this.nodePaths(v1AST, v1TypeInfo);
-    let v2Query: string;
-    if (this.v2Schema && validationErrors.length > 0) {
-      const v2ValidationErrors = gql.validate(this.v2Schema, v1AST);
+    // We try validation against both schemas
+    const queryAST = gql.parse(query);
+    const v1ValidationErrors = gql.validate(this.v1Schema, queryAST);
+    let v2Nodes: AsyncIterable<any>;
+    if (this.v2Schema && v1ValidationErrors.length > 0) {
+      console.log('Inside v2');
+      const v2ValidationErrors = gql.validate(this.v2Schema, queryAST);
+      console.log('v2ValidationErrors');
+      console.log(v2ValidationErrors);
       if (v2ValidationErrors.length > 0) {
         throw new VError(
           'invalid query: %s\nValidation errors: %s',
-          v1Query,
-          validationErrors.map((err) => err.message).join(', ') +
-          v2ValidationErrors.map((err) => err.message).join(', ')
+          query,
+          v1ValidationErrors.map((err) => err.message).join(', ') +
+            v2ValidationErrors.map((err) => err.message).join(', ')
         );
       }
-      // Errors means the query is likely already a V2 query
-      v2Query = v1Query;
-
-    } else {
-      v2Query = postProcessV2Query(gql.print(asV2AST(v1AST, v1TypeInfo)));
+      console.log('running nodePaths');
+      v2Nodes = this.faros.nodeIterable(
+        graph,
+        query,
+        pageSize,
+        paginatedQueryV2,
+        args
+      );
+      console.log('v2Nodes');
+      return {
+        async *[Symbol.asyncIterator](): AsyncIterator<any> {
+          for await (const v2Node of v2Nodes) {
+            console.log(v2Node);
+            yield v2Node;
+          }
+        },
+      };
     }
-    const v2Nodes = this.faros.nodeIterable(
+
+    const v1TypeInfo = new gql.TypeInfo(this.v1Schema);
+    const v2Query = postProcessV2Query(
+      gql.print(asV2AST(queryAST, v1TypeInfo))
+    );
+    const nodePaths = this.nodePathsV1(queryAST, v1TypeInfo);
+    console.log('resultant node paths: ' + String(nodePaths));
+    console.log(nodePaths);
+    v2Nodes = this.faros.nodeIterable(
       graph,
       v2Query,
       pageSize,
@@ -459,7 +505,7 @@ export class QueryAdapter {
         for await (const v2Node of v2Nodes) {
           yield self.v1Node(v2Node, nodePaths);
         }
-      }
+      },
     };
   }
 }

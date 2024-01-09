@@ -645,11 +645,23 @@ describe('query adapter', () => {
     readonly v2Nodes: any[];
   }
 
+  interface RunV2Query {
+    readonly v2Query: string;
+    readonly v2Nodes: any[];
+  }
+
   function asV1Nodes(run: RunV1Query): AsyncIterable<any> {
     const nodeIterable = () => toIterator(run.v2Nodes);
     const faros: FarosClient = {graphVersion: 'v2', nodeIterable} as any;
     const adapter = new sut.QueryAdapter(faros, v1Schema);
     return adapter.nodes('default', run.v1Query);
+  }
+
+  function asV2Nodes(run: RunV2Query): AsyncIterable<any> {
+    const nodeIterable = () => toIterator(run.v2Nodes);
+    const faros: FarosClient = {graphVersion: 'v2', nodeIterable} as any;
+    const adapter = new sut.QueryAdapter(faros, v1Schema, v2Schema);
+    return adapter.nodes('default', run.v2Query);
   }
 
   test('invalid faros client fails', () => {
@@ -658,7 +670,7 @@ describe('query adapter', () => {
       .toThrowError('query adapter only works with v2 clients');
   });
 
-  test('query', async () => {
+  test.only('query', async () => {
     const v1Nodes = asV1Nodes({
       v1Query: `
         {
@@ -682,6 +694,33 @@ describe('query adapter', () => {
       ]
     });
     await expect(toArray(v1Nodes)).resolves.toEqual([
+      {deployment: {uid: 'u1'}, commit: {sha: 's1'}},
+      {deployment: {uid: 'u2'}, commit: {sha: 's2'}}
+    ]);
+  });
+
+  test.only('query v2', async () => {
+    const v2Nodes = asV2Nodes({
+      v2Query: `
+        {
+          cicd_DeploymentChangeset {
+            deployment {
+              uid
+            }
+            commit {
+              sha
+            }
+          }
+        }
+      `,
+      v2Nodes: [
+        {deployment: {uid: 'u1'}, commit: {sha: 's1'}},
+        {deployment: {uid: 'u2'}, commit: {sha: 's2'}}
+      ]
+    });
+    const res = await toArray(v2Nodes);
+    console.log(res);
+    expect(res).toEqual([
       {deployment: {uid: 'u1'}, commit: {sha: 's1'}},
       {deployment: {uid: 'u2'}, commit: {sha: 's2'}}
     ]);
