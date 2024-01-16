@@ -28,7 +28,7 @@ export function makeAxiosInstance(
  */
 export function makeAxiosInstanceWithRetry(
   config?: AxiosRequestConfig,
-  logger?: Logger,
+  logger?: Logger<string>,
   retries = DEFAULT_RETRIES,
   delay = DEFAULT_RETRY_DELAY
 ): AxiosInstance {
