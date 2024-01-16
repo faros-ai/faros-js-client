@@ -42,7 +42,7 @@ export class FarosClient {
 
   constructor(
     cfg: FarosClientConfig,
-    readonly logger: Logger = pino({name: 'faros-client'}),
+    readonly logger: Logger<string> = pino({name: 'faros-client'}),
     axiosConfig: AxiosRequestConfig = DEFAULT_AXIOS_CONFIG
   ) {
     const url = Utils.urlWithoutTrailingSlashes(cfg.url);

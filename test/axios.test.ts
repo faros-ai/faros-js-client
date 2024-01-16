@@ -1,12 +1,12 @@
 import nock from 'nock';
-import pino from 'pino';
+import pino, {Logger} from 'pino';
 
 import * as sut from '../src/axios';
 
 const apiUrl = 'https://test.faros.ai';
 
 describe('axios', () => {
-  const logger = pino({
+  const logger: Logger<string> = pino({
     name: 'test',
     transport: {target: 'pino-pretty', options: {levelFirst: true}},
   });
