@@ -41,7 +41,7 @@
     "json-to-graphql-query": "^2.2.4",
     "lodash": "^4.17.21",
     "luxon": "^3.1.1",
-    "p-limit": "3.1.0",
+    "p-limit": "5.0.0",
     "pino": "^8.17.0",
     "pluralize": "^8.0.0",
     "toposort": "^2.0.2",
