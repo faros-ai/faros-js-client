@@ -188,7 +188,7 @@ describe('AST utilities', () => {
             },
             'deployment.refreshedAt': {
               path: 'deployment.metadata.refreshedAt',
-              type: 'timestamp'
+              type: 'epoch_millis_string'
             },
             'commit.sha': {
               path: 'commit.sha',
@@ -204,7 +204,7 @@ describe('AST utilities', () => {
             },
             'commit.refreshedAt': {
               path: 'commit.metadata.refreshedAt',
-              type: 'timestamp'
+              type: 'epoch_millis_string'
             }
           }
         }
@@ -374,7 +374,7 @@ describe('AST utilities', () => {
               nestedPaths: {
                 changedAt: {
                   path: 'changedAt',
-                  type: 'timestamp'
+                  type: 'epoch_millis'
                 },
                 'status.category': {
                   path: 'status.category',
@@ -382,6 +382,61 @@ describe('AST utilities', () => {
                 },
                 'status.detail': {
                   path: 'status.detail',
+                  type: 'string'
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+  });
+
+  test('rename first field argument to limit', () => {
+    expectConversion({
+      v1Query: `
+        {
+          cicd {
+            deployments {
+              nodes {
+                uid
+                changeset(first: 1) {
+                  nodes {
+                    commit {
+                      sha
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      `,
+      v2Query: `
+        {
+          cicd_Deployment {
+            uid
+            changeset(limit: 1) {
+              commit {
+                sha
+              }
+            }
+          }
+        }
+      `,
+      fieldPaths: {
+        cicd_Deployment: {
+          path: 'cicd.deployments.nodes',
+          nestedPaths: {
+            uid: {
+              path: 'uid',
+              type: 'string'
+            },
+            changeset: {
+              path: 'changeset.nodes',
+              nestedPaths: {
+                'commit.sha': {
+                  path: 'commit.sha',
                   type: 'string'
                 }
               }
@@ -493,90 +548,93 @@ describe('AST utilities', () => {
           nestedPaths: {
             uid: {path: 'uid', type: 'string'},
             description: {path: 'description', type: 'string'},
-            createdAt: {path: 'createdAt', type: 'timestamp'},
+            createdAt: {path: 'createdAt', type: 'epoch_millis_string'},
             origin: {path: 'metadata.origin', type: 'string'},
-            refreshedAt: {path: 'metadata.refreshedAt', type: 'timestamp'},
+            refreshedAt: {
+              path: 'metadata.refreshedAt',
+              type: 'epoch_millis_string',
+            },
             releases: {
               path: 'releases.nodes',
               nestedPaths: {
                 'release.uid': {
                   path: 'release.uid',
-                  type: 'string'
+                  type: 'string',
                 },
                 'release.releasedAt': {
                   path: 'release.releasedAt',
-                  type: 'timestamp'
+                  type: 'epoch_millis_string',
                 },
                 'release.origin': {
                   path: 'release.metadata.origin',
-                  type: 'string'
+                  type: 'string',
                 },
                 'release.refreshedAt': {
                   path: 'release.metadata.refreshedAt',
-                  type: 'timestamp'
-                }
-              }
+                  type: 'epoch_millis_string',
+                },
+              },
             },
             tasks: {
               path: 'tasks.nodes',
               nestedPaths: {
                 'task.uid': {
                   path: 'task.uid',
-                  type: 'string'
+                  type: 'string',
                 },
                 'task.typeCategory': {
                   path: 'task.type.category',
-                  type: 'string'
+                  type: 'string',
                 },
                 'task.typeDetail': {
                   path: 'task.type.detail',
-                  type: 'string'
+                  type: 'string',
                 },
                 'task.origin': {
                   path: 'task.metadata.origin',
-                  type: 'string'
+                  type: 'string',
                 },
                 'task.refreshedAt': {
                   path: 'task.metadata.refreshedAt',
-                  type: 'timestamp'
+                  type: 'epoch_millis_string',
                 },
                 'task.parent.uid': {
                   path: 'task.parent.uid',
-                  type: 'string'
+                  type: 'string',
                 },
                 'task.parent.createdAt': {
                   path: 'task.parent.createdAt',
-                  type: 'timestamp'
+                  type: 'epoch_millis_string',
                 },
                 'task.additionalFields': {
                   path: 'task.additionalFields',
                   nestedPaths: {
                     name: {path: 'name', type: 'string'},
-                    value: {path: 'value', type: 'string'}
-                  }
+                    value: {path: 'value', type: 'string'},
+                  },
                 },
                 'task.statusChangelog': {
                   path: 'task.statusChangelog',
                   nestedPaths: {
                     changedAt: {
                       path: 'changedAt',
-                      type: 'timestamp'
+                      type: 'epoch_millis',
                     },
                     'status.category': {
                       path: 'status.category',
-                      type: 'string'
+                      type: 'string',
                     },
                     'status.detail': {
                       path: 'status.detail',
-                      type: 'string'
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                      type: 'string',
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
   });
 });
@@ -702,7 +760,7 @@ describe('query adapter', () => {
               status: {category: 'c1a', detail: 'd1a'}
             },
             {
-              changedAt: 1667871145261,
+              changedAt: '2022-11-08T01:32:25.261Z',
               status: {category: 'c1b', detail: 'd1b'}
             }
           ]
@@ -719,7 +777,7 @@ describe('query adapter', () => {
               status: {category: 'c2a', detail: 'd2a'}
             },
             {
-              changedAt: 1667871145261,
+              changedAt: '2022-11-08T01:32:25.261Z',
               status: {category: 'c2b', detail: 'd2b'}
             }
           ]

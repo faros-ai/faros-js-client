@@ -11,6 +11,7 @@ export {
   Address,
   Coordinates,
   FarosClientConfig,
+  GraphVersion,
   Location,
   Model,
   NamedQuery,
@@ -33,8 +34,15 @@ export {
   Schema,
   PathToModel,
   Query,
+  Mutation,
 } from './graphql/types';
 export {HasuraSchemaLoader} from './graphql/hasura-schema-loader';
+export {
+  FarosModel,
+  QueryBuilder,
+  mask,
+  batchMutation,
+} from './graphql/query-builder';
 export {
   AnyRecord,
   FlattenContext,
@@ -63,9 +71,4 @@ export {
 } from './graphql/graphql';
 export {FarosGraphSchema} from './schema';
 export {Utils} from './utils';
-export {
-  FieldPaths,
-  getFieldPaths,
-  asV2AST,
-  QueryAdapter,
-} from './adapter';
+export {FieldPaths, getFieldPaths, asV2AST, QueryAdapter} from './adapter';

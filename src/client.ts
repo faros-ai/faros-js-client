@@ -1,44 +1,53 @@
-import {AxiosInstance, AxiosRequestConfig} from 'axios';
+import {AxiosInstance, AxiosRequestConfig, Method} from 'axios';
 import * as gql from 'graphql';
-import {get as traverse} from 'lodash';
+import {get as traverse, isEmpty, unset} from 'lodash';
 import pino, {Logger} from 'pino';
+import {Dictionary} from 'ts-essentials';
+import {promisify} from 'util';
 import VError from 'verror';
+import * as zlib from 'zlib';
 
 import {makeAxiosInstanceWithRetry} from './axios';
 import {wrapApiError} from './errors';
 import {paginatedQuery} from './graphql/graphql';
-import {Schema} from './graphql/types';
+import {batchMutation} from './graphql/query-builder';
+import {Mutation, Schema} from './graphql/types';
 import {
   Account,
   FarosClientConfig,
+  GraphVersion,
   Location,
   Model,
   NamedQuery,
+  Phantom,
   SecretName,
   UpdateAccount,
+  UpdateWebhookEventStatus,
+  WebhookEvent,
 } from './types';
 import {Utils} from './utils';
+
+const gzip = promisify(zlib.gzip);
 
 export const DEFAULT_AXIOS_CONFIG: AxiosRequestConfig = {timeout: 60000};
 
 export const GRAPH_VERSION_HEADER = 'x-faros-graph-version';
 
-enum GraphVersion {
-  V1 = 'v1',
-  V2 = 'v2',
-}
-
 /** Faros API client **/
 export class FarosClient {
   private readonly api: AxiosInstance;
   readonly graphVersion: GraphVersion;
+  readonly phantoms: Phantom;
+  readonly visibility?: string;
 
   constructor(
     cfg: FarosClientConfig,
-    logger: Logger = pino({name: 'faros-client'}),
+    readonly logger: Logger<string> = pino({name: 'faros-client'}),
     axiosConfig: AxiosRequestConfig = DEFAULT_AXIOS_CONFIG
   ) {
     const url = Utils.urlWithoutTrailingSlashes(cfg.url);
+
+    const useGraphQLV2 = cfg.useGraphQLV2 ?? true;
 
     this.api = makeAxiosInstanceWithRetry(
       {
@@ -47,13 +56,17 @@ export class FarosClient {
         headers: {
           ...axiosConfig?.headers,
           authorization: cfg.apiKey,
-          ...(cfg.useGraphQLV2 && {[GRAPH_VERSION_HEADER]: 'v2'}),
+          ...(useGraphQLV2 && {[GRAPH_VERSION_HEADER]: 'v2'}),
         },
+        maxBodyLength: Infinity, // rely on server to enforce request body size
+        maxContentLength: Infinity, // accept any response size
       },
       logger
     );
 
-    this.graphVersion = cfg.useGraphQLV2 ? GraphVersion.V2 : GraphVersion.V1;
+    this.graphVersion = useGraphQLV2 ? GraphVersion.V2 : GraphVersion.V1;
+    this.phantoms = cfg.phantoms || Phantom.IncludeNestedOnly;
+    this.visibility = cfg.visibility;
   }
 
   async tenant(): Promise<string> {
@@ -137,7 +150,7 @@ export class FarosClient {
       await this.api.post(`/graphs/${graph}/models`, models, {
         headers: {'content-type': 'application/graphql'},
         params: {
-          ...(schema && {schema})
+          ...(schema && {schema}),
         },
       });
     } catch (err: any) {
@@ -178,28 +191,76 @@ export class FarosClient {
     }
   }
 
-  /* returns only the data object of a standard qgl response */
-  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
-  async gql(graph: string, query: string, variables?: any): Promise<any> {
+  queryParameters(): Dictionary<any> {
+    const result: Dictionary<any> = {};
+    if (this.graphVersion === GraphVersion.V2) {
+      result.phantoms = this.phantoms;
+      if (this.visibility) {
+        result.visibility = this.visibility;
+      }
+    }
+    return result;
+  }
+
+  private async doGql(
+    graph: string,
+    query: string,
+    variables?: any
+  ): Promise<any> {
     try {
-      const req = variables ? {query, variables} : {query};
-      const {data} = await this.api.post(`/graphs/${graph}/graphql`, req);
-      return data.data;
+      let req: any = variables ? {query, variables} : {query};
+      let doCompression =
+        this.graphVersion === GraphVersion.V2 &&
+        Buffer.byteLength(query, 'utf8') > 10 * 1024; // 10KB
+      if (doCompression) {
+        try {
+          const input = Buffer.from(JSON.stringify(req), 'utf8');
+          req = await gzip(input);
+          this.logger.debug(
+            `Compressed graphql request from ${input.length} ` +
+              `to ${req.length} bytes`
+          );
+        } catch (e) {
+          // gzip failed, send uncompressed
+          this.logger.warn(e, 'failed to compress graphql request');
+          doCompression = false;
+        }
+      }
+      const params = this.queryParameters();
+      const headers: any = {};
+      if (doCompression) {
+        headers['content-encoding'] = 'gzip';
+        headers['content-type'] = 'application/json';
+      }
+      const {data} = await this.api.post(`/graphs/${graph}/graphql`, req, {
+        headers,
+        params,
+      });
+      return data;
     } catch (err: any) {
       throw wrapApiError(err, `unable to query graph: ${graph}`);
     }
   }
 
+  /* returns only the data object of a standard qgl response */
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  async gql(graph: string, query: string, variables?: any): Promise<any> {
+    const data = await this.doGql(graph, query, variables);
+    return data.data;
+  }
+
+  async sendMutations(graph: string, mutations: Mutation[]): Promise<any> {
+    const gql = batchMutation(mutations);
+    if (gql) {
+      return await this.gql(graph, gql);
+    }
+    return undefined;
+  }
+
   /* returns both data (as res.data) and errors (as res.errors) */
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   async rawGql(graph: string, query: string, variables?: any): Promise<any> {
-    try {
-      const req = variables ? {query, variables} : {query};
-      const {data} = await this.api.post(`/graphs/${graph}/graphql`, req);
-      return data;
-    } catch (err: any) {
-      throw wrapApiError(err, `unable to query graph: ${graph}`);
-    }
+    return await this.doGql(graph, query, variables);
   }
 
   async gqlNoDirectives(
@@ -302,9 +363,58 @@ export class FarosClient {
     paginator = paginatedQuery,
     args: Map<string, any> = new Map<string, any>()
   ): AsyncIterable<any> {
-    const {query, edgesPath, pageInfoPath} = paginator(rawQuery);
+    const {query, edgesPath, edgeIdPath, pageInfoPath} = paginator(rawQuery);
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
+    if (edgeIdPath?.length) {
+      return {
+        async *[Symbol.asyncIterator](): AsyncIterator<any> {
+          let id = '';
+          let hasNextPage = true;
+          while (hasNextPage) {
+            const data = await self.gqlNoDirectives(graph, query, {
+              limit: pageSize,
+              id,
+              ...Object.fromEntries(args.entries()),
+            });
+            const edges = traverse(data, edgesPath) || [];
+            for (const edge of edges) {
+              id = traverse(edge, edgeIdPath);
+              unset(edge, edgeIdPath);
+              if (!id) {
+                return;
+              }
+              yield edge;
+            }
+            // break on partial page
+            hasNextPage = edges.length === pageSize;
+          }
+        },
+      };
+    } else if (isEmpty(pageInfoPath)) {
+      // use offset and limit
+      return {
+        async *[Symbol.asyncIterator](): AsyncIterator<any> {
+          let offset = 0;
+          let hasNextPage = true;
+          while (hasNextPage) {
+            const data = await self.gqlNoDirectives(graph, query, {
+              limit: pageSize,
+              offset,
+              ...Object.fromEntries(args.entries()),
+            });
+            const edges = traverse(data, edgesPath) || [];
+            for (const edge of edges) {
+              yield edge;
+            }
+            offset += pageSize;
+            // break on partial page
+            hasNextPage = edges.length === pageSize;
+          }
+        },
+      };
+    }
+    // use relay-styled cursors
     return {
       async *[Symbol.asyncIterator](): AsyncIterator<any> {
         let cursor: string | undefined;
@@ -324,5 +434,84 @@ export class FarosClient {
         }
       },
     };
+  }
+
+  async updateWebhookEventStatus(
+    status: UpdateWebhookEventStatus
+  ): Promise<void> {
+    try {
+      await this.api.patch(
+        `/webhooks/${status.webhookId}/events/${status.eventId}`,
+        {
+          status: status.status,
+          error: status.error,
+        }
+      );
+    } catch (err: any) {
+      throw wrapApiError(
+        err,
+        `unable to update status for webhook: ${status.webhookId}` +
+          `, event: ${status.eventId}`
+      );
+    }
+  }
+
+  async getWebhookEvent(
+    webhookId: string,
+    eventId: string
+  ): Promise<WebhookEvent> {
+    try {
+      const response = await this.api.get(
+        `/webhooks/${webhookId}/events/${eventId}`
+      );
+      let event = response.data;
+      event = {
+        ...event,
+        createdAt: event.createdAt ? new Date(event.createdAt) : undefined,
+        receivedAt: new Date(event.receivedAt),
+        updatedAt: new Date(event.updatedAt),
+      };
+      return event as WebhookEvent;
+    } catch (err: any) {
+      throw wrapApiError(
+        err,
+        `unable to retrieve event: ${eventId} for webhook: ${webhookId}`
+      );
+    }
+  }
+
+  /**
+   * Generic method for making requests to the Faros API.
+   * @param method HTTP request method
+   * @param path endpoint path
+   * @param data request body
+   * @param params request query params
+   * @returns response body
+   */
+  async request<T>(
+    method: Method,
+    path: string,
+    data?: any,
+    params?: any
+  ): Promise<T> {
+    try {
+      const response = await this.api.request({
+        method,
+        url: path,
+        data,
+        params,
+      });
+      return response.data;
+    } catch (err: any) {
+      throw wrapApiError(err, `unable to perform request: ${path}`);
+    }
+  }
+
+  /**
+   * Sets the API key to use for requests.
+   * @param apiKey API key to use for requests
+   */
+  setApiKey(apiKey: string): void {
+    this.api.defaults.headers.authorization = apiKey;
   }
 }

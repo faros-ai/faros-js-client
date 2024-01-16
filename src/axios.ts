@@ -1,5 +1,6 @@
-import axios, {AxiosInstance, AxiosRequestConfig} from 'axios';
+import axios, {AxiosError, AxiosInstance, AxiosRequestConfig} from 'axios';
 import axiosRetry, {IAxiosRetryConfig, isRetryableError} from 'axios-retry';
+import isRetryAllowed from 'is-retry-allowed';
 import {Logger} from 'pino';
 
 import {wrapApiError} from './errors';
@@ -27,13 +28,32 @@ export function makeAxiosInstance(
  */
 export function makeAxiosInstanceWithRetry(
   config?: AxiosRequestConfig,
-  logger?: Logger,
+  logger?: Logger<string>,
   retries = DEFAULT_RETRIES,
   delay = DEFAULT_RETRY_DELAY
 ): AxiosInstance {
+  const isNetworkError = (error: AxiosError<any>): boolean => {
+    return (
+      !error.response &&
+      Boolean(error.code) && // Prevents retrying cancelled requests
+      isRetryAllowed(error) // Prevents retrying unsafe errors
+    );
+  };
+
   return makeAxiosInstance(config, {
     retries,
-    retryCondition: isRetryableError,
+    retryCondition: (error) => {
+      const isGraphQLEndpoint =
+        Boolean(error?.config?.url?.endsWith('graphql')) &&
+        error?.config?.method === 'post';
+      // Timeouts should be retryable
+      // 409 is an edit conflict error, which is retryable for GraphQL endpoints
+      return (
+        isNetworkError(error) ||
+        isRetryableError(error) ||
+        (isGraphQLEndpoint && error.response?.status === 409)
+      );
+    },
     retryDelay: (retryNumber, error) => {
       if (logger) {
         logger.warn(
@@ -42,5 +62,6 @@ export function makeAxiosInstanceWithRetry(
       }
       return retryNumber * delay;
     },
+    shouldResetTimeout: true,
   });
 }

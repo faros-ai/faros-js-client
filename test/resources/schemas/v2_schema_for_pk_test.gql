@@ -22,7 +22,7 @@ type query_root {
 }
 
 """
-columns and relationships of "cicd_Build"
+"farosModel": "cicd_Build"
 """
 type cicd_Build {
   """generated"""
@@ -37,7 +37,7 @@ type cicd_Build {
 }
 
 """
-columns and relationships of "cicd_Pipeline"
+"farosModel": "cicd_Pipeline"
 """
 type cicd_Pipeline {
   """generated"""
@@ -53,7 +53,7 @@ type cicd_Pipeline {
 }
 
 """
-columns and relationships of "cicd_Organization"
+"farosModel": "cicd_Organization"
 """
 type cicd_Organization {
   description: String
@@ -69,7 +69,7 @@ type cicd_Organization {
 }
 
 """
-columns and relationships of "cicd_Repository"
+"farosModel": "cicd_Repository"
 """
 type cicd_Repository {
   description: String
@@ -87,7 +87,7 @@ type cicd_Repository {
 }
 
 """
-columns and relationships of "cicd_Deployment"
+"farosModel": "cicd_Deployment"
 """
 type cicd_Deployment {
   """generated"""

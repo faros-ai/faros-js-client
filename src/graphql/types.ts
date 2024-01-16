@@ -1,4 +1,5 @@
-import {Dictionary} from 'ts-essentials';
+import {EnumType} from 'json-to-graphql-query';
+import {Dictionary, XOR} from 'ts-essentials';
 
 export interface Table {
   schema: string;
@@ -62,4 +63,39 @@ export interface Query {
 export interface PathToModel {
   readonly path: ReadonlyArray<string>;
   readonly modelName: string;
+}
+
+interface MutationOneResponse {
+  readonly id: boolean;
+}
+
+interface MutationManyResponse {
+  readonly returning: {id: boolean};
+}
+
+type MutationResponse = XOR<MutationOneResponse, MutationManyResponse>;
+
+export interface Mutation {
+  mutation: {
+    [key: string]: {
+      __args: MutationObject;
+    } & MutationResponse;
+  };
+}
+
+export interface UpsertMutationObject {
+  object?: any;
+  data?: any;
+  on_conflict: ConflictClause;
+}
+
+export interface DeleteMutationObject {
+  readonly [key: string]: any;
+}
+
+type MutationObject = UpsertMutationObject | DeleteMutationObject;
+
+export interface ConflictClause {
+  constraint: EnumType;
+  update_columns: EnumType[];
 }

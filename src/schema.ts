@@ -33,15 +33,29 @@ export class FarosGraphSchema {
    * Given a JSON record and a Faros model, convert the necessary date fields in
    * the record to: Javascript dates (Timestamp fields) or ISO formatted string
    * (timestamptz fields)
+   * Records for models unknown to the schema are returned unchanged
    */
   fixTimestampFields(record: Dictionary<any>, model: string): any {
     if (!isPlainObject(record)) {
       return record;
     }
 
+    if (model.endsWith('__Update')) {
+      for (const key of ['mask', 'patch', 'where']) {
+        this.fixTimestampFields(record[key], model.replace('__Update', ''));
+      }
+      return record;
+    } else if (model.endsWith('__Deletion')) {
+      this.fixTimestampFields(record.where, model.replace('__Deletion', ''));
+      return record;
+    } else if (model.endsWith('__Upsert')) {
+      this.fixTimestampFields(record, model.replace('__Upsert', ''));
+      return record;
+    }
+
     const node = this.objectTypeDefs[model];
     if (!node) {
-      throw new VError('Model type %s was not found in the schema', model);
+      return record;
     }
 
     const fieldTypes = keyBy(node.fields, (n) => n.name.value);

@@ -11,6 +11,7 @@ import {VError} from 'verror';
 import {
   foreignKeyForArray,
   foreignKeyForObj,
+  foreignKeyForReverseObj,
   isManualConfiguration,
   MULTI_TENANT_COLUMNS,
   parsePrimaryKeys,
@@ -108,15 +109,23 @@ export class HasuraSchemaLoader implements SchemaLoader {
     const res: Dictionary<Dictionary<string>> = {};
     for (const table of source.tables) {
       const targetTable: string = table.table.name;
-      if (table.array_relationships) {
-        for (const arrRel of table.array_relationships) {
-          const fkCol = foreignKeyForArray(arrRel);
-          const sourceTable = remoteTableForArray(arrRel);
-          ok(sourceTable, `missing source table on ${JSON.stringify(arrRel)}`);
-          if (!res[sourceTable]) {
-            res[sourceTable] = {};
+      for (const arrRel of table.array_relationships || []) {
+        const fkCol = foreignKeyForArray(arrRel);
+        const sourceTable = remoteTableForArray(arrRel);
+        ok(sourceTable, `missing source table on ${JSON.stringify(arrRel)}`);
+        if (!res[sourceTable]) {
+          res[sourceTable] = {};
+        }
+        res[sourceTable][fkCol] = targetTable;
+      }
+      // find array relationship represented as reverse object relationships
+      for (const objRel of table.object_relationships || []) {
+        const reverseObjFk = foreignKeyForReverseObj(objRel);
+        if (reverseObjFk) {
+          if (!res[reverseObjFk.sourceTable]) {
+            res[reverseObjFk.sourceTable] = {};
           }
-          res[sourceTable][fkCol] = targetTable;
+          res[reverseObjFk.sourceTable][reverseObjFk.fkCol] = targetTable;
         }
       }
     }
@@ -149,16 +158,13 @@ export class HasuraSchemaLoader implements SchemaLoader {
         continue;
       }
       const scalarTypes: any[] = type.fields.filter(
-        (t: any) =>
-          (t.type.kind === 'SCALAR' ||
-            (t.type.kind === 'NON_NULL' && t.type.ofType.kind === 'SCALAR')) &&
-          t.description !== 'generated'
+        (t: any) => this.unwrapType(t.type).kind === 'SCALAR'
+          && t.description !== 'generated'
       );
       const tableScalars: Dictionary<string> = {};
       for (const scalar of scalarTypes) {
         if (!MULTI_TENANT_COLUMNS.has(snakeCase(scalar.name))) {
-          tableScalars[scalar.name] =
-            scalar.type.ofType?.name ?? scalar.type.name;
+          tableScalars[scalar.name] = this.unwrapType(scalar.type).name;
         }
       }
       scalars[tableName] = tableScalars;
@@ -179,6 +185,10 @@ export class HasuraSchemaLoader implements SchemaLoader {
       const tableReferences: Dictionary<Reference> = {};
       for (const rel of table.object_relationships ?? []) {
         const fk = foreignKeyForObj(rel);
+        // skip reverse object relationships
+        if (fk === 'id') {
+          continue;
+        }
         const relFldName = this.camelCaseFieldNames ? camelCase(fk) : fk;
         const relMetadata = {
           field: rel.name,
@@ -204,6 +214,19 @@ export class HasuraSchemaLoader implements SchemaLoader {
           };
         }
       );
+      const reverseBackRefs: BackReference[] = [];
+      (table.object_relationships ?? []).forEach(
+        (rel) => {
+          const reverseObjFk = foreignKeyForReverseObj(rel);
+          if (reverseObjFk) {
+            reverseBackRefs.push({
+              field: rel.name,
+              model: reverseObjFk.sourceTable,
+            });
+          }
+        },
+      );
+      backReferences[tableName].push(...reverseBackRefs);
     }
     const modelDeps: [string, string][] = [];
     for (const model of Object.keys(references)) {
@@ -223,6 +246,14 @@ export class HasuraSchemaLoader implements SchemaLoader {
       sortedModelDependencies,
       tableNames,
     };
+  }
+
+  // Unwraps type from its wrapping type (non-null and list containers)
+  private unwrapType(type: any): any {
+    if (type.kind === 'LIST' || type.kind === 'NON_NULL') {
+      return this.unwrapType(type.ofType);
+    }
+    return type;
   }
 }
 

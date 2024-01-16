@@ -159,7 +159,11 @@ export function getFieldPaths(
         } else if (isLeafType(type)) {
           const fieldPath = fieldStack.join('.');
           let newFieldPath = newFieldStack.join('.');
-          let fieldType = asLeafValueType(type);
+          // Timestamps in v1 are always stringified epoch millis, except when
+          // they're inside embedded object lists. In that case, they're stored
+          // as epoch millis.
+          const stringifyTimestamps = !mirrorPaths;
+          let fieldType = asLeafValueType(type, stringifyTimestamps);
           if (mirrorPaths) {
             fieldPaths[fieldPath] = {path: fieldPath, type: fieldType};
             return undefined;
@@ -172,7 +176,7 @@ export function getFieldPaths(
                 // In V2, it's stored and typed like every other timestamp.
                 // We force conversion from ISO 8601 string => epoch millis
                 // string by overriding the type from string to timestamp.
-                fieldType = 'timestamp';
+                fieldType = 'epoch_millis_string';
               }
             } else {
               // Prefix the last field name with the embedded field name
@@ -218,6 +222,10 @@ export function getFieldPaths(
  *    as JSONB arrays in V2 and cannot be extracted. Example:
  *
  *    task { additionalFields { name value } } => task { additionalFields }
+ *
+ * 5. Renames the "first" field argument to "limit". Example:
+ *
+ *    deployments(first: 1) { uid } => deployments(limit: 1) { uid }
  */
 export function asV2AST(ast: gql.ASTNode, typeInfo: gql.TypeInfo): gql.ASTNode {
   return gql.visit(ast, gql.visitWithTypeInfo(typeInfo, {
@@ -242,7 +250,7 @@ export function asV2AST(ast: gql.ASTNode, typeInfo: gql.TypeInfo): gql.ASTNode {
         return {
           ...modelField,
           name: {
-            kind: 'Name',
+            kind: gql.Kind.NAME,
             value: queryNamespace(modelNamespace, model)
           },
         };
@@ -279,8 +287,15 @@ export function asV2AST(ast: gql.ASTNode, typeInfo: gql.TypeInfo): gql.ASTNode {
           }
           typeInfo.leave(selection);
         }
-        return {kind: 'SelectionSet', selections: newSelections};
+        return {kind: gql.Kind.SELECTION_SET, selections: newSelections};
       }
+    },
+    // Handles rule (5)
+    Argument(node) {
+      if (node.name.value === 'first') {
+        return {...node, name: {kind: gql.Kind.NAME, value: 'limit'}};
+      }
+      return undefined;
     }
   }));
 }
@@ -315,7 +330,7 @@ export class QueryAdapter {
       return v2Value;
     }
 
-    if (type === 'double') {
+    if (type === 'float' || type === 'double') {
       if (_.isString(v2Value)) {
         const double = parseFloat(v2Value);
         if (!isNaN(double)) {
@@ -335,16 +350,15 @@ export class QueryAdapter {
         return `${v2Value}`;
       }
       throw new VError('invalid long: %s', v2Value);
-    } else if (type === 'timestamp') {
-      // A timestamp will be an ISO string in v2, unless it's inside a list of
-      // embedded objects, in which case it will be an epoch millis number
+    } else if (type === 'epoch_millis' || type === 'epoch_millis_string') {
+      const stringify = type === 'epoch_millis_string';
       if (_.isString(v2Value)) {
         const millis = DateTime.fromISO(v2Value).toMillis();
         if (!isNaN(millis)) {
-          return `${millis}`;
+          return stringify ? `${millis}` : millis;
         }
       } else if (_.isNumber(v2Value)) {
-        return v2Value;
+        return stringify ? `${v2Value}` : v2Value;
       }
       throw new VError('invalid timestamp: %s', v2Value);
     }
@@ -403,12 +417,13 @@ export class QueryAdapter {
     graph: string,
     v1Query: string,
     pageSize = 100,
-    args: Map<string, any> = new Map<string, any>()
+    args: Map<string, any> = new Map<string, any>(),
+    postProcessV2Query: (v2Query: string) => string = _.identity
   ): AsyncIterable<any> {
     const v1AST = gql.parse(v1Query);
     const v1TypeInfo = new gql.TypeInfo(this.v1Schema);
     const nodePaths = this.nodePaths(v1AST, v1TypeInfo);
-    const v2Query = gql.print(asV2AST(v1AST, v1TypeInfo));
+    const v2Query = postProcessV2Query(gql.print(asV2AST(v1AST, v1TypeInfo)));
     const v2Nodes = this.faros.nodeIterable(
       graph,
       v2Query,

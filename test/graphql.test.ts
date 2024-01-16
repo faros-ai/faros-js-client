@@ -169,10 +169,10 @@ describe('graphql', () => {
     expect(await toArray(flattenedNodes)).toMatchSnapshot();
   });
 
-  test('paginated v2 query', async () => {
+  test('paginated relay v2 query', async () => {
     const query = await loadQueryFile('commits-v2.gql');
     const expectedQuery = await loadQueryFile('paginated-commits-v2.gql');
-    const paginatedQuery = sut.paginatedQueryV2(query);
+    const paginatedQuery = sut.paginatedWithRelayV2(query);
     expect(paginatedQuery.edgesPath).toEqual([
       'vcs_Commit_connection',
       'edges',
@@ -182,6 +182,40 @@ describe('graphql', () => {
       'pageInfo',
     ]);
     expect(paginatedQuery.query).toEqual(expectedQuery);
+  });
+
+  test('paginated offset/limit v2 query', async () => {
+    const query = await loadQueryFile('commits-v2.gql');
+    const paginatedQuery = sut.paginateWithOffsetLimitV2(query);
+    const expectedQuery =
+      await loadQueryFile('paginated-commits-offset-limit-v2.gql');
+    expect(paginatedQuery.query).toEqual(expectedQuery);
+    expect(paginatedQuery.edgesPath).toEqual([
+      'vcs_Commit',
+    ]);
+    expect(paginatedQuery.pageInfoPath).toBeEmpty();
+  });
+
+  test('paginated keyset v2 query', async () => {
+    const query = await loadQueryFile('incidents-v2.gql');
+    const paginatedQuery = sut.paginateWithKeysetV2(query);
+    const expectedQuery =
+      await loadQueryFile('paginated-incidents-keyset-v2.gql');
+    expect(paginatedQuery.query).toEqual(expectedQuery);
+    expect(paginatedQuery.edgesPath).toEqual(['ims_Incident']);
+    expect(paginatedQuery.edgeIdPath).toEqual(['_id']);
+    expect(paginatedQuery.pageInfoPath).toBeEmpty();
+  });
+
+  test('paginated keyset v2 query with existing where clause', async () => {
+    const query = await loadQueryFile('commits-v2.gql');
+    const paginatedQuery = sut.paginateWithKeysetV2(query);
+    const expectedQuery =
+      await loadQueryFile('paginated-commits-keyset-v2.gql');
+    expect(paginatedQuery.query).toEqual(expectedQuery);
+    expect(paginatedQuery.edgesPath).toEqual(['vcs_Commit']);
+    expect(paginatedQuery.edgeIdPath).toEqual(['_id']);
+    expect(paginatedQuery.pageInfoPath).toBeEmpty();
   });
 
   test('build incremental V2', () => {

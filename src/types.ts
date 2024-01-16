@@ -2,6 +2,20 @@ export interface FarosClientConfig {
   readonly url: string;
   readonly apiKey: string;
   readonly useGraphQLV2?: boolean;
+  readonly phantoms?: Phantom;
+  readonly visibility?: string;
+}
+
+export enum GraphVersion {
+  V1 = 'v1',
+  V2 = 'v2',
+}
+
+export enum Phantom {
+  Only = 'only',
+  Exclude = 'exclude',
+  Include = 'include',
+  IncludeNestedOnly = 'include-nested-only',
 }
 
 export interface NamedQuery {
@@ -66,4 +80,29 @@ export interface Model {
   backwardReferences: any;
   keySchema: any;
   dataSchema: any;
+}
+
+export interface UpdateWebhookEventStatus {
+  webhookId: string;
+  eventId: string;
+  status: string;
+  error?: string;
+}
+
+export interface WebhookEvent {
+  id: string;
+  name: string;
+  webhookId: string;
+  event: any;
+  status: WebhookEventStatus;
+  error?: string;
+  createdAt?: Date;
+  receivedAt: Date;
+  updatedAt: Date;
+}
+
+export enum WebhookEventStatus {
+  Pending = 'Pending',
+  Ok = 'OK',
+  Error = 'Error',
 }

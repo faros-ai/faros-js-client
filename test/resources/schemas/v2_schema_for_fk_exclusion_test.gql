@@ -22,7 +22,7 @@ type query_root {
 }
 
 """
-columns and relationships of "cicd_Pipeline"
+"farosModel": "cicd_Pipeline"
 """
 type cicd_Pipeline {
   """generated"""
@@ -38,7 +38,7 @@ type cicd_Pipeline {
 }
 
 """
-columns and relationships of "cicd_Organization"
+"farosModel": "cicd_Organization"
 """
 type cicd_Organization {
   description: String

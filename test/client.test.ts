@@ -1,10 +1,11 @@
 import nock from 'nock';
 
-import {FarosClient, Schema} from '../src';
+import {FarosClient, FarosClientConfig, Schema} from '../src';
 import {GRAPH_VERSION_HEADER} from '../src/client';
+import {Phantom, WebhookEvent, WebhookEventStatus} from '../src/types';
 
 const apiUrl = 'https://test.faros.ai';
-const clientConfig = {url: apiUrl, apiKey: 'test-key'};
+const clientConfig = {url: apiUrl, apiKey: 'test-key', useGraphQLV2: false};
 const client = new FarosClient(clientConfig);
 
 describe('client', () => {
@@ -140,7 +141,7 @@ describe('client', () => {
         owner: {
           field: 'cal_User',
           model: 'cal_User',
-          foreignKey: 'user'
+          foreignKey: 'user',
         },
       },
     },
@@ -178,19 +179,92 @@ describe('client', () => {
   });
 
   test('check v2 header value', async () => {
+    await expectV2Request(
+      {
+        url: apiUrl,
+        apiKey: 'test-key',
+        useGraphQLV2: true,
+      },
+      true
+    );
+  });
+
+  async function expectV2Request(
+    cfg: FarosClientConfig,
+    expected: true | URLSearchParams
+  ) {
+    expect(cfg.useGraphQLV2).toBeTruthy();
     const mock = nock(apiUrl, {
       reqheaders: {
         // use literal to be sure as variable requires []'s
         'x-faros-graph-version': /v2/i,
       },
     })
-      .get('/graphs/foobar/graphql/schema')
-      .reply(200, gqlSchema);
+      .post('/graphs/foobar/graphql')
+      .query(expected)
+      .reply(200, {});
+    const client = new FarosClient(cfg);
+    await client.gql('foobar', 'query { __schema { types { name } } }');
+    mock.done();
+  }
+
+  test('v2 query parameters - visibility', async () => {
+    const expected = new URLSearchParams({
+      phantoms: Phantom.IncludeNestedOnly,
+      visibility: 'foobar',
+    });
+    const clientConfig = {
+      url: apiUrl,
+      apiKey: 'test-key',
+      useGraphQLV2: true,
+      visibility: 'foobar',
+    };
+    await expectV2Request(clientConfig, expected);
+  });
+
+  test('v2 query parameters - default', async () => {
+    const expected = new URLSearchParams({
+      phantoms: Phantom.IncludeNestedOnly,
+    });
+    const clientConfig = {
+      url: apiUrl,
+      apiKey: 'test-key',
+      useGraphQLV2: true,
+    };
+    await expectV2Request(clientConfig, expected);
+  });
+
+  test('v2 query parameters - custom phantoms', async () => {
+    const expected = new URLSearchParams({
+      phantoms: Phantom.Exclude,
+    });
+    const clientConfig = {
+      url: apiUrl,
+      apiKey: 'test-key',
+      useGraphQLV2: true,
+      phantoms: Phantom.Exclude,
+    };
+    await expectV2Request(clientConfig, expected);
+  });
+
+  test('gql v2 - default', async () => {
+    const query = `
+      {
+        tms_Task {
+          uid
+        }
+      } `;
+    const mock = nock(apiUrl)
+      .post('/graphs/g1/graphql', JSON.stringify({query}))
+      .query({phantoms: Phantom.IncludeNestedOnly})
+      .reply(200, {data: {result: 'ok'}});
 
     const clientConfig = {url: apiUrl, apiKey: 'test-key', useGraphQLV2: true};
     const client = new FarosClient(clientConfig);
-    await client.gqlSchema('foobar');
+
+    const res = await client.gql('g1', query);
     mock.done();
+    expect(res).toEqual({result: 'ok'});
   });
 
   test('gql with variables', async () => {
@@ -395,5 +469,74 @@ describe('client', () => {
     const res = await client.geocode(...locations);
     mock.done();
     expect(res).toStrictEqual(locationsRes);
+  });
+
+  test('update webhook event status', async () => {
+    const mock = nock(apiUrl)
+      .patch('/webhooks/testWebhookId/events/testEventId')
+      .reply(204);
+
+    await client.updateWebhookEventStatus({
+      webhookId: 'testWebhookId',
+      eventId: 'testEventId',
+      status: 'error',
+      error: 'error message',
+    });
+    mock.done();
+  });
+
+  test('get webhook event', async () => {
+    const webhookId = 'testWebhookId';
+    const eventId = 'testEventId';
+    const now = new Date();
+    const mockReplyEvent: WebhookEvent = {
+      id: eventId,
+      webhookId,
+      event: {
+        eventType: 'push',
+        commit: {
+          sha: '0xdeadbeef',
+        },
+      },
+      name: 'push',
+      status: WebhookEventStatus.Pending,
+      createdAt: now,
+      receivedAt: now,
+      updatedAt: now,
+    };
+
+    const mock = nock(apiUrl)
+      .get(`/webhooks/${webhookId}/events/${eventId}`)
+      .reply(200, mockReplyEvent);
+
+    const event = await client.getWebhookEvent(webhookId, eventId);
+    expect(event).toEqual(mockReplyEvent);
+    mock.done();
+  });
+
+  test('generic request', async () => {
+    const path = '/prefix/endpoint';
+    const body = {foo: 'bar'};
+    const responseBody = {result: 'ok'};
+    const mock = nock(apiUrl).post(path, body).reply(200, responseBody);
+    const response = await client.request('POST', path, body);
+    expect(response).toEqual(responseBody);
+    mock.done();
+  });
+
+  test('set api key', async () => {
+    const mock = nock(apiUrl)
+      .get('/users/me')
+      .matchHeader('authorization', 'test-key')
+      .reply(200, {tenantId: '1'})
+      .get('/users/me')
+      .matchHeader('authorization', 'test-key-2')
+      .reply(200, {tenantId: '2'});
+    const res1 = await client.tenant();
+    expect(res1).toBe('1');
+    client.setApiKey('test-key-2');
+    const res2 = await client.tenant();
+    expect(res2).toBe('2');
+    mock.done();
   });
 });
