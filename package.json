@@ -35,7 +35,7 @@
     "axios": "^1.6.2",
     "axios-retry": "^4.0.0",
     "commander": "^9.3.0",
-    "fs-extra": "^9.1.0",
+    "fs-extra": "^11.2.0",
     "graphql": "^16.8.1",
     "is-retry-allowed": "^2.2.0",
     "json-to-graphql-query": "^2.2.4",
@@ -50,7 +50,7 @@
     "verror": "^1.10.0"
   },
   "devDependencies": {
-    "@types/fs-extra": "^9.0.13",
+    "@types/fs-extra": "^11.0.4",
     "@types/jest": "^29.5.10",
     "@types/lodash": "^4.14.194",
     "@types/luxon": "^3.1.0",
