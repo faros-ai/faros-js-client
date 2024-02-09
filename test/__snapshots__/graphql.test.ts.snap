@@ -356,6 +356,10 @@ exports[`graphql create incremental queries V2 1`] = `
     "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id } }",
     "name": "cicd_Pipeline",
   },
+  {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Artifact (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id tags uid } }",
+    "name": "cicd_Artifact",
+  },
 ]
 `;
 
@@ -368,6 +372,10 @@ exports[`graphql create incremental queries V2 2`] = `
   {
     "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id } }",
     "name": "cicd_Pipeline",
+  },
+  {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Artifact (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id tags uid } }",
+    "name": "cicd_Artifact",
   },
 ]
 `;

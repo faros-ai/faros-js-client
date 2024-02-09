@@ -1,6 +1,6 @@
 import {ok} from 'assert';
 import * as gql from 'graphql';
-import {Kind} from 'graphql';
+import {isScalarType, Kind} from 'graphql';
 import {VariableDefinitionNode} from 'graphql/language/ast';
 import {jsonToGraphQLQuery, VariableType} from 'json-to-graphql-query';
 import _ from 'lodash';
@@ -772,6 +772,12 @@ export function flattenV2(
                 leafPath
               );
             }
+            // use field description to determine if the jsonb field is an array
+            if (isScalarType(gqlType)
+              && gqlType.name === 'jsonb'
+              && typeInfo.getFieldDef()?.description === 'array') {
+              jsonArrayPaths.add(leafPath);
+            }
             leafPaths.push(leafPath);
             pathToType.set(leafPath, gqlType);
             if (node.selectionSet?.selections?.length) {
@@ -864,7 +870,15 @@ function addVariableDefinition(
   const nodeType = node.type as gql.NamedTypeNode;
   const type = gql.typeFromAST(schema, nodeType);
   if (gql.isInputType(type)) {
-    params.set(node.variable.name.value, type);
+    const unwrapped = unwrapType(type);
+    if (!unwrapped) {
+      throw new VError(
+        'cannot unwrap type \'%s\' of variable \'%s\'',
+        type,
+        node.variable.name.value
+      );
+    }
+    params.set(node.variable.name.value, unwrapped as gql.GraphQLInputType);
   }
 }
 
