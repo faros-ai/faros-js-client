@@ -79,6 +79,32 @@ describe('graphql', () => {
     ]);
   });
 
+  test('flatten nodes V2 with jsonb array', () => {
+    const query = `
+      query ($from: timestamptz!, $to: timestamptz!) {
+        cicd_Artifact (where: {refreshedAt: {_gte: $from, _lt: $to}}) 
+          { id tags uid }
+      }`;
+    const ctx = sut.flattenV2(query, graphSchemaV2);
+    for (const [id, type] of ctx.fieldTypes) {
+      switch (id) {
+        case 'id':
+        case 'uid':
+          expect(type).toEqual(gql.GraphQLString);
+          break;
+        case 'tags': {
+          expect(type.constructor.name).toEqual('GraphQLList');
+          const ofType =
+            (type as gql.GraphQLList<gql.GraphQLScalarType>).ofType;
+          expect(ofType.name).toEqual('jsonb');
+        }
+          break;
+        default:
+          fail(`unexpected field ${id}`);
+      }
+    }
+  });
+
   test('flatten nodes V2 with list rels', async () => {
     const nodes = [
       {
