@@ -1203,6 +1203,7 @@ export interface Reader {
     readonly fields: Map<string, gql.GraphQLType>;
     readonly params: Map<string, gql.GraphQLInputType>;
     readonly modelKeys?: ReadonlyArray<string>;
+    readonly incremental: boolean;
   };
 }
 
@@ -1238,6 +1239,7 @@ export function readerFromQuery(
       fields: flattenCtx.fieldTypes,
       modelKeys: incremental ? [ID_FLD] : undefined,
       params: flattenCtx.params,
+      incremental
     },
   };
 }
