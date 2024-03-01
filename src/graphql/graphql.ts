@@ -754,10 +754,13 @@ export function flattenV2(
         enter(node): boolean | void {
           const name = node.alias?.value ?? node.name.value;
           fieldPath.push(name);
+          const type = typeInfo.getType();
           if (!rootPath.length) {
             rootPath.push(...fieldPath);
+            if (!type) {
+              throw new VError('invalid type \'%s\'', name);
+            }
           }
-          const type = typeInfo.getType();
           if (isListType(type)) {
             const listPath = fieldPath.join('.');
             listPaths.push(listPath);
