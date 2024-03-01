@@ -195,6 +195,12 @@ describe('graphql', () => {
     expect(await toArray(flattenedNodes)).toMatchSnapshot();
   });
 
+  test('flatten nodes V2 with invalid type', () => {
+    expect(() => sut.flattenV2('{foo_Bar{id}}', graphSchemaV2)).toThrow(
+      'invalid type \'foo_Bar\''
+    );
+  });
+
   test('paginated relay v2 query', async () => {
     const query = await loadQueryFile('commits-v2.gql');
     const expectedQuery = await loadQueryFile('paginated-commits-v2.gql');
