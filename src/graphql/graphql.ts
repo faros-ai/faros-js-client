@@ -1452,6 +1452,12 @@ function isV2ModelType(type: any): type is gql.GraphQLObjectType {
     : false;
 }
 
+function isScalar(type: any): boolean {
+  const unwrapped = unwrapType(type);
+  return gql.isScalarType(unwrapped) ||
+    (gql.isListType(unwrapped) && gql.isScalarType(unwrapped.ofType));
+}
+
 /**
  * Creates an incremental query from a model type.
  * The selections will include:
@@ -1479,7 +1485,7 @@ export function buildIncrementalQueryV2(
   fieldsObj[ID_FLD] = true;
   for (const fldName of Object.keys(type.getFields())) {
     const field = type.getFields()[fldName];
-    if (gql.isScalarType(unwrapType(field.type))) {
+    if (isScalar(field.type)) {
       const reference = references[fldName];
       if (reference) {
         // This is a (scalar) foreign key to a top-level model
