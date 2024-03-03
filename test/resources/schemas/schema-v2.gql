@@ -264,6 +264,7 @@ type cicd_Build {
 type cicd_Pipeline {
   """generated"""
   id: String!
+  tags: [String!]
 }
 
 scalar jsonb
