@@ -267,6 +267,47 @@ describe('client', () => {
     expect(res).toEqual({result: 'ok'});
   });
 
+  test('clone', async () => {
+    async function test(client: FarosClient, params: URLSearchParams) {
+      const mock = nock(apiUrl)
+        .post(
+          '/graphs/g1/graphql',
+          JSON.stringify({query: '{ tms_Task { uid } }'})
+        )
+        .query(params)
+        .reply(200, {data: {result: 'ok'}});
+      const res = await client.gql('g1', '{ tms_Task { uid } }');
+      mock.done();
+      expect(res).toEqual({result: 'ok'});
+    }
+    const clientConfig = {
+      url: apiUrl,
+      apiKey: 'test-key',
+      useGraphQLV2: true,
+    };
+    const client = new FarosClient(clientConfig);
+    // baseline test
+    await test(
+      client,
+      new URLSearchParams({phantoms: Phantom.IncludeNestedOnly}),
+    );
+    // test clone w/ different params
+    await test(
+      client.copy({phantoms: Phantom.Exclude}),
+      new URLSearchParams({phantoms: Phantom.Exclude}),
+    );
+    // test clone with no changes
+    await test(
+      client.copy(),
+      new URLSearchParams({phantoms: Phantom.IncludeNestedOnly}),
+    );
+    // test client again to ensure it wasn't changed
+    await test(
+      client,
+      new URLSearchParams({phantoms: Phantom.IncludeNestedOnly}),
+    );
+  });
+
   test('gql with variables', async () => {
     const query = `{
       query ($pageSize: Int = 10, $after: Cursor) {

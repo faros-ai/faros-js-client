@@ -41,9 +41,9 @@ export class FarosClient {
   readonly visibility?: string;
 
   constructor(
-    cfg: FarosClientConfig,
+    private readonly cfg: FarosClientConfig,
     readonly logger: Logger<string> = pino({name: 'faros-client'}),
-    axiosConfig: AxiosRequestConfig = DEFAULT_AXIOS_CONFIG
+    private readonly axiosConfig: AxiosRequestConfig = DEFAULT_AXIOS_CONFIG
   ) {
     const url = Utils.urlWithoutTrailingSlashes(cfg.url);
 
@@ -67,6 +67,24 @@ export class FarosClient {
     this.graphVersion = useGraphQLV2 ? GraphVersion.V2 : GraphVersion.V1;
     this.phantoms = cfg.phantoms || Phantom.IncludeNestedOnly;
     this.visibility = cfg.visibility;
+  }
+
+  copy(
+    cfg?: Partial<FarosClientConfig>,
+    logger?: Logger<string>,
+    axiosConfig?: AxiosRequestConfig
+  ): FarosClient {
+    return new FarosClient(
+      {
+        ...this.cfg,
+        ...cfg,
+      },
+      logger ?? this.logger,
+      {
+        ...this.axiosConfig,
+        ...axiosConfig
+      }
+    );
   }
 
   async tenant(): Promise<string> {
