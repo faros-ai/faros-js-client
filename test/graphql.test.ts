@@ -888,6 +888,14 @@ describe('graphql', () => {
     expect(
       sut.createIncrementalQueriesV2(graphSchemaV2, undefined, undefined, false)
     ).toMatchSnapshot();
+    expect(
+      sut.createIncrementalQueriesV2(graphSchemaV2,
+        undefined,
+        undefined,
+        false,
+        true,
+      ),
+    ).toMatchSnapshot();
   });
 
   test('create incremental queries V2 with primary keys/references', () => {

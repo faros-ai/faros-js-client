@@ -1476,7 +1476,8 @@ export function buildIncrementalQueryV2(
   type: gql.GraphQLObjectType,
   avoidCollisions = true,
   resolvedPrimaryKeys: Dictionary<string> = {},
-  references: Dictionary<Reference> = {}
+  references: Dictionary<Reference> = {},
+  scalarsOnly = false
 ): Query {
   const name = type.name;
   // add fields and FKs
@@ -1500,7 +1501,7 @@ export function buildIncrementalQueryV2(
       } else {
         fieldsObj[field.name] = true; // arbitrary value here
       }
-    } else if (isV2ModelType(field.type)) {
+    } else if (isV2ModelType(field.type) && !scalarsOnly) {
       // this is foreign key to a top-level model.
       // add nested fragment to select id of referenced model
       const fk = resolvedPrimaryKeys[field.type.name] || ID_FLD;
@@ -1549,9 +1550,17 @@ export function createIncrementalReadersV2(
   client: FarosClient,
   graph: string,
   pageSize: number,
-  graphQLSchema: gql.GraphQLSchema
+  graphQLSchema: gql.GraphQLSchema,
+  avoidCollisions = true,
+  scalarsOnly = false
 ): ReadonlyArray<Reader> {
-  const result: Reader[] = createIncrementalQueriesV2(graphQLSchema).map(
+  const result: Reader[] = createIncrementalQueriesV2(
+    graphQLSchema,
+    undefined,
+    undefined,
+    avoidCollisions,
+    scalarsOnly
+  ).map(
     (query) =>
       readerFromQuery(
         graph,
@@ -1574,7 +1583,8 @@ export function createIncrementalQueriesV2(
   graphQLSchema: gql.GraphQLSchema,
   primaryKeys?: Dictionary<ReadonlyArray<string>>,
   references?: Dictionary<Dictionary<Reference>>,
-  avoidCollisions = true
+  avoidCollisions = true,
+  scalarsOnly = false
 ): ReadonlyArray<Query> {
   const result: Query[] = [];
   const resolvedPrimaryKeys = primaryKeys
@@ -1598,7 +1608,8 @@ export function createIncrementalQueriesV2(
           type,
           avoidCollisions,
           resolvedPrimaryKeys,
-          typeReferences
+          typeReferences,
+          scalarsOnly
         )
       );
     }
