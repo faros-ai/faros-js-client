@@ -380,6 +380,23 @@ exports[`graphql create incremental queries V2 2`] = `
 ]
 `;
 
+exports[`graphql create incremental queries V2 3`] = `
+[
+  {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id createdAt endedAt name number origin refreshedAt startedAt status statusCategory statusDetail uid url } }",
+    "name": "cicd_Build",
+  },
+  {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id tags } }",
+    "name": "cicd_Pipeline",
+  },
+  {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Artifact (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id tags uid } }",
+    "name": "cicd_Artifact",
+  },
+]
+`;
+
 exports[`graphql create incremental queries V2 when missing expected field 2`] = `"expected missing_field to be a reference field of cicd_Pipeline (foreign key to cicd_Organization)"`;
 
 exports[`graphql create incremental queries V2 with primary keys/references 1`] = `
