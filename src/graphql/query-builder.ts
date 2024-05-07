@@ -14,7 +14,7 @@ type MutationFieldValue =
   | boolean
   | any[]
   | {category: string; detail: string}
-  | {[field: string] : string | number | boolean}
+  | {[field: string]: string | number | boolean}
   | Ref
   | undefined
   | null;
@@ -28,7 +28,7 @@ export interface FarosModel {
 }
 
 export class Ref {
-  constructor(readonly model: FarosModel) {}
+  constructor(readonly model?: FarosModel) {}
 }
 
 export class QueryBuilder {
@@ -58,7 +58,7 @@ export class QueryBuilder {
           __args: deleteObj,
           returning: {
             id: true,
-          }
+          },
         },
       },
     };
@@ -67,7 +67,7 @@ export class QueryBuilder {
   /**
    * Creates a Ref that can be used in another Faros Model.
    */
-  ref(model: FarosModel): Ref {
+  ref(model?: FarosModel): Ref {
     return new Ref(model);
   }
 
@@ -92,7 +92,11 @@ export class QueryBuilder {
       if (isNil(v)) {
         mutObj[k] = null;
       } else if (v instanceof Ref) {
-        mutObj[k] = this.upsertMutationObj(v.model, true);
+        if (v.model) {
+          mutObj[k] = this.upsertMutationObj(v.model, true);
+        } else {
+          mutObj[k] = null;
+        }
         // ref's key should be suffixed with Id for onConflict field
         maskKey += 'Id';
       } else {
@@ -133,7 +137,11 @@ export class QueryBuilder {
       if (isNil(v)) {
         mutObj[k] = null;
       } else if (v instanceof Ref) {
-        mutObj[k] = this.deleteMutationObj(v.model, true);
+        if (v.model) {
+          mutObj[k] = this.deleteMutationObj(v.model, true);
+        } else {
+          mutObj[k + 'Id'] = {_is_null: true};
+        }
       } else {
         const value = Array.isArray(v) ? arrayLiteral(v) : v;
         mutObj[k] = {_eq: value};
