@@ -1,6 +1,6 @@
 import {ok} from 'assert';
 import * as gql from 'graphql';
-import {Kind} from 'graphql';
+import {isScalarType, Kind} from 'graphql';
 import {VariableDefinitionNode} from 'graphql/language/ast';
 import {jsonToGraphQLQuery, VariableType} from 'json-to-graphql-query';
 import _ from 'lodash';
@@ -754,10 +754,13 @@ export function flattenV2(
         enter(node): boolean | void {
           const name = node.alias?.value ?? node.name.value;
           fieldPath.push(name);
+          const type = typeInfo.getType();
           if (!rootPath.length) {
             rootPath.push(...fieldPath);
+            if (!type) {
+              throw new VError('invalid type \'%s\'', name);
+            }
           }
-          const type = typeInfo.getType();
           if (isListType(type)) {
             const listPath = fieldPath.join('.');
             listPaths.push(listPath);
@@ -771,6 +774,12 @@ export function flattenV2(
                 type,
                 leafPath
               );
+            }
+            // use field description to determine if the jsonb field is an array
+            if (isScalarType(gqlType)
+              && gqlType.name === 'jsonb'
+              && typeInfo.getFieldDef()?.description === 'array') {
+              jsonArrayPaths.add(leafPath);
             }
             leafPaths.push(leafPath);
             pathToType.set(leafPath, gqlType);
@@ -864,7 +873,15 @@ function addVariableDefinition(
   const nodeType = node.type as gql.NamedTypeNode;
   const type = gql.typeFromAST(schema, nodeType);
   if (gql.isInputType(type)) {
-    params.set(node.variable.name.value, type);
+    const unwrapped = unwrapType(type);
+    if (!unwrapped) {
+      throw new VError(
+        'cannot unwrap type \'%s\' of variable \'%s\'',
+        type,
+        node.variable.name.value
+      );
+    }
+    params.set(node.variable.name.value, unwrapped as gql.GraphQLInputType);
   }
 }
 
@@ -1189,6 +1206,7 @@ export interface Reader {
     readonly fields: Map<string, gql.GraphQLType>;
     readonly params: Map<string, gql.GraphQLInputType>;
     readonly modelKeys?: ReadonlyArray<string>;
+    readonly incremental: boolean;
   };
 }
 
@@ -1224,6 +1242,7 @@ export function readerFromQuery(
       fields: flattenCtx.fieldTypes,
       modelKeys: incremental ? [ID_FLD] : undefined,
       params: flattenCtx.params,
+      incremental
     },
   };
 }
@@ -1433,6 +1452,12 @@ function isV2ModelType(type: any): type is gql.GraphQLObjectType {
     : false;
 }
 
+function isScalar(type: any): boolean {
+  const unwrapped = unwrapType(type);
+  return gql.isScalarType(unwrapped) ||
+    (gql.isListType(unwrapped) && gql.isScalarType(unwrapped.ofType));
+}
+
 /**
  * Creates an incremental query from a model type.
  * The selections will include:
@@ -1451,7 +1476,8 @@ export function buildIncrementalQueryV2(
   type: gql.GraphQLObjectType,
   avoidCollisions = true,
   resolvedPrimaryKeys: Dictionary<string> = {},
-  references: Dictionary<Reference> = {}
+  references: Dictionary<Reference> = {},
+  scalarsOnly = false
 ): Query {
   const name = type.name;
   // add fields and FKs
@@ -1460,7 +1486,7 @@ export function buildIncrementalQueryV2(
   fieldsObj[ID_FLD] = true;
   for (const fldName of Object.keys(type.getFields())) {
     const field = type.getFields()[fldName];
-    if (gql.isScalarType(unwrapType(field.type))) {
+    if (isScalar(field.type)) {
       const reference = references[fldName];
       if (reference) {
         // This is a (scalar) foreign key to a top-level model
@@ -1475,7 +1501,7 @@ export function buildIncrementalQueryV2(
       } else {
         fieldsObj[field.name] = true; // arbitrary value here
       }
-    } else if (isV2ModelType(field.type)) {
+    } else if (isV2ModelType(field.type) && !scalarsOnly) {
       // this is foreign key to a top-level model.
       // add nested fragment to select id of referenced model
       const fk = resolvedPrimaryKeys[field.type.name] || ID_FLD;
@@ -1524,9 +1550,17 @@ export function createIncrementalReadersV2(
   client: FarosClient,
   graph: string,
   pageSize: number,
-  graphQLSchema: gql.GraphQLSchema
+  graphQLSchema: gql.GraphQLSchema,
+  avoidCollisions = true,
+  scalarsOnly = false
 ): ReadonlyArray<Reader> {
-  const result: Reader[] = createIncrementalQueriesV2(graphQLSchema).map(
+  const result: Reader[] = createIncrementalQueriesV2(
+    graphQLSchema,
+    undefined,
+    undefined,
+    avoidCollisions,
+    scalarsOnly
+  ).map(
     (query) =>
       readerFromQuery(
         graph,
@@ -1549,7 +1583,8 @@ export function createIncrementalQueriesV2(
   graphQLSchema: gql.GraphQLSchema,
   primaryKeys?: Dictionary<ReadonlyArray<string>>,
   references?: Dictionary<Dictionary<Reference>>,
-  avoidCollisions = true
+  avoidCollisions = true,
+  scalarsOnly = false
 ): ReadonlyArray<Query> {
   const result: Query[] = [];
   const resolvedPrimaryKeys = primaryKeys
@@ -1573,7 +1608,8 @@ export function createIncrementalQueriesV2(
           type,
           avoidCollisions,
           resolvedPrimaryKeys,
-          typeReferences
+          typeReferences,
+          scalarsOnly
         )
       );
     }

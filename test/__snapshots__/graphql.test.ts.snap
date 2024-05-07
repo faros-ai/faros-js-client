@@ -353,8 +353,12 @@ exports[`graphql create incremental queries V2 1`] = `
     "name": "cicd_Build",
   },
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id tags } }",
     "name": "cicd_Pipeline",
+  },
+  {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Artifact (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id tags uid } }",
+    "name": "cicd_Artifact",
   },
 ]
 `;
@@ -366,8 +370,29 @@ exports[`graphql create incremental queries V2 2`] = `
     "name": "cicd_Build",
   },
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id tags } }",
     "name": "cicd_Pipeline",
+  },
+  {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Artifact (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id tags uid } }",
+    "name": "cicd_Artifact",
+  },
+]
+`;
+
+exports[`graphql create incremental queries V2 3`] = `
+[
+  {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id createdAt endedAt name number origin refreshedAt startedAt status statusCategory statusDetail uid url } }",
+    "name": "cicd_Build",
+  },
+  {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id tags } }",
+    "name": "cicd_Pipeline",
+  },
+  {
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Artifact (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id tags uid } }",
+    "name": "cicd_Artifact",
   },
 ]
 `;

@@ -17,6 +17,7 @@ export {
   NamedQuery,
   SecretName,
   UpdateAccount,
+  Phantom,
 } from './types';
 export {
   foreignKeyForArray,

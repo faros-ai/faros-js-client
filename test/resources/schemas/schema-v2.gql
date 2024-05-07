@@ -46,6 +46,14 @@ type query_root {
     """limit the number of rows returned"""
     limit: Int
   ): [cicd_Build!]!
+
+  """
+  fetch data from the table: "cicd_Artifact"
+  """
+  cicd_Artifact(
+    """limit the number of rows returned"""
+    limit: Int
+  ): [cicd_Artifact!]!
 }
 
 type ims_Incident {
@@ -256,7 +264,25 @@ type cicd_Build {
 type cicd_Pipeline {
   """generated"""
   id: String!
+  tags: [String!]
 }
 
 scalar jsonb
+
+"""
+"farosModel": "cicd_Artifact"
+"""
+type cicd_Artifact {
+
+  """generated"""
+  id: String!
+
+  """array"""
+  tags(
+    """JSON select path"""
+    path: String
+  ): jsonb
+
+  uid: String!
+}
 

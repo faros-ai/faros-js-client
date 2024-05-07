@@ -79,6 +79,32 @@ describe('graphql', () => {
     ]);
   });
 
+  test('flatten nodes V2 with jsonb array', () => {
+    const query = `
+      query ($from: timestamptz!, $to: timestamptz!) {
+        cicd_Artifact (where: {refreshedAt: {_gte: $from, _lt: $to}}) 
+          { id tags uid }
+      }`;
+    const ctx = sut.flattenV2(query, graphSchemaV2);
+    for (const [id, type] of ctx.fieldTypes) {
+      switch (id) {
+        case 'id':
+        case 'uid':
+          expect(type).toEqual(gql.GraphQLString);
+          break;
+        case 'tags': {
+          expect(type.constructor.name).toEqual('GraphQLList');
+          const ofType =
+            (type as gql.GraphQLList<gql.GraphQLScalarType>).ofType;
+          expect(ofType.name).toEqual('jsonb');
+        }
+          break;
+        default:
+          fail(`unexpected field ${id}`);
+      }
+    }
+  });
+
   test('flatten nodes V2 with list rels', async () => {
     const nodes = [
       {
@@ -167,6 +193,12 @@ describe('graphql', () => {
     const ctx = sut.flattenV2(query, graphSchemaV2);
     const flattenedNodes = sut.flattenIterable(ctx, nodes);
     expect(await toArray(flattenedNodes)).toMatchSnapshot();
+  });
+
+  test('flatten nodes V2 with invalid type', () => {
+    expect(() => sut.flattenV2('{foo_Bar{id}}', graphSchemaV2)).toThrow(
+      'invalid type \'foo_Bar\''
+    );
   });
 
   test('paginated relay v2 query', async () => {
@@ -855,6 +887,14 @@ describe('graphql', () => {
     expect(sut.createIncrementalQueriesV2(graphSchemaV2)).toMatchSnapshot();
     expect(
       sut.createIncrementalQueriesV2(graphSchemaV2, undefined, undefined, false)
+    ).toMatchSnapshot();
+    expect(
+      sut.createIncrementalQueriesV2(graphSchemaV2,
+        undefined,
+        undefined,
+        false,
+        true,
+      ),
     ).toMatchSnapshot();
   });
 
