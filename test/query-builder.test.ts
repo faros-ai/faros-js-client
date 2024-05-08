@@ -106,6 +106,26 @@ describe('query builder', () => {
     const queryString = sut.batchMutation(mutations);
     expect(queryString).toMatchSnapshot();
   });
+
+  test('upsert undefined ref', () => {
+    const cicd_Pipeline = {
+      uid: '<pipeline_uid>',
+      organization: qb.ref(undefined),
+    };
+    const mutations = [qb.upsert({cicd_Pipeline})];
+    const queryString = sut.batchMutation(mutations);
+    expect(queryString).toMatchSnapshot();
+  });
+
+  test('delete undefined ref', () => {
+    const cicd_Pipeline = {
+      uid: '<pipeline_uid>',
+      organization: qb.ref(undefined),
+    };
+    const mutations = [qb.delete({cicd_Pipeline})];
+    const queryString = sut.batchMutation(mutations);
+    expect(queryString).toMatchSnapshot();
+  });
 });
 
 describe('arrayLiteral', () => {
