@@ -208,20 +208,6 @@ describe('client', () => {
     mock.done();
   }
 
-  test('v2 query parameters - visibility', async () => {
-    const expected = new URLSearchParams({
-      phantoms: Phantom.IncludeNestedOnly,
-      visibility: 'foobar',
-    });
-    const clientConfig = {
-      url: apiUrl,
-      apiKey: 'test-key',
-      useGraphQLV2: true,
-      visibility: 'foobar',
-    };
-    await expectV2Request(clientConfig, expected);
-  });
-
   test('v2 query parameters - default', async () => {
     const expected = new URLSearchParams({
       phantoms: Phantom.IncludeNestedOnly,

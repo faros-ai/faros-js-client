@@ -38,7 +38,6 @@ export class FarosClient {
   private readonly api: AxiosInstance;
   readonly graphVersion: GraphVersion;
   readonly phantoms: Phantom;
-  readonly visibility?: string;
 
   constructor(
     private readonly cfg: FarosClientConfig,
@@ -66,7 +65,6 @@ export class FarosClient {
 
     this.graphVersion = useGraphQLV2 ? GraphVersion.V2 : GraphVersion.V1;
     this.phantoms = cfg.phantoms || Phantom.IncludeNestedOnly;
-    this.visibility = cfg.visibility;
   }
 
   copy(
@@ -213,9 +211,6 @@ export class FarosClient {
     const result: Dictionary<any> = {};
     if (this.graphVersion === GraphVersion.V2) {
       result.phantoms = this.phantoms;
-      if (this.visibility) {
-        result.visibility = this.visibility;
-      }
     }
     return result;
   }
