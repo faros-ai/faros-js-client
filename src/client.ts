@@ -4,7 +4,6 @@ import {get as traverse, isEmpty, unset} from 'lodash';
 import pino, {Logger} from 'pino';
 import {Dictionary} from 'ts-essentials';
 import {promisify} from 'util';
-import VError from 'verror';
 import * as zlib from 'zlib';
 
 import {makeAxiosInstanceWithRetry} from './axios';
@@ -17,7 +16,6 @@ import {
   FarosClientConfig,
   GraphVersion,
   Location,
-  Model,
   NamedQuery,
   Phantom,
   SecretName,
@@ -36,7 +34,6 @@ export const GRAPH_VERSION_HEADER = 'x-faros-graph-version';
 /** Faros API client **/
 export class FarosClient {
   private readonly api: AxiosInstance;
-  readonly graphVersion: GraphVersion;
   readonly phantoms: Phantom;
 
   constructor(
@@ -46,8 +43,6 @@ export class FarosClient {
   ) {
     const url = Utils.urlWithoutTrailingSlashes(cfg.url);
 
-    const useGraphQLV2 = cfg.useGraphQLV2 ?? true;
-
     this.api = makeAxiosInstanceWithRetry(
       {
         ...axiosConfig,
@@ -55,7 +50,7 @@ export class FarosClient {
         headers: {
           ...axiosConfig?.headers,
           authorization: cfg.apiKey,
-          ...(useGraphQLV2 && {[GRAPH_VERSION_HEADER]: 'v2'}),
+          [GRAPH_VERSION_HEADER]: GraphVersion.V2,
         },
         maxBodyLength: Infinity, // rely on server to enforce request body size
         maxContentLength: Infinity, // accept any response size
@@ -63,7 +58,6 @@ export class FarosClient {
       logger
     );
 
-    this.graphVersion = useGraphQLV2 ? GraphVersion.V2 : GraphVersion.V1;
     this.phantoms = cfg.phantoms || Phantom.IncludeNestedOnly;
   }
 
@@ -137,47 +131,6 @@ export class FarosClient {
     }
   }
 
-  async models(graph: string): Promise<ReadonlyArray<Model>> {
-    if (this.graphVersion !== GraphVersion.V1) {
-      throw new VError(
-        `listing models is not supported for ${this.graphVersion} graphs`
-      );
-    }
-
-    try {
-      const {data} = await this.api.get(`/graphs/${graph}/models`);
-      return data.models;
-    } catch (err: any) {
-      throw wrapApiError(err, `unable to list models: ${graph}`);
-    }
-  }
-
-  async addModels(
-    graph: string,
-    models: string,
-    schema?: string
-  ): Promise<void> {
-    if (this.graphVersion !== GraphVersion.V1) {
-      throw new VError(
-        `Adding models is not supported for ${this.graphVersion} graphs`
-      );
-    }
-    try {
-      await this.api.post(`/graphs/${graph}/models`, models, {
-        headers: {'content-type': 'application/graphql'},
-        params: {
-          ...(schema && {schema}),
-        },
-      });
-    } catch (err: any) {
-      throw wrapApiError(err, `failed to add models to graph: ${graph}`);
-    }
-  }
-
-  async addCanonicalModels(graph: string): Promise<void> {
-    return await this.addModels(graph, '', 'canonical');
-  }
-
   async namedQuery(name: string): Promise<NamedQuery | undefined> {
     try {
       const {data} = await this.api.get(`/queries/${name}`);
@@ -190,29 +143,11 @@ export class FarosClient {
     }
   }
 
-  async entrySchema(graph: string): Promise<any> {
-    if (this.graphVersion !== GraphVersion.V1) {
-      throw new VError(
-        `entry schema is not supported for ${this.graphVersion} graphs`
-      );
-    }
-
-    try {
-      const {data} = await this.api.get(
-        `/graphs/${graph}/revisions/entries/schema`
-      );
-      return data.schema;
-    } catch (err: any) {
-      throw wrapApiError(err, `unable to load entry schema of graph: ${graph}`);
-    }
-  }
 
   queryParameters(): Dictionary<any> {
-    const result: Dictionary<any> = {};
-    if (this.graphVersion === GraphVersion.V2) {
-      result.phantoms = this.phantoms;
-    }
-    return result;
+    return {
+      phantoms: this.phantoms,
+    };
   }
 
   private async doGql(
@@ -223,7 +158,6 @@ export class FarosClient {
     try {
       let req: any = variables ? {query, variables} : {query};
       let doCompression =
-        this.graphVersion === GraphVersion.V2 &&
         Buffer.byteLength(query, 'utf8') > 10 * 1024; // 10KB
       if (doCompression) {
         try {

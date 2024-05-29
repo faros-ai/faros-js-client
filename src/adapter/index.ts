@@ -305,14 +305,7 @@ export class QueryAdapter {
   constructor(
     private readonly faros: FarosClient,
     private readonly v1Schema: gql.GraphQLSchema
-  ) {
-    if (faros.graphVersion !== 'v2') {
-      throw new VError(
-        'query adapter only works with v2 clients. found version: %s',
-        faros.graphVersion
-      );
-    }
-  }
+  ) {}
 
   /** Converts a V2 field value into a V1 field value */
   private v1Value(v2Value: any, type: LeafValueType): any {

@@ -1,12 +1,10 @@
 export interface FarosClientConfig {
   readonly url: string;
   readonly apiKey: string;
-  readonly useGraphQLV2?: boolean;
   readonly phantoms?: Phantom;
 }
 
 export enum GraphVersion {
-  V1 = 'v1',
   V2 = 'v2',
 }
 

@@ -6,10 +6,11 @@ import _ from 'lodash';
 import {FarosClient} from '../src';
 import * as sut from '../src/adapter';
 import {
-graphSchemaForAdapterTest as v1Schema,
-graphSchemaV2ForAdapterTest as v2Schema,
-toArray,
-toIterator} from './helpers';
+  graphSchemaForAdapterTest as v1Schema,
+  graphSchemaV2ForAdapterTest as v2Schema,
+  toArray,
+  toIterator,
+} from './helpers';
 
 describe('AST utilities', () => {
   // Sorts fields and removes directives and aliases
@@ -651,12 +652,6 @@ describe('query adapter', () => {
     const adapter = new sut.QueryAdapter(faros, v1Schema);
     return adapter.nodes('default', run.v1Query);
   }
-
-  test('invalid faros client fails', () => {
-    const faros: FarosClient = {graphVersion: 'v1'} as any;
-    expect(() => new sut.QueryAdapter(faros, v1Schema))
-      .toThrowError('query adapter only works with v2 clients');
-  });
 
   test('query', async () => {
     const v1Nodes = asV1Nodes({
