@@ -1,11 +1,10 @@
 import nock from 'nock';
 
 import {FarosClient, FarosClientConfig, Schema} from '../src';
-import {GRAPH_VERSION_HEADER} from '../src/client';
 import {Phantom, WebhookEvent, WebhookEventStatus} from '../src/types';
 
 const apiUrl = 'https://test.faros.ai';
-const clientConfig = {url: apiUrl, apiKey: 'test-key', useGraphQLV2: false};
+const clientConfig = {url: apiUrl, apiKey: 'test-key'};
 const client = new FarosClient(clientConfig);
 
 describe('client', () => {
@@ -67,23 +66,6 @@ describe('client', () => {
     expect(res).toBe(false);
   });
 
-  test('get models', async () => {
-    const mock = nock(apiUrl)
-      .get('/graphs/g1/models')
-      .reply(200, {
-        models: [
-          {name: 'model1', key: ['key1A', 'key1B']},
-          {name: 'model2', key: ['key2A', 'key2B']},
-        ],
-      });
-    const res = await client.models('g1');
-    mock.done();
-    expect(res).toEqual([
-      {name: 'model1', key: ['key1A', 'key1B']},
-      {name: 'model2', key: ['key2A', 'key2B']},
-    ]);
-  });
-
   test('get query', async () => {
     const mock = nock(apiUrl)
       .get('/queries/my-query')
@@ -94,15 +76,6 @@ describe('client', () => {
       dataPath: 'a.b.c',
       query: '{ hello { world } }',
     });
-  });
-
-  test('get entry schema', async () => {
-    const mock = nock(apiUrl)
-      .get('/graphs/g1/revisions/entries/schema')
-      .reply(200, {schema: []});
-    const res = await client.entrySchema('g1');
-    mock.done();
-    expect(res).toEqual([]);
   });
 
   test('gql', async () => {
@@ -118,6 +91,7 @@ describe('client', () => {
 
     const mock = nock(apiUrl)
       .post('/graphs/g1/graphql', JSON.stringify({query}))
+      .query({phantoms: Phantom.IncludeNestedOnly})
       .reply(200, {data: {tms: {tasks: {nodes: [{uid: '1'}, {uid: '2'}]}}}});
 
     const res = await client.gql('g1', query);
@@ -167,23 +141,11 @@ describe('client', () => {
     expect(res).toStrictEqual(gqlSchema);
   });
 
-  test('use v2 off by default', async () => {
-    const mock = nock(apiUrl, {
-      badheaders: [GRAPH_VERSION_HEADER],
-    })
-      .get('/graphs/foobar/graphql/schema')
-      .reply(200, gqlSchema);
-
-    await client.gqlSchema('foobar');
-    mock.done();
-  });
-
   test('check v2 header value', async () => {
     await expectV2Request(
       {
         url: apiUrl,
         apiKey: 'test-key',
-        useGraphQLV2: true,
       },
       true
     );
@@ -193,7 +155,6 @@ describe('client', () => {
     cfg: FarosClientConfig,
     expected: true | URLSearchParams
   ) {
-    expect(cfg.useGraphQLV2).toBeTruthy();
     const mock = nock(apiUrl, {
       reqheaders: {
         // use literal to be sure as variable requires []'s
@@ -215,7 +176,6 @@ describe('client', () => {
     const clientConfig = {
       url: apiUrl,
       apiKey: 'test-key',
-      useGraphQLV2: true,
     };
     await expectV2Request(clientConfig, expected);
   });
@@ -227,7 +187,6 @@ describe('client', () => {
     const clientConfig = {
       url: apiUrl,
       apiKey: 'test-key',
-      useGraphQLV2: true,
       phantoms: Phantom.Exclude,
     };
     await expectV2Request(clientConfig, expected);
@@ -245,7 +204,7 @@ describe('client', () => {
       .query({phantoms: Phantom.IncludeNestedOnly})
       .reply(200, {data: {result: 'ok'}});
 
-    const clientConfig = {url: apiUrl, apiKey: 'test-key', useGraphQLV2: true};
+    const clientConfig = {url: apiUrl, apiKey: 'test-key'};
     const client = new FarosClient(clientConfig);
 
     const res = await client.gql('g1', query);
@@ -269,7 +228,6 @@ describe('client', () => {
     const clientConfig = {
       url: apiUrl,
       apiKey: 'test-key',
-      useGraphQLV2: true,
     };
     const client = new FarosClient(clientConfig);
     // baseline test
@@ -314,6 +272,7 @@ describe('client', () => {
         '/graphs/g1/graphql',
         JSON.stringify({query, variables: {pageSize: 100, after: 'abc'}})
       )
+      .query({phantoms: Phantom.IncludeNestedOnly})
       .reply(200, {
         data: {tms: {tasks: {edges: [{node: {uid: '1'}}, {node: {uid: '2'}}]}}},
       });
@@ -328,6 +287,7 @@ describe('client', () => {
   test('introspect', async () => {
     const mock = nock(apiUrl)
       .post('/graphs/g1/graphql')
+      .query({phantoms: Phantom.IncludeNestedOnly})
       .reply(200, {
         data: {
           __schema: {
