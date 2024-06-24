@@ -114,4 +114,20 @@ describe('axios', () => {
     );
     mock.done();
   });
+
+  test('delay using function', async () => {
+    const mock = mockPostCode('/hi', 502);
+    const client = sut.makeAxiosInstanceWithRetry(
+      {baseURL: apiUrl},
+      undefined,
+      3,
+      () => {
+        return 50;
+      }
+    );
+    const res = await client.post('/hi');
+    expect(res.status).toBe(200);
+    expect(res.data).toStrictEqual({tenantId: '1'});
+    mock.done();
+  });
 });
