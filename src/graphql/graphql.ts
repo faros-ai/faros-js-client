@@ -1533,8 +1533,8 @@ export function buildIncrementalQueryV2(
         __args: {
           where: {
             refreshedAt: {
-              _gt: new VariableType('from'),
-              _lte: new VariableType('to'),
+              _gte: new VariableType('from'),
+              _lt: new VariableType('to'),
             },
           },
         },
