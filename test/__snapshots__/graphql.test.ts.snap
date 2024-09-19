@@ -16,14 +16,14 @@ exports[`graphql build incremental V1 2`] = `
 
 exports[`graphql build incremental V2 1`] = `
 {
-  "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id createdAt endedAt name number origin pipeline { pipelineId: id } refreshedAt startedAt status statusCategory statusDetail uid url } }",
+  "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id createdAt endedAt name number origin pipeline { pipelineId: id } refreshedAt startedAt status statusCategory statusDetail uid url } }",
   "name": "cicd_Build",
 }
 `;
 
 exports[`graphql build incremental V2 2`] = `
 {
-  "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id createdAt endedAt name number origin pipeline { id } refreshedAt startedAt status statusCategory statusDetail uid url } }",
+  "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id createdAt endedAt name number origin pipeline { id } refreshedAt startedAt status statusCategory statusDetail uid url } }",
   "name": "cicd_Build",
 }
 `;
@@ -349,15 +349,15 @@ exports[`graphql create incremental queries V1 with primary keys info 2`] = `
 exports[`graphql create incremental queries V2 1`] = `
 [
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id createdAt endedAt name number origin pipeline { pipelineId: id } refreshedAt startedAt status statusCategory statusDetail uid url } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id createdAt endedAt name number origin pipeline { pipelineId: id } refreshedAt startedAt status statusCategory statusDetail uid url } }",
     "name": "cicd_Build",
   },
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id tags } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id tags } }",
     "name": "cicd_Pipeline",
   },
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Artifact (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id tags uid } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Artifact (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id tags uid } }",
     "name": "cicd_Artifact",
   },
 ]
@@ -366,15 +366,15 @@ exports[`graphql create incremental queries V2 1`] = `
 exports[`graphql create incremental queries V2 2`] = `
 [
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id createdAt endedAt name number origin pipeline { id } refreshedAt startedAt status statusCategory statusDetail uid url } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id createdAt endedAt name number origin pipeline { id } refreshedAt startedAt status statusCategory statusDetail uid url } }",
     "name": "cicd_Build",
   },
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id tags } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id tags } }",
     "name": "cicd_Pipeline",
   },
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Artifact (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id tags uid } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Artifact (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id tags uid } }",
     "name": "cicd_Artifact",
   },
 ]
@@ -383,15 +383,15 @@ exports[`graphql create incremental queries V2 2`] = `
 exports[`graphql create incremental queries V2 3`] = `
 [
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id createdAt endedAt name number origin refreshedAt startedAt status statusCategory statusDetail uid url } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id createdAt endedAt name number origin refreshedAt startedAt status statusCategory statusDetail uid url } }",
     "name": "cicd_Build",
   },
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id tags } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id tags } }",
     "name": "cicd_Pipeline",
   },
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Artifact (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id tags uid } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Artifact (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id tags uid } }",
     "name": "cicd_Artifact",
   },
 ]
@@ -402,23 +402,23 @@ exports[`graphql create incremental queries V2 when missing expected field 2`] =
 exports[`graphql create incremental queries V2 with primary keys/references 1`] = `
 [
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id name pipeline { organization { source uid } uid } uid url } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id name pipeline { organization { source uid } uid } uid url } }",
     "name": "cicd_Build",
   },
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id name organization { source uid } uid url } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id name organization { source uid } uid url } }",
     "name": "cicd_Pipeline",
   },
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Organization (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id description name origin source uid url } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Organization (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id description name origin source uid url } }",
     "name": "cicd_Organization",
   },
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Repository (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id description name organization { source uid } origin uid url } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Repository (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id description name organization { source uid } origin uid url } }",
     "name": "cicd_Repository",
   },
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Deployment (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id source statusCategory statusDetail uid url } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Deployment (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id source statusCategory statusDetail uid url } }",
     "name": "cicd_Deployment",
   },
 ]
@@ -427,11 +427,11 @@ exports[`graphql create incremental queries V2 with primary keys/references 1`] 
 exports[`graphql excludes foreign key (scalar) identifier from selection 1`] = `
 [
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id name organization { source uid } uid url } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Pipeline (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id name organization { source uid } uid url } }",
     "name": "cicd_Pipeline",
   },
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Organization (where: {refreshedAt: {_gt: $from, _lte: $to}}) { id description name origin source uid url } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Organization (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id description name origin source uid url } }",
     "name": "cicd_Organization",
   },
 ]
