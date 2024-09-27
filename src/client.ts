@@ -88,17 +88,14 @@ export class FarosClient {
     }
   }
 
-  async secretExists(
-    name: string,
-    group?: string
-  ): Promise<boolean | undefined> {
+  async secretExists(name: string, group?: string): Promise<boolean> {
     try {
       const params = group ? {group} : undefined;
       const res = await this.api.get(`/secrets/${name}`, {params});
       return res.status === 200;
     } catch (err: any) {
       if (err.response?.status === 404) {
-        return undefined;
+        return false;
       }
       throw wrapApiError(err, `unable to get secret: ${name}`);
     }
