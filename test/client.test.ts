@@ -15,13 +15,13 @@ describe('client', () => {
     expect(res).toBe('1');
   });
 
-  test('get secret', async () => {
+  test('has secret', async () => {
     const mock = nock(apiUrl)
       .get('/secrets/top-secret')
       .reply(200, {value: 'ZEKRET'});
-    const res = await client.secret('top-secret');
+    const res = await client.secretExists('top-secret');
     mock.done();
-    expect(res).toBe('ZEKRET');
+    expect(res).toBe(true);
   });
 
   test('get secrets', async () => {
