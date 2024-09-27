@@ -74,7 +74,7 @@ export class FarosClient {
       logger ?? this.logger,
       {
         ...this.axiosConfig,
-        ...axiosConfig
+        ...axiosConfig,
       }
     );
   }
@@ -88,11 +88,14 @@ export class FarosClient {
     }
   }
 
-  async secretExists(name: string, group?: string): Promise<boolean | undefined> {
+  async secretExists(
+    name: string,
+    group?: string
+  ): Promise<boolean | undefined> {
     try {
       const params = group ? {group} : undefined;
-      const {data} = await this.api.get(`/secrets/${name}`, {params});
-      return true;
+      const res = await this.api.get(`/secrets/${name}`, {params});
+      return res.status === 200;
     } catch (err: any) {
       if (err.response?.status === 404) {
         return undefined;
@@ -143,7 +146,6 @@ export class FarosClient {
     }
   }
 
-
   queryParameters(): Dictionary<any> {
     return {
       phantoms: this.phantoms,
@@ -157,8 +159,7 @@ export class FarosClient {
   ): Promise<any> {
     try {
       let req: any = variables ? {query, variables} : {query};
-      let doCompression =
-        Buffer.byteLength(query, 'utf8') > 10 * 1024; // 10KB
+      let doCompression = Buffer.byteLength(query, 'utf8') > 10 * 1024; // 10KB
       if (doCompression) {
         try {
           const input = Buffer.from(JSON.stringify(req), 'utf8');
