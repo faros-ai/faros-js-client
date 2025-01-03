@@ -1,0 +1,13 @@
+query basic($from: timestamptz) {
+  cicd_Deployment(where: {refreshedAt: {_gte: $from}}) {
+    deploymentUid: uid
+    application {
+      appName: name
+    }
+    changeset {
+      commit {
+        sha
+      }
+    }
+  }
+}
