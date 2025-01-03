@@ -5,8 +5,7 @@ import path from 'path';
 export const SCHEMA_DIR = path.join(__dirname, 'resources', 'schemas');
 
 // This is a subset of our schema. Make sure to extend if needed
-//  when adding tests.
-// This schema is NOT a V2 copy of the V1 schema above
+// when adding tests.
 export const graphSchemaV2 = gql.buildSchema(
   fs.readFileSync(path.join(SCHEMA_DIR, 'schema-v2.gql'), 'utf-8')
 );
