@@ -23,16 +23,13 @@ import {
   unset,
   unzip,
 } from 'lodash';
-import pino from 'pino';
 import traverse from 'traverse';
 import {assert, Dictionary} from 'ts-essentials';
 import {VError} from 'verror';
 
-//import {AirbyteLogger} from 'faros-airbyte-cdk';
 import {paginatedQueryV2} from '../graphql';
 import {SchemaLoader} from '../schema';
 import {Schema} from '../types';
-//import {StreamNameSeparator} from '../converters/converter';
 import {OriginProvider} from './graphql-writer';
 import {
   DeletionRecord, Logger,
@@ -214,7 +211,7 @@ export function toLevels(upserts: Upsert[]): Upsert[][] {
   );
   const result: any[] = [];
   Object.keys(byLevel)
-    .sort()
+    .sort((a, b) => Number(a) - Number(b))
     .forEach((level) => {
       result.push(unzip(byLevel[level])[0]);
     });
@@ -305,7 +302,7 @@ export class GraphQLClient {
   private resetLimitMillis: number;
 
   constructor(
-    logger: pino.Logger,
+    logger: Logger,
     schemaLoader: SchemaLoader,
     backend: GraphQLBackend,
     upsertBatchSize: number,
