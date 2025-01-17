@@ -1,6 +1,7 @@
 import fs from 'fs-extra';
+import pino from 'pino';
 
-import {Schema} from '../src';
+import {Schema, SchemaLoader} from '../src';
 import {
   batchIterator,
   GraphQLBackend,
@@ -15,7 +16,8 @@ import {
   UpsertBuffer,
 } from '../src/graphql/client/graphql-client';
 import {Operation, UpdateRecord} from '../src/graphql/client/types';
-import pino from 'pino';
+
+/*eslint max-len: ["error", { "code": 120 }]*/
 
 describe('graphql-client', () => {
   test('basic batch mutation', () => {
@@ -207,10 +209,12 @@ describe('graphql-client write batch upsert', () => {
       }
     }`);
     const record1 = JSON.parse(
-      '{"name":"foo","uid":"foo","repository":{"name":"metis","uid":"metis","organization":{"uid":"faros-ai","source":"GitHub"}},"source":"GitHub"}'
+      '{"name":"foo","uid":"foo","repository":{"name":"metis","uid":"metis",' +
+      '"organization":{"uid":"faros-ai","source":"GitHub"}},"source":"GitHub"}'
     );
     const record2 = JSON.parse(
-      '{"name":"main","uid":"main","repository":{"name":"hermes","uid":"hermes","organization":{"uid":"faros-ai","source":"GitHub"}},"source":"GitHub"}'
+      '{"name":"main","uid":"main","repository":{"name":"hermes","uid":"hermes",' +
+      '"organization":{"uid":"faros-ai","source":"GitHub"}},"source":"GitHub"}'
     );
     let queries = 0;
     const backend: GraphQLBackend = {
@@ -226,9 +230,8 @@ describe('graphql-client write batch upsert', () => {
           return Promise.resolve(res2);
         } else if (query.startsWith('mutation { insert_vcs_Branch')) {
           return Promise.resolve(res3);
-        } else {
-          throw new Error('unexpected query ' + query);
         }
+        throw new Error('unexpected query ' + query);
       },
     };
     const client = new GraphQLClient(
@@ -306,7 +309,8 @@ describe('graphql-client write batch upsert', () => {
     const records = [
       JSON.parse('{"name":"foo","uid":"foo"}'),
       JSON.parse(
-        '{"name":"main","uid":"main","repository":{"name":"hermes","uid":"hermes","organization":{"uid":"faros-ai","source":"GitHub"}},"source":"GitHub"}'
+        '{"name":"main","uid":"main","repository":{"name":"hermes","uid":"hermes",' +
+        '"organization":{"uid":"faros-ai","source":"GitHub"}},"source":"GitHub"}'
       ),
     ];
     let queries = 0;
@@ -360,9 +364,8 @@ describe('graphql-client write batch upsert', () => {
         queries++;
         if (query.startsWith('mutation { insert_vcs_Organization')) {
           return Promise.resolve(res1);
-        } else {
-          throw new Error('unexpected query ' + query);
         }
+        throw new Error('unexpected query ' + query);
       },
     };
     const client = new GraphQLClient(
@@ -441,7 +444,9 @@ describe('graphql-client write batch upsert', () => {
     }`);
     const responses = [res1, res2, res3, res4];
     const record1 = JSON.parse(
-      '{"userTool":{"user":{"uid":"dbruno21","source":"GitHub"},"organization":{"uid":"princode-ar","source":"GitHub"},"tool":{"category":"GitHubCopilot","detail":""}},"usedAt":"2021-10-14T00:53:33-06:00"}'
+      '{"userTool":{"user":{"uid":"dbruno21","source":"GitHub"},' +
+      '"organization":{"uid":"princode-ar","source":"GitHub"},' +
+      '"tool":{"category":"GitHubCopilot","detail":""}},"usedAt":"2021-10-14T00:53:33-06:00"}'
     );
     let queries = 0;
     const backend: GraphQLBackend = {
@@ -465,7 +470,7 @@ describe('graphql-client write batch upsert', () => {
     await client.flush();
     expect(queries).toEqual(4);
   });
-  test('mergeByPrimaryKey', async () => {
+  test('mergeByPrimaryKey', () => {
     const users = [
       {
         uid: 'tovbinm',
@@ -517,7 +522,7 @@ describe('graphql-client write batch upsert', () => {
     const primaryKeys = ['uid', 'source'];
     expect(mergeByPrimaryKey(users, primaryKeys)).toMatchSnapshot();
   });
-  test('mergeByPrimaryKey - object value', async () => {
+  test('mergeByPrimaryKey - object value', () => {
     const objs = [
       {
         uid: 'tovbinm',
@@ -726,14 +731,16 @@ describe('graphql-client write batch upsert', () => {
         model: 'vcs_PullRequest',
         origin: 'my-origin',
         data: JSON.parse(
-          '{"number":2,"uid":"2","repository":{"name":"repo1","uid":"repo1","organization":{"uid":"playg","source":"Bitbucket"}}}'
+          '{"number":2,"uid":"2","repository":{"name":"repo1","uid":"repo1",' +
+          '"organization":{"uid":"playg","source":"Bitbucket"}}}'
         ),
       },
       {
         model: 'vcs_Commit',
         origin: 'my-origin',
         data: JSON.parse(
-          '{"sha":"b500332b58c74fc15302c8961e54facf66c16c44","uid":"b500332b58c74fc15302c8961e54facf66c16c44","repository":{"name":"repo1","uid":"repo1","organization":{"uid":"playg","source":"Bitbucket"}}}'
+          '{"sha":"b500332b58c74fc15302c8961e54facf66c16c44","uid":"b500332b58c74fc15302c8961e54facf66c16c44",' +
+          '"repository":{"name":"repo1","uid":"repo1","organization":{"uid":"playg","source":"Bitbucket"}}}'
         ),
       },
     ];
@@ -992,7 +999,7 @@ describe('graphql-client write batch upsert', () => {
 });
 
 describe('graphql-client write batch updates', () => {
-  const schemaLoader = {
+  const schemaLoader: SchemaLoader = {
     async loadSchema(): Promise<Schema> {
       return await fs.readJson('test/resources/hasura-ce-schema.json', {
         encoding: 'utf-8',
@@ -1049,7 +1056,7 @@ describe('graphql-client write batch updates', () => {
 });
 
 describe('upsert buffer', () => {
-  test('basic', async () => {
+  test('basic', () => {
     const buf = new UpsertBuffer();
     buf.add({model: 'm1', object: {}, foreignKeys: {}});
     expect(buf.size()).toEqual(1);
@@ -1067,11 +1074,11 @@ describe('upsert buffer', () => {
 });
 
 describe('graphql-client utilities', () => {
-  test('serialize', async () => {
+  test('serialize', () => {
     expect(serialize({z: 1, a: 'bar'})).toEqual('a:bar|z:1');
     expect(serialize({})).toEqual('');
   });
-  test('strictPick', async () => {
+  test('strictPick', () => {
     expect(strictPick({z: 0, a: 'bar'}, ['z', 'b'])).toEqual({z: 0, b: 'null'});
     expect(strictPick({z: 1, a: 'bar'}, ['z', 'b'])).toEqual({z: 1, b: 'null'});
     expect(strictPick({z: 1, a: 'bar'}, ['b'])).toEqual({b: 'null'});
@@ -1251,18 +1258,18 @@ describe('groupByKeys', () => {
 });
 
 describe('toPostgresArrayLiteral', () => {
-  test('strings', async () => {
-    expect(toPostgresArrayLiteral(['a', 'b', 'c'])).toEqual(`{"a","b","c"}`);
-    expect(toPostgresArrayLiteral(['a', '', 'c'])).toEqual(`{"a","","c"}`);
-    expect(toPostgresArrayLiteral(['a', null, 'c'])).toEqual(`{"a",NULL,"c"}`);
+  test('strings', () => {
+    expect(toPostgresArrayLiteral(['a', 'b', 'c'])).toEqual('{"a","b","c"}');
+    expect(toPostgresArrayLiteral(['a', '', 'c'])).toEqual('{"a","","c"}');
+    expect(toPostgresArrayLiteral(['a', null, 'c'])).toEqual('{"a",NULL,"c"}');
     expect(toPostgresArrayLiteral(['a', undefined, 'c'])).toEqual(
-      `{"a",NULL,"c"}`
+      '{"a",NULL,"c"}'
     );
   });
-  test('numbers', async () => {
-    expect(toPostgresArrayLiteral([1, 2, 3])).toEqual(`{1,2,3}`);
-    expect(toPostgresArrayLiteral([1, null, 3])).toEqual(`{1,NULL,3}`);
-    expect(toPostgresArrayLiteral([1, undefined, 3])).toEqual(`{1,NULL,3}`);
-    expect(toPostgresArrayLiteral([1, 0, 3])).toEqual(`{1,0,3}`);
+  test('numbers', () => {
+    expect(toPostgresArrayLiteral([1, 2, 3])).toEqual('{1,2,3}');
+    expect(toPostgresArrayLiteral([1, null, 3])).toEqual('{1,NULL,3}');
+    expect(toPostgresArrayLiteral([1, undefined, 3])).toEqual('{1,NULL,3}');
+    expect(toPostgresArrayLiteral([1, 0, 3])).toEqual('{1,0,3}');
   });
 });
