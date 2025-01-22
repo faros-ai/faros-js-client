@@ -64,3 +64,7 @@ export {
 } from './graphql/graphql';
 export {FarosGraphSchema} from './schema';
 export {Utils} from './utils';
+export {GraphQLClient, GraphQLBackend} from './graphql/client/graphql-client';
+export {GraphQLWriter, OriginProvider} from './graphql/client/graphql-writer';
+export {StreamNameSeparator, Logger, Operation} from './graphql/client/types';
+export {WriteStats} from './graphql/client/write-stats';
