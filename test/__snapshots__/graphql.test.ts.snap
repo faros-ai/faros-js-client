@@ -71,7 +71,7 @@ exports[`graphql create incremental queries V2 2`] = `
 exports[`graphql create incremental queries V2 3`] = `
 [
   {
-    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id createdAt endedAt name number origin pipeline { id } refreshedAt startedAt status statusCategory statusDetail uid url } }",
+    "gql": "query ($from: timestamptz!, $to: timestamptz!) { cicd_Build (where: {refreshedAt: {_gte: $from, _lt: $to}}) { id createdAt endedAt name number origin refreshedAt startedAt status statusCategory statusDetail uid url } }",
     "name": "cicd_Build",
   },
   {
