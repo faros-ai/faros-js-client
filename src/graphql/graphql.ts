@@ -1098,7 +1098,7 @@ export function createIncrementalQueriesV2(
   cfg: IncrementalQueriesConfig
 ): ReadonlyArray<Query> {
   const avoidCollisions = cfg.avoidCollisions ?? true;
-  const scalarsOnly = cfg.avoidCollisions ?? false;
+  const scalarsOnly = cfg.scalarsOnly ?? false;
   const result: Query[] = [];
   const resolvedPrimaryKeys = cfg.primaryKeys
     ? new PrimaryKeyResolver(
