@@ -2,7 +2,6 @@ import {randomUUID} from 'crypto';
 import dateformat from 'date-format';
 import {EnumType, jsonToGraphQLQuery} from 'json-to-graphql-query';
 import {
-  clone,
   difference,
   flatMap,
   get,
@@ -32,8 +31,10 @@ import {SchemaLoader} from '../schema';
 import {Schema} from '../types';
 import {OriginProvider} from './graphql-writer';
 import {
-  DeletionRecord, Logger,
-  Operation, StreamNameSeparator,
+  DeletionRecord,
+  Logger,
+  Operation,
+  StreamNameSeparator,
   TimestampedRecord,
   UpdateRecord,
   UpsertRecord,
@@ -881,18 +882,18 @@ export class GraphQLClient {
     // for each FK, copy id of related upsert to FK field
     // the upsert's id was populated after the associated batch
     // was written in doFlushUpsertBuffer
-    const result = clone(upsert.object);
+    const result = upsert.object;
     for (const [relName, fkUpsert] of Object.entries(upsert.foreignKeys)) {
       // foreign key was constructed from schema so the following is safe
       const fkField = this.getSchema()
         .references[upsert.model][relName].foreignKey;
       const fkValue = fkUpsert.id;
-      assert(
-        !isNil(fkValue),
-        `failed to resolve fk value for ${relName} from ${JSON.stringify(
-          fkUpsert
-        )}`
-      );
+      if (isNil(fkValue)) {
+        throw new Error(
+          `failed to resolve fk value for ${relName} from ${JSON.stringify(
+            fkUpsert,
+          )}`);
+      }
       result[fkField] = fkValue;
     }
     return result;

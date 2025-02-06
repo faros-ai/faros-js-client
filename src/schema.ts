@@ -132,10 +132,10 @@ function toDateAsISOString(
     return new Date(val).toISOString();
   }
   try {
-    return new Date(toNumber(val)).toISOString();
+    return new Date(val).toISOString();
   } catch {
     try {
-      return new Date(val).toISOString();
+      return new Date(toNumber(val)).toISOString();
     } catch {
       throw new VError('Invalid date: %s', val);
     }
