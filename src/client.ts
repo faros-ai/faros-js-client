@@ -8,7 +8,7 @@ import * as zlib from 'zlib';
 
 import {makeAxiosInstanceWithRetry} from './axios';
 import {wrapApiError} from './errors';
-import {paginatedQuery} from './graphql/graphql';
+import {paginatedQueryV2} from './graphql/graphql';
 import {batchMutation} from './graphql/query-builder';
 import {Mutation, Schema} from './graphql/types';
 import {
@@ -305,7 +305,7 @@ export class FarosClient {
     graph: string,
     rawQuery: string,
     pageSize = 100,
-    paginator = paginatedQuery,
+    paginator = paginatedQueryV2,
     args: Map<string, any> = new Map<string, any>()
   ): AsyncIterable<any> {
     const {query, edgesPath, edgeIdPath, pageInfoPath} = paginator(rawQuery);

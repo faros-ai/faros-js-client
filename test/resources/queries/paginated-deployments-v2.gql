@@ -1,0 +1,18 @@
+query paginatedQuery($id: String, $limit: Int, $from: timestamptz) {
+  cicd_Deployment(
+    where: {_and: [{refreshedAt: {_gte: $from}}, {id: {_gt: $id}}]}
+    order_by: {id: asc}
+    limit: $limit
+  ) {
+    _id: id
+    deploymentUid: uid
+    application {
+      appName: name
+    }
+    changeset {
+      commit {
+        sha
+      }
+    }
+  }
+}

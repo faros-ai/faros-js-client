@@ -1,0 +1,331 @@
+{
+  "primaryKeys": {
+    "vcs_Branch": [
+      "name",
+      "repositoryId"
+    ],
+    "vcs_Commit": [
+      "repositoryId",
+      "sha"
+    ],
+    "vcs_Organization": [
+      "source",
+      "uid"
+    ],
+    "vcs_Repository": [
+      "name",
+      "organizationId"
+    ],
+    "org_Employee": [
+      "uid"
+    ],
+    "vcs_PullRequest": [
+      "number",
+      "repositoryId"
+    ],
+    "vcs_User": [
+      "source",
+      "uid"
+    ],
+    "vcs_UserTool": [
+      "organizationId",
+      "tool",
+      "userId"
+    ],
+    "vcs_UserToolUsage": [
+      "usedAt",
+      "userToolId"
+    ]
+  },
+  "scalars": {
+    "vcs_Branch": {
+      "name": "String",
+      "origin": "String",
+      "refreshedAt": "timestamptz",
+      "repositoryId": "String"
+    },
+    "vcs_Commit": {
+      "authorId": "String",
+      "createdAt": "timestamptz",
+      "htmlUrl": "String",
+      "message": "String",
+      "origin": "String",
+      "refreshedAt": "timestamptz",
+      "repositoryId": "String",
+      "sha": "String"
+    },
+    "vcs_Organization": {
+      "createdAt": "timestamptz",
+      "htmlUrl": "String",
+      "name": "String",
+      "origin": "String",
+      "refreshedAt": "timestamptz",
+      "source": "String",
+      "type": "jsonb",
+      "uid": "String"
+    },
+    "vcs_Repository": {
+      "createdAt": "timestamptz",
+      "description": "String",
+      "fullName": "String",
+      "htmlUrl": "String",
+      "included": "Boolean",
+      "language": "String",
+      "mainBranch": "String",
+      "name": "String",
+      "organizationId": "String",
+      "origin": "String",
+      "private": "Boolean",
+      "refreshedAt": "timestamptz",
+      "size": "bigint",
+      "topics": "jsonb",
+      "updatedAt": "timestamptz"
+    },
+    "org_Employee": {
+      "additionalFields": "jsonb",
+      "departmentId": "String",
+      "employmentType": "jsonb",
+      "identityId": "String",
+      "ignored": "Boolean",
+      "inactive": "Boolean",
+      "joinedAt": "timestamptz",
+      "level": "Int",
+      "locationId": "String",
+      "managerId": "String",
+      "origin": "String",
+      "refreshedAt": "timestamptz",
+      "reportingChain": "jsonb",
+      "role": "String",
+      "terminatedAt": "timestamptz",
+      "title": "String",
+      "uid": "String"
+    },
+    "vcs_PullRequest": {
+      "authorId": "String",
+      "commentCount": "Int",
+      "commitCount": "Int",
+      "createdAt": "timestamptz",
+      "description": "String",
+      "diffStats": "jsonb",
+      "htmlUrl": "String",
+      "mergeCommitId": "String",
+      "mergedAt": "timestamptz",
+      "number": "Int",
+      "origin": "String",
+      "readyForReviewAt": "timestamptz",
+      "refreshedAt": "timestamptz",
+      "repositoryId": "String",
+      "state": "jsonb",
+      "title": "String",
+      "updatedAt": "timestamptz"
+    },
+    "vcs_User": {
+      "email": "String",
+      "htmlUrl": "String",
+      "inactive": "Boolean",
+      "name": "String",
+      "origin": "String",
+      "refreshedAt": "timestamptz",
+      "source": "String",
+      "type": "jsonb",
+      "uid": "String"
+    },
+    "vcs_UserTool": {
+      "endedAt": "timestamptz",
+      "inactive": "Boolean",
+      "organizationId": "String",
+      "origin": "String",
+      "refreshedAt": "timestamptz",
+      "startedAt": "timestamptz",
+      "tool": "jsonb",
+      "userId": "String"
+    },
+    "vcs_UserToolUsage": {
+      "origin": "String",
+      "refreshedAt": "timestamptz",
+      "usedAt": "timestamptz",
+      "userToolId": "String"
+    }
+  },
+  "references": {
+    "vcs_Branch": {
+      "repositoryId": {
+        "field": "repository",
+        "model": "vcs_Repository",
+        "foreignKey": "repositoryId"
+      },
+      "repository": {
+        "field": "repository",
+        "model": "vcs_Repository",
+        "foreignKey": "repositoryId"
+      }
+    },
+    "vcs_Commit": {
+      "authorId": {
+        "field": "author",
+        "model": "vcs_User",
+        "foreignKey": "authorId"
+      },
+      "author": {
+        "field": "author",
+        "model": "vcs_User",
+        "foreignKey": "authorId"
+      },
+      "repositoryId": {
+        "field": "repository",
+        "model": "vcs_Repository",
+        "foreignKey": "repositoryId"
+      },
+      "repository": {
+        "field": "repository",
+        "model": "vcs_Repository",
+        "foreignKey": "repositoryId"
+      }
+    },
+    "vcs_Organization": {},
+    "vcs_Repository": {
+      "organizationId": {
+        "field": "organization",
+        "model": "vcs_Organization",
+        "foreignKey": "organizationId"
+      },
+      "organization": {
+        "field": "organization",
+        "model": "vcs_Organization",
+        "foreignKey": "organizationId"
+      }
+    },
+    "org_Employee": {
+      "departmentId": {
+        "field": "department",
+        "model": "org_Department",
+        "foreignKey": "departmentId"
+      },
+      "department": {
+        "field": "department",
+        "model": "org_Department",
+        "foreignKey": "departmentId"
+      },
+      "identityId": {
+        "field": "identity",
+        "model": "identity_Identity",
+        "foreignKey": "identityId"
+      },
+      "identity": {
+        "field": "identity",
+        "model": "identity_Identity",
+        "foreignKey": "identityId"
+      },
+      "locationId": {
+        "field": "location",
+        "model": "geo_Location",
+        "foreignKey": "locationId"
+      },
+      "location": {
+        "field": "location",
+        "model": "geo_Location",
+        "foreignKey": "locationId"
+      },
+      "managerId": {
+        "field": "manager",
+        "model": "org_Employee",
+        "foreignKey": "managerId"
+      },
+      "manager": {
+        "field": "manager",
+        "model": "org_Employee",
+        "foreignKey": "managerId"
+      }
+    },
+    "vcs_PullRequest": {
+      "authorId": {
+        "field": "author",
+        "model": "vcs_User",
+        "foreignKey": "authorId"
+      },
+      "author": {
+        "field": "author",
+        "model": "vcs_User",
+        "foreignKey": "authorId"
+      },
+      "mergeCommitId": {
+        "field": "mergeCommit",
+        "model": "vcs_Commit",
+        "foreignKey": "mergeCommitId"
+      },
+      "mergeCommit": {
+        "field": "mergeCommit",
+        "model": "vcs_Commit",
+        "foreignKey": "mergeCommitId"
+      },
+      "repositoryId": {
+        "field": "repository",
+        "model": "vcs_Repository",
+        "foreignKey": "repositoryId"
+      },
+      "repository": {
+        "field": "repository",
+        "model": "vcs_Repository",
+        "foreignKey": "repositoryId"
+      }
+    },
+    "vcs_User": {},
+    "vcs_UserTool": {
+      "organizationId": {
+        "field": "organization",
+        "model": "vcs_Organization",
+        "foreignKey": "organizationId"
+      },
+      "organization": {
+        "field": "organization",
+        "model": "vcs_Organization",
+        "foreignKey": "organizationId"
+      },
+      "userId": {
+        "field": "user",
+        "model": "vcs_User",
+        "foreignKey": "userId"
+      },
+      "user": {
+        "field": "user",
+        "model": "vcs_User",
+        "foreignKey": "userId"
+      }
+    },
+    "vcs_UserToolUsage": {
+      "userToolId": {
+        "field": "userTool",
+        "model": "vcs_UserTool",
+        "foreignKey": "userToolId"
+      },
+      "userTool": {
+        "field": "userTool",
+        "model": "vcs_UserTool",
+        "foreignKey": "userToolId"
+      }
+    }
+  },
+  "backReferences": {},
+  "sortedModelDependencies": [
+    "org_Employee",
+    "vcs_Branch",
+    "vcs_PullRequest",
+    "vcs_Commit",
+    "vcs_Repository",
+    "vcs_UserToolUsage",
+    "vcs_UserTool",
+    "vcs_Organization",
+    "vcs_User"
+  ],
+  "tableNames": [
+    "org_Employee",
+    "vcs_Branch",
+    "vcs_PullRequest",
+    "vcs_Commit",
+    "vcs_Organization",
+    "vcs_Repository",
+    "vcs_User",
+    "vcs_UserTool",
+    "vcs_UserToolUsage"
+  ]
+}
