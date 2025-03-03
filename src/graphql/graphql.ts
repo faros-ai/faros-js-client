@@ -4,7 +4,6 @@ import {isScalarType, Kind} from 'graphql';
 import {VariableDefinitionNode} from 'graphql/language/ast';
 import {jsonToGraphQLQuery, VariableType} from 'json-to-graphql-query';
 import _ from 'lodash';
-import {plural} from 'pluralize';
 import {Dictionary} from 'ts-essentials';
 import {Memoize} from 'typescript-memoize';
 import {VError} from 'verror';
@@ -13,8 +12,8 @@ import {FarosClient} from '../client';
 import {PathToModel, Query, Reference} from './types';
 
 export type AnyRecord = Record<string, any>;
-type AsyncOrSyncIterable<T> = AsyncIterable<T> | Iterable<T>;
 export type RecordIterable = AsyncOrSyncIterable<AnyRecord>;
+type AsyncOrSyncIterable<T> = AsyncIterable<T> | Iterable<T>;
 
 export interface PaginatedQuery {
   readonly query: string;
@@ -36,11 +35,9 @@ export interface FlattenContext {
 
 export const NODES = 'nodes';
 export const EDGES = 'edges';
-export const METADATA = 'metadata';
 export const REFRESHED_AT = 'refreshedAt';
 
 const DEFAULT_DIRECTIVE = 'default';
-const MAX_NODE_DEPTH = 10;
 
 const ID_FLD = 'id';
 
@@ -51,37 +48,8 @@ function invalidQuery(message: string): Error {
   return new Error(`invalid query: ${message}`);
 }
 
-/**
- * An embedded type is an object type that can be inlined in another object
- * type with the following exceptions:
- *
- * 1. It is not a query type for a model namespace, e.g., vcs_Query
- * 2. It is not a connection spec type and does not implement a connection spec
- *    type, e.g., node, connection or edge
- */
- export function isEmbeddedObjectType(type: any | undefined | null): boolean {
-  if (gql.isNonNullType(type)) {
-    return isEmbeddedObjectType(type.ofType);
-  } else if (!gql.isObjectType(type)) {
-    return false;
-  }
-
-  return !(
-    type.name.endsWith('Query') ||
-    type.name.endsWith('Connection') ||
-    type.name.endsWith('Edge') ||
-    isV1ModelType(type)
-  );
-}
-
 export function isObjectListType(type: any): type is gql.GraphQLList<any> {
   return gql.isListType(type) && gql.isObjectType(type.ofType);
-}
-
-export function isEmbeddedObjectListType(
-  type: any
-): type is gql.GraphQLList<any> {
-  return gql.isListType(type) && isEmbeddedObjectType(type.ofType);
 }
 
 export function isModelQuery(
@@ -89,197 +57,11 @@ export function isModelQuery(
   type: any
 ): type is gql.GraphQLObjectType {
   return (
-    gql.isObjectType(parentType) && parentType.name.endsWith('Query') &&
-    gql.isObjectType(type) && type.name.endsWith('Connection')
+    gql.isObjectType(parentType) &&
+    parentType.name.endsWith('Query') &&
+    gql.isObjectType(type) &&
+    type.name.endsWith('Connection')
   );
-}
-
-function isLeafType(type: any): boolean {
-  if (gql.isNonNullType(type)) {
-    type = type.ofType;
-  }
-
-  if (gql.isListType(type)) {
-    let ofType = type.ofType;
-    // The element type can also be non-null
-    if (gql.isNonNullType(ofType)) {
-      ofType = ofType.ofType;
-    }
-    // A list of object types will be serialized as a list of strings
-    return gql.isLeafType(ofType) || gql.isObjectType(ofType);
-  }
-  return gql.isLeafType(type);
-}
-
-/** Returns paths to all node collections in a query */
-export function queryNodesPaths(query: string): ReadonlyArray<string[]> {
-  const fieldPath: string[] = [];
-  const nodesPaths: string[][] = [];
-  gql.visit(gql.parse(query), {
-    Document(node) {
-      const definition = node.definitions[0];
-      if (
-        node.definitions.length !== 1 ||
-        definition.kind !== 'OperationDefinition' ||
-        definition.operation !== 'query'
-      ) {
-        throw invalidQuery(
-          'document should contain a single query operation definition'
-        );
-      }
-    },
-    Field: {
-      enter(node) {
-        const name = node.alias?.value ?? node.name.value;
-        fieldPath.push(name);
-        if (name === NODES) {
-          nodesPaths.push([...fieldPath]);
-        }
-      },
-      leave() {
-        fieldPath.pop();
-      },
-    },
-  });
-  return nodesPaths;
-}
-
-export function paginatedQuery(query: string): PaginatedQuery {
-  const fieldPath: string[] = [];
-  const edgesPath: string[] = [];
-  const pageInfoPath: string[] = [];
-  const ast = gql.visit(gql.parse(query), {
-    Document(node) {
-      if (node.definitions.length !== 1) {
-        throw invalidQuery(
-          'document should contain a single query operation definition'
-        );
-      }
-    },
-    OperationDefinition(node) {
-      if (node.operation !== 'query') {
-        throw invalidQuery('only query operations are supported');
-      }
-
-      // Verify that all fields up until the first nodes field
-      // contain a single selection
-      const selections = [...node.selectionSet.selections];
-      while (selections.length) {
-        if (selections.length > 1) {
-          throw invalidQuery(
-            'query operation can only contain a single selection'
-          );
-        }
-        const selection = selections.pop();
-        if (selection?.kind === 'Field') {
-          if (selection.name.value === NODES) {
-            break;
-          }
-          selections.push(...(selection.selectionSet?.selections || []));
-        }
-      }
-
-      // Add pagination variables to query operation
-      return createOperationDefinition(
-        node,
-        [['pageSize', 'Int'], ['cursor', 'Cursor']]
-      );
-    },
-    Field: {
-      enter(node) {
-        fieldPath.push(node.name.value);
-        const isParentOfNodes = node.selectionSet?.selections.some(
-          (s) => s.kind === 'Field' && s.name.value === NODES
-        );
-
-        if (edgesPath.length) {
-          // Skip rest of nodes once edges path has been set
-          return false;
-        } else if (isParentOfNodes) {
-          pageInfoPath.push(...fieldPath, 'pageInfo');
-          // copy existing filter args
-          const existing = (node.arguments ?? []).filter((n) =>
-            ALLOWED_ARG_TYPES.has(n.name.value)
-          );
-          return {
-            kind: 'Field',
-            name: node.name,
-            // Add pagination arguments
-            arguments: [
-              ...existing,
-              {
-                kind: 'Argument',
-                name: {kind: 'Name', value: 'first'},
-                value: {
-                  kind: 'Variable',
-                  name: {kind: 'Name', value: 'pageSize'},
-                },
-              },
-              {
-                kind: 'Argument',
-                name: {kind: 'Name', value: 'after'},
-                value: {
-                  kind: 'Variable',
-                  name: {kind: 'Name', value: 'cursor'},
-                },
-              },
-            ],
-            // Add pageInfo alongside the existing selection set
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                ...(node.selectionSet?.selections || []),
-                {
-                  kind: 'Field',
-                  name: {kind: 'Name', value: 'pageInfo'},
-                  selectionSet: {
-                    kind: 'SelectionSet',
-                    selections: [
-                      {
-                        kind: 'Field',
-                        name: {kind: 'Name', value: 'hasNextPage'},
-                      },
-                    ],
-                  },
-                },
-              ],
-            },
-          };
-        } else if (node.name.value === NODES) {
-          edgesPath.push(...fieldPath.slice(0, -1), EDGES);
-          // Replace the first nodes field with edges field
-          return {
-            kind: 'Field',
-            name: {kind: 'Name', value: EDGES},
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {
-                  kind: 'Field',
-                  name: {kind: 'Name', value: 'cursor'},
-                },
-                {
-                  kind: 'Field',
-                  name: {kind: 'Name', value: 'node'},
-                  selectionSet: node.selectionSet,
-                },
-              ],
-            },
-          };
-        }
-        return undefined;
-      },
-      leave() {
-        fieldPath.pop();
-      },
-    },
-  });
-
-  return {
-    query: gql.print(ast),
-    edgesPath,
-    pageInfoPath,
-  };
 }
 
 export function paginatedQueryV2(query: string): PaginatedQuery {
@@ -314,10 +96,10 @@ export function paginatedWithRelayV2(query: string): PaginatedQuery {
       }
 
       // Add pagination variables to query operation
-      return createOperationDefinition(
-        node,
-        [['pageSize', 'Int'], ['cursor', 'String']]
-      );
+      return createOperationDefinition(node, [
+        ['pageSize', 'Int'],
+        ['cursor', 'String'],
+      ]);
     },
     Field: {
       enter(node) {
@@ -411,8 +193,8 @@ function createOperationDefinition(
   node: gql.OperationDefinitionNode,
   varDefs: [string, string][]
 ): gql.OperationDefinitionNode {
-  const variableDefinitions: VariableDefinitionNode [] =
-    varDefs.map(([varName, varType]) => {
+  const variableDefinitions: VariableDefinitionNode[] = varDefs.map(
+    ([varName, varType]) => {
       return {
         kind: Kind.VARIABLE_DEFINITION,
         variable: {
@@ -424,7 +206,8 @@ function createOperationDefinition(
           name: {kind: Kind.NAME, value: varType},
         },
       };
-    });
+    }
+  );
   variableDefinitions.push(...(node.variableDefinitions || []));
   return {
     kind: Kind.OPERATION_DEFINITION,
@@ -479,6 +262,8 @@ export function paginateWithKeysetV2(query: string): PaginatedQuery {
       }
     },
     OperationDefinition(node) {
+      // TODO: Unlike the old v1 paginator, this one doesn't restrict the query
+      // to a single model at the root of the query node. Seems like a mistake?
       if (node.operation !== 'query') {
         throw invalidQuery('only query operations are supported');
       }
@@ -497,9 +282,8 @@ export function paginateWithKeysetV2(query: string): PaginatedQuery {
         }
         edgesPath.push(node.name.value);
 
-        const existingWhereArgs = node.arguments?.filter(
-          (n) => n.name.value === 'where'
-        ) ?? [];
+        const existingWhereArgs =
+          node.arguments?.filter((n) => n.name.value === 'where') ?? [];
         let whereArgs: gql.ArgumentNode[] = [
           ...existingWhereArgs,
           {
@@ -602,7 +386,7 @@ export function paginateWithOffsetLimitV2(query: string): PaginatedQuery {
     Document(node) {
       if (node.definitions.length !== 1) {
         throw invalidQuery(
-          'document should contain a single query operation definition',
+          'document should contain a single query operation definition'
         );
       }
     },
@@ -612,10 +396,10 @@ export function paginateWithOffsetLimitV2(query: string): PaginatedQuery {
       }
 
       // Add pagination variables to query operation
-      return createOperationDefinition(
-        node,
-        [['offset', 'Int'], ['limit', 'Int']]
-      );
+      return createOperationDefinition(node, [
+        ['offset', 'Int'],
+        ['limit', 'Int'],
+      ]);
     },
     Field: {
       enter(node) {
@@ -626,7 +410,7 @@ export function paginateWithOffsetLimitV2(query: string): PaginatedQuery {
         edgesPath.push(node.name.value);
         // copy existing where args
         const existing = (node.arguments ?? []).filter((n) =>
-          ALLOWED_ARG_TYPES.has(n.name.value),
+          ALLOWED_ARG_TYPES.has(n.name.value)
         );
         return {
           ...node,
@@ -776,9 +560,11 @@ export function flattenV2(
               );
             }
             // use field description to determine if the jsonb field is an array
-            if (isScalarType(gqlType)
-              && gqlType.name === 'jsonb'
-              && typeInfo.getFieldDef()?.description === 'array') {
+            if (
+              isScalarType(gqlType) &&
+              gqlType.name === 'jsonb' &&
+              typeInfo.getFieldDef()?.description === 'array'
+            ) {
               jsonArrayPaths.add(leafPath);
             }
             leafPaths.push(leafPath);
@@ -962,118 +748,6 @@ function setPathToDefault(
   pathToDefault.set(path, defaultValue);
 }
 
-/** Flattens nested nodes returned from a query */
-export function flatten(
-  query: string,
-  schema: gql.GraphQLSchema
-): FlattenContext {
-  const fieldPath: string[] = [];
-  const leafPaths: string[] = [];
-  const pathToDefault = new Map<string, any>();
-  const pathToType = new Map<string, gql.GraphQLType>();
-  const params = new Map<string, gql.GraphQLInputType>();
-  const typeInfo = new gql.TypeInfo(schema);
-  gql.visit(
-    gql.parse(query),
-    gql.visitWithTypeInfo(typeInfo, {
-      VariableDefinition(node: gql.VariableDefinitionNode): boolean {
-        addVariableDefinition(node, schema, params);
-        return false;
-      },
-      Argument(): boolean {
-        // Skip arg subtrees
-        return false;
-      },
-      Directive(node) {
-        setPathToDefault(node, fieldPath, pathToType, pathToDefault);
-      },
-      Field: {
-        enter(node): boolean | void {
-          const name = node.alias?.value ?? node.name.value;
-          fieldPath.push(name);
-          const type = typeInfo.getType();
-          if (name !== NODES && isLeafType(type)) {
-            const leafPath = fieldPath.join('.');
-            const gqlType = unwrapType(type);
-            if (!gqlType) {
-              throw new VError(
-                'cannot unwrap type \'%s\' of field \'%s\'',
-                type,
-                leafPath
-              );
-            }
-            leafPaths.push(leafPath);
-            pathToType.set(leafPath, gqlType);
-            if (node.selectionSet?.selections?.length) {
-              // Returning false bypasses call to leave()
-              fieldPath.pop();
-              return false;
-            }
-          }
-          return undefined;
-        },
-        leave(): void {
-          fieldPath.pop();
-        },
-      },
-      FragmentDefinition(): void {
-        throw new VError('fragments are not supported');
-      },
-      FragmentSpread(): void {
-        throw new VError('fragments are not supported');
-      },
-    })
-  );
-
-  // Verify the query doesn't exceed the max node depth
-  const nodesPaths = queryNodesPaths(query);
-  if (!nodesPaths.length) {
-    throw new VError('query must contain at least one nodes collection');
-  }
-  for (const path of nodesPaths) {
-    let nodeDepth = 0;
-    for (const pathPart of path) {
-      if (pathPart === NODES) {
-        nodeDepth++;
-      }
-    }
-    if (nodeDepth > MAX_NODE_DEPTH) {
-      throw new VError('query exceeds max node depth of %d', MAX_NODE_DEPTH);
-    }
-  }
-
-  // Verify names won't collide once flattened
-  const fieldTypes = new Map<string, gql.GraphQLType>();
-  const leafToPath = new Map<string, string>();
-  const leafToDefault = new Map<string, any>();
-  for (const path of leafPaths) {
-    const name = fieldName(path);
-    if (leafToPath.has(name)) {
-      const otherPath = leafToPath.get(name);
-      throw new VError(
-        'fields \'%s\' and \'%s\' will both map to the same name: ' +
-          '\'%s\'. use field aliases to prevent collision.',
-        path,
-        otherPath,
-        name
-      );
-    }
-    leafToPath.set(name, path);
-    leafToDefault.set(name, pathToDefault.get(path));
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    fieldTypes.set(name, pathToType.get(path)!);
-  }
-
-  return {
-    fieldTypes,
-    params,
-    currentPath: nodesPaths[0].join('.'),
-    leafToDefault,
-    leafPaths,
-    depth: 0,
-  };
-}
-
 /**
  * Returns an iterable that cross-joins an array of object iterables
  * and merges each output object array into a single object
@@ -1210,239 +884,66 @@ export interface Reader {
   };
 }
 
-export function readerFromQuery(
-  graph: string,
-  faros: FarosClient,
-  query: Query,
-  pageSize: number,
-  graphSchema: gql.GraphQLSchema,
-  incremental = false,
-  paginator = paginatedQuery,
-  flattener = flatten
-): Reader {
-  const flattenCtx = flattener(query.gql, graphSchema);
+interface ReaderFromQueryConfig {
+  readonly client: FarosClient;
+  readonly graph: string;
+  readonly graphSchema: gql.GraphQLSchema;
+  readonly query: Query;
+  readonly pageSize: number;
+  readonly incremental?: boolean;
+}
+
+export function readerFromQuery(cfg: ReaderFromQueryConfig): Reader {
+  const flattenCtx = flattenV2(cfg.query.gql, cfg.graphSchema);
   if (!(flattenCtx.leafPaths.length && flattenCtx.fieldTypes.size)) {
     throw new VError(
       'unable to extract metadata from query %s: %s',
-      query.name, query.gql);
+      cfg.query.name,
+      cfg.query.gql
+    );
   }
   return {
     execute(args: Map<string, any>): AsyncIterable<AnyRecord> {
-      const nodes = faros.nodeIterable(
-        graph,
-        query.gql,
-        pageSize,
-        paginator,
+      const nodes = cfg.client.nodeIterable(
+        cfg.graph,
+        cfg.query.gql,
+        cfg.pageSize,
+        paginatedQueryV2,
         args
       );
       return flattenIterable(flattenCtx, nodes);
     },
     metadata: {
-      name: query.name,
+      name: cfg.query.name,
       fields: flattenCtx.fieldTypes,
-      modelKeys: incremental ? [ID_FLD] : undefined,
+      modelKeys: cfg.incremental ? [ID_FLD] : undefined,
       params: flattenCtx.params,
-      incremental
+      incremental: cfg.incremental ?? false,
     },
   };
+}
+
+interface NonIncrementalReadersConfig {
+  readonly client: FarosClient;
+  readonly graph: string;
+  readonly graphSchema: gql.GraphQLSchema;
+  readonly queries: ReadonlyArray<Query>;
+  readonly pageSize: number;
 }
 
 export function createNonIncrementalReaders(
-  client: FarosClient,
-  graph: string,
-  pageSize: number,
-  graphSchema: gql.GraphQLSchema,
-  graphqlVersion: string,
-  queries: ReadonlyArray<Query>
+  cfg: NonIncrementalReadersConfig
 ): ReadonlyArray<Reader> {
-  return queries.map((query) => {
-    switch (graphqlVersion) {
-      case 'v1':
-        return readerFromQuery(graph, client, query, pageSize, graphSchema);
-      case 'v2':
-        return readerFromQuery(
-          graph,
-          client,
-          query,
-          pageSize,
-          graphSchema,
-          false,
-          paginatedQueryV2,
-          flattenV2
-        );
-      default:
-        throw new VError('invalid graphql version %s', graphqlVersion);
-    }
-  });
-}
-
-/**
- * Creates an incremental query from a model type.
- * The selections will include:
- *  1. All the scalar fields.
- *  2. Nested fragments for all referenced models, selecting their IDs.
- *  3. A fragment "metadata { refreshedAt }"
- *
- * By default, it aliases referenced models IDs to prevent collisions
- * if flattened.
- * E.g., { id pipeline { id } } => { id pipeline { pipelineId: id } }
- * The avoidCollisions parameter controls this behavior.
- *
- * If resolvedPrimaryKeys is provided, it will use the fully resolved
- * primary key fragment for referenced models instead of the ID field.
- */
-export function buildIncrementalQueryV1(
-  type: gql.GraphQLObjectType,
-  avoidCollisions = true,
-  resolvedPrimaryKeys: Dictionary<string> = {},
-  resolvedEmbeddedFields: Dictionary<string> = {}
-): Query {
-  const name = type.name;
-  // add fields and FKs
-  const fieldsObj: any = {};
-  // add PK
-  fieldsObj[ID_FLD] = true;
-  for (const fldName of Object.keys(type.getFields())) {
-    const field = type.getFields()[fldName];
-    let unwrappedType = unwrapType(field.type) || field.type;
-    if (gql.isListType(unwrappedType)) {
-      unwrappedType = unwrappedType.ofType;
-    }
-
-    if (gql.isScalarType(unwrappedType)) {
-      fieldsObj[field.name] = true; // arbitrary value here
-    } else if (isV1EmbeddedType(unwrappedType)) {
-      const resolved = resolvedEmbeddedFields[unwrappedType.name];
-      ok(
-        !_.isNil(resolved),
-        `expected ${unwrappedType.name} embedded type to have been resolved`
-      );
-      fieldsObj[field.name] = {
-        [resolved]: true,
-      };
-    } else if (isV1ModelType(unwrappedType)) {
-      // this is foreign key to a top-level model.
-      // add nested fragment to select id of referenced model
-      const fk = resolvedPrimaryKeys[unwrappedType.name] || ID_FLD;
-
-      if (avoidCollisions) {
-        let nestedName = `${field.name}Id`;
-        // check for collision between nested name and scalars
-        if (_.has(type.getFields(), nestedName)) {
-          nestedName = `${field.name}Fk`;
-        }
-        fieldsObj[field.name] = {
-          [`${nestedName}: ${fk}`]: true,
-        };
-      } else {
-        fieldsObj[field.name] = {
-          [fk]: true,
-        };
-      }
-    }
-  }
-
-  // Add refreshedAt
-  fieldsObj.metadata = {
-    refreshedAt: true,
-  };
-
-  // transform name into a dot-separated path for setting fields and filters
-  // e.g. cicd_ReleaseTagAssociation => cicd.releaseTagAssociations
-  const segments = name.split('_');
-  ok(segments.length > 1, `expected 2 or more elements in ${segments}`);
-  // last segment is model name and needs to be lowerFirst and plural
-  const names = segments.slice(0, -1);
-  names.push(_.lowerFirst(plural(_.last(segments) as string)));
-  // prepend query
-  names.unshift('query');
-  // add fields under nodes
-  const fieldPath = names.concat('nodes').join('.');
-  const query = _.set({}, fieldPath, fieldsObj);
-  // add filter for refreshedAt at level of model name
-  const filterPath = names.concat('__args').join('.');
-  const refreshedFilter = {
-    filter: {
-      refreshedAtMillis: {
-        greaterThanOrEqualTo: new VariableType('from'),
-        lessThan: new VariableType('to'),
-      },
-    },
-  };
-  _.set(query, filterPath, refreshedFilter);
-  _.set(query, 'query.__variables', {
-    from: 'builtin_BigInt!',
-    to: 'builtin_BigInt!',
-  });
-  return {name, gql: jsonToGraphQLQuery(query)};
-}
-
-function isV1ModelType(type: any): type is gql.GraphQLObjectType {
-  return (
-    gql.isObjectType(type) &&
-    type.getInterfaces().length > 0 &&
-    type.getInterfaces()[0].name === 'Node'
+  return cfg.queries.map((query) =>
+    readerFromQuery({
+      client: cfg.client,
+      graph: cfg.graph,
+      graphSchema: cfg.graphSchema,
+      query,
+      pageSize: cfg.pageSize,
+      incremental: false,
+    })
   );
-}
-
-function isV1EmbeddedType(type: any): type is gql.GraphQLObjectType {
-  return (
-    gql.isObjectType(type) &&
-    !gql.isIntrospectionType(type) &&
-    !_.some(type.getInterfaces(), (i) => i.name === 'Node')
-  );
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function createIncrementalReadersV1(
-  client: FarosClient,
-  graph: string,
-  pageSize: number,
-  graphQLSchema: gql.GraphQLSchema
-): ReadonlyArray<Reader> {
-  const result: Reader[] = createIncrementalQueriesV1(graphQLSchema).map(
-    (query) =>
-      readerFromQuery(graph, client, query, pageSize, graphQLSchema, true)
-  );
-
-  if (!result.length) {
-    throw new VError('failed to load v1 incremental readers');
-  }
-  return result;
-}
-
-export function createIncrementalQueriesV1(
-  graphQLSchema: gql.GraphQLSchema,
-  primaryKeys?: Dictionary<ReadonlyArray<string>>,
-  avoidCollisions = true
-): ReadonlyArray<Query> {
-  const result: Query[] = [];
-  const resolvedPrimaryKeys = primaryKeys
-    ? new PrimaryKeyResolver(
-        graphQLSchema,
-        primaryKeys,
-        {},
-        isV1ModelType
-      ).resolvePrimaryKeys()
-    : {};
-  const resolvedEmbeddedFields = new EmbeddedFieldResolver(
-    graphQLSchema
-  ).resolveEmbeddedFields();
-  for (const name of Object.keys(graphQLSchema.getTypeMap())) {
-    const type = graphQLSchema.getType(name);
-    if (isV1ModelType(type)) {
-      result.push(
-        buildIncrementalQueryV1(
-          type,
-          avoidCollisions,
-          resolvedPrimaryKeys,
-          resolvedEmbeddedFields
-        )
-      );
-    }
-  }
-
-  return result;
 }
 
 function isV2ModelType(type: any): type is gql.GraphQLObjectType {
@@ -1454,8 +955,18 @@ function isV2ModelType(type: any): type is gql.GraphQLObjectType {
 
 function isScalar(type: any): boolean {
   const unwrapped = unwrapType(type);
-  return gql.isScalarType(unwrapped) ||
-    (gql.isListType(unwrapped) && gql.isScalarType(unwrapped.ofType));
+  return (
+    gql.isScalarType(unwrapped) ||
+    (gql.isListType(unwrapped) && gql.isScalarType(unwrapped.ofType))
+  );
+}
+
+interface IncrementalQueryConfig {
+  readonly type: gql.GraphQLObjectType;
+  readonly resolvedPrimaryKeys?: Dictionary<string>;
+  readonly references?: Dictionary<Reference>;
+  readonly avoidCollisions?: boolean;
+  readonly scalarsOnly?: boolean;
 }
 
 /**
@@ -1472,31 +983,29 @@ function isScalar(type: any): boolean {
  * If resolvedPrimaryKeys is provided, it will use the fully resolved
  * primary key fragment for referenced models instead of the ID field.
  */
-export function buildIncrementalQueryV2(
-  type: gql.GraphQLObjectType,
-  avoidCollisions = true,
-  resolvedPrimaryKeys: Dictionary<string> = {},
-  references: Dictionary<Reference> = {},
-  scalarsOnly = false
-): Query {
-  const name = type.name;
+export function buildIncrementalQueryV2(cfg: IncrementalQueryConfig): Query {
+  const avoidCollisions = cfg.avoidCollisions ?? true;
+  const resolvedPrimaryKeys = cfg.resolvedPrimaryKeys ?? {};
+  const references = cfg.references ?? {};
+  const scalarsOnly = cfg.scalarsOnly ?? false;
+  const name = cfg.type.name;
   // add fields and FKs
   const fieldsObj: any = {};
   // add PK
   fieldsObj[ID_FLD] = true;
-  for (const fldName of Object.keys(type.getFields())) {
-    const field = type.getFields()[fldName];
+  for (const fldName of Object.keys(cfg.type.getFields())) {
+    const field = cfg.type.getFields()[fldName];
     if (isScalar(field.type)) {
       const reference = references[fldName];
       if (reference) {
         // This is a (scalar) foreign key to a top-level model
         // Check that the non-scalar corresponding foreign key
         // exists and skip from the query selection
-        const checkField = type.getFields()[reference.field];
+        const checkField = cfg.type.getFields()[reference.field];
         ok(
           !_.isNil(checkField),
           `expected ${reference.field} to be a reference field of` +
-            ` ${type.name} (foreign key to ${reference.model})`
+            ` ${cfg.type.name} (foreign key to ${reference.model})`
         );
       } else {
         fieldsObj[field.name] = true; // arbitrary value here
@@ -1508,7 +1017,7 @@ export function buildIncrementalQueryV2(
       if (avoidCollisions) {
         let nestedName = `${field.name}Id`;
         // check for collision between nested name and scalars
-        if (_.has(type.getFields(), nestedName)) {
+        if (_.has(cfg.type.getFields(), nestedName)) {
           nestedName = `${field.name}Fk`;
         }
         {
@@ -1545,33 +1054,31 @@ export function buildIncrementalQueryV2(
   return {name, gql: jsonToGraphQLQuery(query)};
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+interface IncrementalReadersConfig {
+  readonly client: FarosClient;
+  readonly graph: string;
+  readonly pageSize: number;
+  readonly graphSchema: gql.GraphQLSchema;
+  readonly avoidCollisions: boolean;
+  readonly scalarsOnly: boolean;
+}
+
 export function createIncrementalReadersV2(
-  client: FarosClient,
-  graph: string,
-  pageSize: number,
-  graphQLSchema: gql.GraphQLSchema,
-  avoidCollisions = true,
-  scalarsOnly = false
+  cfg: IncrementalReadersConfig
 ): ReadonlyArray<Reader> {
-  const result: Reader[] = createIncrementalQueriesV2(
-    graphQLSchema,
-    undefined,
-    undefined,
-    avoidCollisions,
-    scalarsOnly
-  ).map(
-    (query) =>
-      readerFromQuery(
-        graph,
-        client,
-        query,
-        pageSize,
-        graphQLSchema,
-        true,
-        paginatedQueryV2,
-        flattenV2
-      )
+  const result: Reader[] = createIncrementalQueriesV2({
+    graphSchema: cfg.graphSchema,
+    avoidCollisions: cfg.avoidCollisions ?? true,
+    scalarsOnly: cfg.scalarsOnly ?? false,
+  }).map((query) =>
+    readerFromQuery({
+      client: cfg.client,
+      graph: cfg.graph,
+      graphSchema: cfg.graphSchema,
+      pageSize: cfg.pageSize,
+      incremental: true,
+      query,
+    })
   );
   if (!result.length) {
     throw new VError('failed to create v2 incremental readers');
@@ -1579,221 +1086,48 @@ export function createIncrementalReadersV2(
   return result;
 }
 
+interface IncrementalQueriesConfig {
+  readonly graphSchema: gql.GraphQLSchema;
+  readonly primaryKeys?: Dictionary<ReadonlyArray<string>>;
+  readonly references?: Dictionary<Dictionary<Reference>>;
+  readonly avoidCollisions?: boolean;
+  readonly scalarsOnly?: boolean;
+}
+
 export function createIncrementalQueriesV2(
-  graphQLSchema: gql.GraphQLSchema,
-  primaryKeys?: Dictionary<ReadonlyArray<string>>,
-  references?: Dictionary<Dictionary<Reference>>,
-  avoidCollisions = true,
-  scalarsOnly = false
+  cfg: IncrementalQueriesConfig
 ): ReadonlyArray<Query> {
+  const avoidCollisions = cfg.avoidCollisions ?? true;
+  const scalarsOnly = cfg.scalarsOnly ?? false;
   const result: Query[] = [];
-  const resolvedPrimaryKeys = primaryKeys
+  const resolvedPrimaryKeys = cfg.primaryKeys
     ? new PrimaryKeyResolver(
-        graphQLSchema,
-        primaryKeys,
-        references || {},
-        isV2ModelType
+        cfg.graphSchema,
+        cfg.primaryKeys,
+        cfg.references || {}
       ).resolvePrimaryKeys()
     : {};
-  for (const name of Object.keys(graphQLSchema.getTypeMap())) {
-    const type = graphQLSchema.getType(name);
+  for (const name of Object.keys(cfg.graphSchema.getTypeMap())) {
+    const type = cfg.graphSchema.getType(name);
     let typeReferences = {};
-    if (references && type) {
-      typeReferences = references[type.name] || {};
+    if (cfg.references && type) {
+      typeReferences = cfg.references[type.name] || {};
     }
 
     if (isV2ModelType(type)) {
       result.push(
-        buildIncrementalQueryV2(
+        buildIncrementalQueryV2({
           type,
-          avoidCollisions,
           resolvedPrimaryKeys,
-          typeReferences,
+          references: typeReferences,
+          avoidCollisions,
           scalarsOnly
-        )
+        })
       );
     }
   }
 
   return result;
-}
-
-/**
- * Converts a V1 query into incremental:
- * Adds "from" and "to" query variables.
- * Adds a filter "from" <= refreshedAt < "to" to the top level model.
- * Makes sure metadata { refreshedAt } is selected.
- *
- * Example:
- *  vcs {
- *     pullRequests {
- *       nodes {
- *         title
- *       }
- *     }
- *  }
- *
- * becomes:
- *  query incrementalQuery($from: builtin_BigInt!, $to: builtin_BigInt!) {
- *   vcs {
- *     pullRequests(
- *       filter: {
- *        refreshedAtMillis: {
- *          greaterThanOrEqualTo: $from,
- *          lessThan: $to
- *        }
- *       }
- *     ) {
- *       nodes {
- *         title
- *         metadata {
- *           refreshedAt
- *         }
- *       }
- *     }
- *   }
- *  }
- */
-export function toIncrementalV1(query: string): string {
-  let hasMetadata = false,
-    hasRefreshedAt = false,
-    firstNodesSeen = false;
-  let fieldDepth = 0;
-
-  const ast = gql.visit(gql.parse(query), {
-    Document(node) {
-      if (node.definitions.length !== 1) {
-        throw invalidQuery(
-          'document should contain a single query operation definition'
-        );
-      }
-    },
-    OperationDefinition(node) {
-      if (node.operation !== 'query') {
-        throw invalidQuery('only query operations are supported');
-      }
-
-      // Add refreshedAtMillis filter variables to query operation
-      return withVariableDefinitions(node, [
-        {
-          kind: Kind.VARIABLE_DEFINITION,
-          variable: {
-            kind: Kind.VARIABLE,
-            name: {kind: Kind.NAME, value: 'from'},
-          },
-          type: {
-            kind: Kind.NAMED_TYPE,
-            name: {kind: Kind.NAME, value: 'builtin_BigInt!'},
-          },
-        },
-        {
-          kind: Kind.VARIABLE_DEFINITION,
-          variable: {
-            kind: Kind.VARIABLE,
-            name: {kind: Kind.NAME, value: 'to'},
-          },
-          type: {
-            kind: Kind.NAMED_TYPE,
-            name: {kind: Kind.NAME, value: 'builtin_BigInt!'},
-          },
-        },
-      ]);
-    },
-    Field: {
-      enter(node) {
-        const name = node.alias?.value ?? node.name.value;
-
-        if (!firstNodesSeen) {
-          if (name === NODES) {
-            firstNodesSeen = true;
-          }
-          fieldDepth++;
-          return undefined;
-        }
-        if (!hasMetadata) {
-          if (name === 'metadata') {
-            hasMetadata = true;
-            fieldDepth++;
-            return undefined;
-          }
-          return false;
-        }
-        if (!hasRefreshedAt) {
-          if (name === 'refreshedAt') {
-            hasRefreshedAt = true;
-            fieldDepth++;
-            return undefined;
-          }
-          return false;
-        }
-        return false;
-      },
-      leave(node) {
-        const name = node.alias?.value ?? node.name.value;
-        fieldDepth--;
-
-        // We're at the top level model
-        // Add the filter here
-        if (fieldDepth === 1) {
-          const refreshedFilter = buildRefreshedFilter(
-            'filter',
-            'refreshedAtMillis',
-            'greaterThanOrEqualTo',
-            'lessThan'
-          );
-
-          return {
-            ...node,
-            arguments: [...(node.arguments || []), refreshedFilter],
-          };
-        }
-
-        if (name === NODES && !hasMetadata) {
-          // Adds metadata { refreshedAt }
-          const selections = node.selectionSet?.selections || [];
-          const newSelection = {
-            kind: 'Field',
-            name: {kind: 'Name', value: 'metadata'},
-            selectionSet: {
-              kind: 'SelectionSet',
-              selections: [
-                {
-                  kind: 'Field',
-                  name: {kind: 'Name', value: 'refreshedAt'},
-                },
-              ],
-            },
-          };
-
-          return {
-            ...node,
-            selectionSet: {
-              kind: Kind.SELECTION_SET,
-              selections: [...selections, newSelection],
-            },
-          };
-        }
-        if (name === 'metadata' && !hasRefreshedAt) {
-          // Adds refreshedAt
-          const selections = node.selectionSet?.selections || [];
-          const newSelection = {
-            kind: 'Field',
-            name: {kind: 'Name', value: 'refreshedAt'},
-          };
-
-          return {
-            ...node,
-            selectionSet: {
-              kind: Kind.SELECTION_SET,
-              selections: [...selections, newSelection],
-            },
-          };
-        }
-        return undefined;
-      },
-    },
-  });
-  return gql.print(ast);
 }
 
 /**
@@ -1912,67 +1246,6 @@ export function toIncrementalV2(query: string): string {
     },
   });
   return gql.print(ast);
-}
-
-/**
- * Returns the path to the queried top-level model in a V1 query
- *
- * Example, for query:
- *  vcs {
- *     pullRequests {
- *       nodes {
- *         title
- *       }
- *     }
- *  }
- *
- * returns:
- * {
- *  modelName: 'vcs_PullRequest',
- *  path: ['vcs', 'pullRequests', 'nodes'],
- * }
- */
-export function pathToModelV1(
-  query: string,
-  schema: gql.GraphQLSchema
-): PathToModel {
-  const typeInfo = new gql.TypeInfo(schema);
-  let firstNodesSeen = false;
-  let modelName: string | undefined;
-  const fieldPath: string[] = [];
-
-  gql.visit(
-    gql.parse(query),
-    gql.visitWithTypeInfo(typeInfo, {
-      Field: {
-        enter(node) {
-          const name = node.alias?.value ?? node.name.value;
-
-          if (firstNodesSeen) {
-            const type = typeInfo.getParentType();
-            ok(isV1ModelType(type));
-            modelName = type.name;
-            return false;
-          }
-
-          fieldPath.push(name);
-
-          if (name === NODES) {
-            firstNodesSeen = true;
-          }
-
-          return undefined;
-        },
-      },
-    })
-  );
-
-  ok(modelName !== undefined, 'Could not find queried top-level model');
-
-  return {
-    path: fieldPath,
-    modelName,
-  };
 }
 
 /**
@@ -2105,8 +1378,7 @@ class PrimaryKeyResolver {
   constructor(
     readonly graphQLSchema: gql.GraphQLSchema,
     readonly primaryKeys: Dictionary<ReadonlyArray<string>>,
-    readonly references: Dictionary<Dictionary<Reference>>,
-    readonly isTopLevelModelTypeChecker = isV1ModelType
+    readonly references: Dictionary<Dictionary<Reference>>
   ) {}
 
   /**
@@ -2123,7 +1395,7 @@ class PrimaryKeyResolver {
 
     for (const name of Object.keys(this.graphQLSchema.getTypeMap())) {
       const type = this.graphQLSchema.getType(name);
-      if (this.isTopLevelModelTypeChecker(type)) {
+      if (isV2ModelType(type)) {
         result[name] = this.resolvePrimaryKey(type);
       }
     }
@@ -2156,58 +1428,9 @@ class PrimaryKeyResolver {
 
       if (gql.isScalarType(unwrapType(field.type))) {
         resolved.push(field.name);
-      } else if (this.isTopLevelModelTypeChecker(field.type)) {
+      } else if (isV2ModelType(field.type)) {
         resolved.push(
           `${field.name} { ${this.resolvePrimaryKey(field.type)} }`
-        );
-      }
-    }
-
-    return resolved.join(' ');
-  }
-}
-
-class EmbeddedFieldResolver {
-  constructor(readonly graphQLSchema: gql.GraphQLSchema) {}
-
-  /**
-   * Fully resolves embedded objects in the schema.
-   *
-   * E.g., given a type 'Person' with fields 'name: String' and
-   * 'contact: Contact' and type 'Contact' with fields
-   * 'email: String' and 'phone: String', the type 'Person'
-   * resolves to { name contact { email phone } }
-   */
-  public resolveEmbeddedFields(): Dictionary<string> {
-    const result: Dictionary<string> = {};
-
-    for (const name of Object.keys(this.graphQLSchema.getTypeMap())) {
-      const type = this.graphQLSchema.getType(name);
-      if (isV1EmbeddedType(type)) {
-        result[name] = this.resolveEmbeddedField(type);
-      }
-    }
-
-    return result;
-  }
-
-  @Memoize((type: gql.GraphQLObjectType) => type.name)
-  private resolveEmbeddedField(type: gql.GraphQLObjectType): string {
-    const resolved = [];
-
-    for (const fldName of Object.keys(type.getFields())) {
-      const field = type.getFields()[fldName];
-      let unwrappedType = unwrapType(field.type) || field.type;
-
-      if (gql.isListType(unwrappedType)) {
-        unwrappedType = unwrappedType.ofType;
-      }
-
-      if (gql.isScalarType(unwrappedType) || gql.isEnumType(unwrappedType)) {
-        resolved.push(field.name);
-      } else if (isV1EmbeddedType(unwrappedType)) {
-        resolved.push(
-          `${field.name} { ${this.resolveEmbeddedField(unwrappedType)} }`
         );
       }
     }
