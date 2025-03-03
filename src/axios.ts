@@ -5,7 +5,10 @@ import {Logger} from 'pino';
 
 import {wrapApiError} from './errors';
 
-type DelayFunction = (error: AxiosError<unknown, any>) => number;
+type DelayFunction = (
+  error: AxiosError<unknown, any>,
+  retryNumber?: number
+) => number;
 
 export const DEFAULT_RETRIES = 3;
 export const DEFAULT_RETRY_DELAY = 1000;
@@ -65,7 +68,7 @@ export function makeAxiosInstanceWithRetry(
       if (typeof delay === 'number') {
         return retryNumber * delay;
       }
-      return delay(error);
+      return delay(error, retryNumber);
 
     },
     shouldResetTimeout: true,

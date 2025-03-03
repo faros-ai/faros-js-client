@@ -8,7 +8,7 @@ import * as zlib from 'zlib';
 
 import {makeAxiosInstanceWithRetry} from './axios';
 import {wrapApiError} from './errors';
-import {paginatedQuery} from './graphql/graphql';
+import {paginatedQueryV2} from './graphql/graphql';
 import {batchMutation} from './graphql/query-builder';
 import {Mutation, Schema} from './graphql/types';
 import {
@@ -74,7 +74,7 @@ export class FarosClient {
       logger ?? this.logger,
       {
         ...this.axiosConfig,
-        ...axiosConfig
+        ...axiosConfig,
       }
     );
   }
@@ -88,14 +88,14 @@ export class FarosClient {
     }
   }
 
-  async secret(name: string, group?: string): Promise<string | undefined> {
+  async secretExists(name: string, group?: string): Promise<boolean> {
     try {
       const params = group ? {group} : undefined;
-      const {data} = await this.api.get(`/secrets/${name}`, {params});
-      return data.value;
+      const res = await this.api.get(`/secrets/${name}`, {params});
+      return res.status === 200;
     } catch (err: any) {
       if (err.response?.status === 404) {
-        return undefined;
+        return false;
       }
       throw wrapApiError(err, `unable to get secret: ${name}`);
     }
@@ -143,7 +143,6 @@ export class FarosClient {
     }
   }
 
-
   queryParameters(): Dictionary<any> {
     return {
       phantoms: this.phantoms,
@@ -157,8 +156,7 @@ export class FarosClient {
   ): Promise<any> {
     try {
       let req: any = variables ? {query, variables} : {query};
-      let doCompression =
-        Buffer.byteLength(query, 'utf8') > 10 * 1024; // 10KB
+      let doCompression = Buffer.byteLength(query, 'utf8') > 10 * 1024; // 10KB
       if (doCompression) {
         try {
           const input = Buffer.from(JSON.stringify(req), 'utf8');
@@ -307,7 +305,7 @@ export class FarosClient {
     graph: string,
     rawQuery: string,
     pageSize = 100,
-    paginator = paginatedQuery,
+    paginator = paginatedQueryV2,
     args: Map<string, any> = new Map<string, any>()
   ): AsyncIterable<any> {
     const {query, edgesPath, edgeIdPath, pageInfoPath} = paginator(rawQuery);
