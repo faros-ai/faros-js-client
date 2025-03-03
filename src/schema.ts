@@ -132,12 +132,12 @@ function toDateAsISOString(
     return new Date(val).toISOString();
   }
   try {
-    return new Date(toNumber(val)).toISOString();
-  } catch {
-    try {
-      return new Date(val).toISOString();
-    } catch {
-      throw new VError('Invalid date: %s', val);
+    // test for integers represented as strings
+    if (/^-?\d+$/.test(val)) {
+      return new Date(toNumber(val)).toISOString();
     }
+    return new Date(val).toISOString();
+  } catch {
+    throw new VError('Invalid date: %s', val);
   }
 }
