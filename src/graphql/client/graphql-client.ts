@@ -490,7 +490,7 @@ export class GraphQLClient {
       [`del: delete_${model}`]: {
         __args: {
           where: {
-            _and: [{...deleteConditions, id: {_in: ids}, }],
+            _and: {...deleteConditions, id: {_in: ids}},
           },
         },
         affected_rows: true,
