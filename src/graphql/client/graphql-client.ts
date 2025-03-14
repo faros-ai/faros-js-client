@@ -451,11 +451,14 @@ export class GraphQLClient {
         this.resetPageSize
       );
       let ids = [];
+      let numMarkedForDeletion = 0;
+      let numDeleted = 0;
       for await (const record of records) {
         ids.push(record.id);
+        numMarkedForDeletion++;
         // delete in batches
         if (ids.length >= this.resetPageSize) {
-          await this.deleteByIdWithConditions(
+          numDeleted += await this.deleteByIdWithConditions(
             model,
             ids,
             deleteConditions,
@@ -466,22 +469,32 @@ export class GraphQLClient {
       }
       // clean up any remaining records
       if (ids.length > 0) {
-        await this.deleteByIdWithConditions(
+        numDeleted += await this.deleteByIdWithConditions(
           model,
           ids,
           deleteConditions,
           deleteSessionId
         );
       }
+      this.logger.info(
+        `Deleted ${numDeleted} records from ${model} out of ` +
+        `${numMarkedForDeletion} marked for deletion`
+      );
     }
   }
 
+  /**
+   * FAI-15611 - Added deleteByIdWithConditions to put guardrails around
+   * deleteByIds. This prevents deletes of records that are updated after
+   * the ids are fetched or if the id lookup is performed against a stale
+   * replica.
+   */
   async deleteByIdWithConditions(
     model: string,
     ids: string[],
     deleteConditions: any,
     session: string
-  ): Promise<void> {
+  ): Promise<number> {
     const mutation = {
       ...(this.supportsSetCtx && {
         ctx: {__aliasFor: `setCtx(args: {session: "${session}"}) { success }`},
@@ -496,9 +509,10 @@ export class GraphQLClient {
         affected_rows: true,
       },
     };
-    await this.backend.postQuery(
+    const res = await this.backend.postQuery(
       jsonToGraphQLQuery({mutation})
     );
+    return res.data.del.affected_rows;
   }
 
 
