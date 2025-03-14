@@ -482,12 +482,12 @@ export class GraphQLClient {
     deleteConditions: any,
     session: string
   ): Promise<void> {
-    const ctxExpr = this.supportsSetCtx
-      ? `setCtx(args: {session: "${session}"}) { success }`
-      : undefined;
     const mutation = {
-      ctx: ctxExpr,
-      [`del: delete_${model}`]: {
+      ...(this.supportsSetCtx && {
+        ctx: {__aliasFor: `setCtx(args: {session: "${session}"}) { success }`},
+      }),
+      del: {
+        __aliasFor: `delete_${model}`,
         __args: {
           where: {
             _and: {...deleteConditions, id: {_in: ids}},
@@ -496,7 +496,9 @@ export class GraphQLClient {
         affected_rows: true,
       },
     };
-    await this.backend.postQuery(jsonToGraphQLQuery({mutation}));
+    await this.backend.postQuery(
+      jsonToGraphQLQuery({mutation})
+    );
   }
 
 
