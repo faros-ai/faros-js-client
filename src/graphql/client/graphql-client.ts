@@ -477,8 +477,8 @@ export class GraphQLClient {
         );
       }
       this.logger.info(
-        `Deleted ${numDeleted} records from ${model} ` +
-        `(${numMarkedForDeletion} marked for deletion)`
+        `Deleted ${numDeleted} records from ${model} out of ` +
+        `${numMarkedForDeletion} marked for deletion`
       );
     }
   }
