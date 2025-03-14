@@ -455,16 +455,50 @@ export class GraphQLClient {
         ids.push(record.id);
         // delete in batches
         if (ids.length >= this.resetPageSize) {
-          await this.deleteById(model, ids, deleteSessionId);
+          await this.deleteByIdWithConditions(
+            model,
+            ids,
+            deleteConditions,
+            deleteSessionId
+          );
           ids = [];
         }
       }
       // clean up any remaining records
       if (ids.length > 0) {
-        await this.deleteById(model, ids, deleteSessionId);
+        await this.deleteByIdWithConditions(
+          model,
+          ids,
+          deleteConditions,
+          deleteSessionId
+        );
       }
     }
   }
+
+  async deleteByIdWithConditions(
+    model: string,
+    ids: string[],
+    deleteConditions: any,
+    session: string
+  ): Promise<void> {
+    const ctxExpr = this.supportsSetCtx
+      ? `setCtx(args: {session: "${session}"}) { success }`
+      : undefined;
+    const mutation = {
+      ctx: ctxExpr,
+      [`del: delete_${model}`]: {
+        __args: {
+          where: {
+            _and: [{id: {_in: ids}, ...deleteConditions}],
+          },
+        },
+        affected_rows: true,
+      },
+    };
+    await this.backend.postQuery(jsonToGraphQLQuery({mutation}));
+  }
+
 
   async deleteById(
     model: string,
