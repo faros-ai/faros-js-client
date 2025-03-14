@@ -937,7 +937,7 @@ describe('graphql-client write batch upsert', () => {
       JSON.parse(`
       {
         "data": {
-          "delete_vcs_Organization": {
+          "del": {
             "affected_rows": 3
           }
         }
@@ -961,7 +961,7 @@ describe('graphql-client write batch upsert', () => {
       JSON.parse(`
       {
         "data": {
-          "delete_vcs_Organization": {
+          "del": {
             "affected_rows": 2
           }
         }
