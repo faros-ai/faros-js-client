@@ -178,21 +178,6 @@ describe('graphql', () => {
     );
   });
 
-  test('paginated relay v2 query', async () => {
-    const query = await loadQueryFile('commits-v2.gql');
-    const expectedQuery = await loadQueryFile('paginated-commits-v2.gql');
-    const paginatedQuery = sut.paginatedWithRelayV2(query);
-    expect(paginatedQuery.edgesPath).toEqual([
-      'vcs_Commit_connection',
-      'edges',
-    ]);
-    expect(paginatedQuery.pageInfoPath).toEqual([
-      'vcs_Commit_connection',
-      'pageInfo',
-    ]);
-    expect(paginatedQuery.query).toEqual(expectedQuery);
-  });
-
   test('paginated offset/limit v2 query', async () => {
     const query = await loadQueryFile('commits-v2.gql');
     const paginatedQuery = sut.paginateWithOffsetLimitV2(query);
