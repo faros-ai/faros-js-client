@@ -58,8 +58,8 @@ describe('query builder', () => {
         os: 'os',
         browser: 'browser',
         isSupported: true,
-        size: 10
-      }
+        size: 10,
+      },
     };
 
     const mutations = [qb.upsert({qa_TestCase})];
@@ -97,12 +97,8 @@ describe('query builder', () => {
     expect(queryString).toMatchSnapshot();
   });
 
-
   test('delete mutations with model refs', () => {
-    const mutations = [
-      qb.delete({cicd_Deployment}),
-      qb.delete({cicd_Build})
-    ];
+    const mutations = [qb.delete({cicd_Deployment}), qb.delete({cicd_Build})];
     const queryString = sut.batchMutation(mutations);
     expect(queryString).toMatchSnapshot();
   });
@@ -126,13 +122,31 @@ describe('query builder', () => {
     const queryString = sut.batchMutation(mutations);
     expect(queryString).toMatchSnapshot();
   });
+
+  test('upsert with conflict override', () => {
+    const org_ApplicationOwnership = {
+      team: qb.ref({org_Team: {uid: 'test_team'}}),
+      application: qb.ref({
+        compute_Application: {name: 'test_app', platform: 'test_platform'},
+      }),
+    };
+    const mutations = [
+      qb.upsert(
+        {org_ApplicationOwnership},
+        {
+          constraint: 'org_ApplicationOwnership_application_id_unique',
+          update_columns: ['teamId', 'refreshedAt', 'origin'],
+        }
+      ),
+    ];
+    const queryString = sut.batchMutation(mutations);
+    expect(queryString).toMatchSnapshot();
+  });
 });
 
 describe('arrayLiteral', () => {
   test('strings', () => {
     expect(sut.arrayLiteral(['a', 'b', 'c'])).toEqual('{"a","b","c"}');
-    expect(sut.arrayLiteral(['"a', 'b"', '"c"'])).toEqual(
-      '{"a","b","c"}'
-    );
+    expect(sut.arrayLiteral(['"a', 'b"', '"c"'])).toEqual('{"a","b","c"}');
   });
 });

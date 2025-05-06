@@ -10,6 +10,8 @@ exports[`query builder delete mutations with model refs 1`] = `"mutation { m0: d
 
 exports[`query builder delete mutations with non-model objects 1`] = `"mutation { m0: delete_qa_TestCase (where: {uid: {_eq: "<uid>"}, source: {_eq: "<source>"}, name: {_eq: "<name>"}, before: null, after: null, tags: {_eq: "{\\"tag1\\",\\"tag2\\"}"}}) { returning { id } } }"`;
 
+exports[`query builder delete undefined ref 1`] = `"mutation { m0: delete_cicd_Pipeline (where: {uid: {_eq: "<pipeline_uid>"}, organizationId: {_is_null: true}}) { returning { id } } }"`;
+
 exports[`query builder upsert undefined ref 1`] = `"mutation { m0: insert_cicd_Pipeline_one (object: {uid: "<pipeline_uid>", organization: null, origin: "test-origin"}, on_conflict: {constraint: cicd_Pipeline_pkey, update_columns: [refreshedAt, uid, organizationId, origin]}) { id } }"`;
 
-exports[`query builder delete undefined ref 1`] = `"mutation { m0: delete_cicd_Pipeline (where: {uid: {_eq: "<pipeline_uid>"}, organizationId: {_is_null: true}}) { returning { id } } }"`;
+exports[`query builder upsert with conflict override 1`] = `"mutation { m0: insert_org_ApplicationOwnership_one (object: {team: {data: {uid: "test_team"}, on_conflict: {constraint: org_Team_pkey, update_columns: [refreshedAt]}}, application: {data: {name: "test_app", platform: "test_platform"}, on_conflict: {constraint: compute_Application_pkey, update_columns: [refreshedAt]}}, origin: "test-origin"}, on_conflict: {constraint: org_ApplicationOwnership_application_id_unique, update_columns: [teamId, refreshedAt, origin]}) { id } }"`;
