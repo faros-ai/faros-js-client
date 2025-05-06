@@ -23,6 +23,11 @@ interface MutationFields {
   [field: string]: MutationFieldValue;
 }
 
+interface Conflict {
+  constraint: string;
+  update_columns: string[];
+}
+
 export interface FarosModel {
   [modelName: string]: MutationFields;
 }
@@ -37,10 +42,11 @@ export class QueryBuilder {
   /**
    * Creates an upsert mutation for the provided Faros model.
    * @param model   The Faros model
+   * @param conflict Override the default conflict clause
    * @returns       The upsert mutation
    */
-  upsert(model: FarosModel): Mutation {
-    const mutationObj = this.upsertMutationObj(model);
+  upsert(model: FarosModel, conflict?: Conflict): Mutation {
+    const mutationObj = this.upsertMutationObj({model, ref: false, conflict});
     const modelName = Object.keys(model)[0];
     return {
       mutation: {
@@ -79,10 +85,14 @@ export class QueryBuilder {
    * @param ref     If the mutationObj should be a reference
    * @returns       The mutation object
    */
-  private upsertMutationObj(
-    model: FarosModel,
-    ref = false
-  ): UpsertMutationObject {
+  private upsertMutationObj(args: {
+    model: FarosModel;
+    conflict?: Conflict;
+    ref?: boolean;
+  }): UpsertMutationObject {
+    const {model, conflict} = args;
+    const ref = args.ref ?? false;
+
     const [modelName, fields] = Object.entries(model)[0];
     const mutObj: any = {};
     const mask = ['refreshedAt'];
@@ -93,7 +103,7 @@ export class QueryBuilder {
         mutObj[k] = null;
       } else if (v instanceof Ref) {
         if (v.model) {
-          mutObj[k] = this.upsertMutationObj(v.model, true);
+          mutObj[k] = this.upsertMutationObj({model: v.model, ref: true});
         } else {
           mutObj[k] = null;
         }
@@ -109,12 +119,18 @@ export class QueryBuilder {
 
     if (!ref) {
       mutObj.origin = this.origin;
+      conflict?.update_columns?.push('origin');
       mask.push('origin');
     }
 
+    const defaultConflict = {
+      constraint: `${modelName}_pkey`,
+      update_columns: mask,
+    };
+
     return {
       [!ref ? 'object' : 'data']: mutObj,
-      on_conflict: this.createConflictClause(modelName, mask),
+      on_conflict: this.createConflictClause(conflict ?? defaultConflict),
     };
   }
 
@@ -151,10 +167,10 @@ export class QueryBuilder {
     return !ref ? {where: mutObj} : mutObj;
   }
 
-  private createConflictClause(model: string, mask: string[]): ConflictClause {
+  private createConflictClause(conflict: Conflict): ConflictClause {
     return {
-      constraint: new EnumType(`${model}_pkey`),
-      update_columns: mask.map((c) => new EnumType(c)),
+      constraint: new EnumType(conflict.constraint),
+      update_columns: conflict.update_columns.map((c) => new EnumType(c)),
     };
   }
 }
