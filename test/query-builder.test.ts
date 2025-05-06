@@ -135,7 +135,7 @@ describe('query builder', () => {
         {org_ApplicationOwnership},
         {
           constraint: 'org_ApplicationOwnership_application_id_unique',
-          update_columns: ['teamId', 'refreshedAt', 'origin'],
+          update_columns: ['teamId'],
         }
       ),
     ];

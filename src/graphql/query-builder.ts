@@ -119,6 +119,7 @@ export class QueryBuilder {
 
     if (!ref) {
       mutObj.origin = this.origin;
+      conflict?.update_columns?.push('origin');
       mask.push('origin');
     }
 

@@ -71,6 +71,33 @@ const mutations = [
 await faros.sendMutations('default', mutations);
 ```
 
+Example using conflict override to manage a conflict on unqiue constraint
+
+```ts
+import {QueryBuilder, FarosClient} from "faros-js-client";
+
+const faros = new FarosClient({
+    url: 'https://prod.api.faros.ai',
+    apiKey: '<your_faros_api_key>',
+});
+
+const qb = new QueryBuilder('example-origin');
+
+const mutations = [
+  qb.upsert(
+    {org_ApplicationOwnership},
+    {
+      // Override the conflict clause with the unique constraint
+      constraint: 'org_ApplicationOwnership_application_id_unique',
+      update_columns: ['teamId'], // Origin will be added automatically
+    }
+  )
+]
+
+// Send your mutations to Faros!
+await faros.sendMutations('default', mutations);
+```
+
 Please read the [Faros documentation][farosdocs] to learn more.
 
 [farosdocs]: https://docs.faros.ai
