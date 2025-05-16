@@ -46,6 +46,7 @@ export {
 } from './graphql/query-builder';
 export {
   AnyRecord,
+  DeleteReaderConfig,
   FlattenContext,
   PaginatedQuery,
   Reader,
@@ -59,6 +60,7 @@ export {
   crossMerge,
   flattenIterable,
   flattenV2,
+  IncrementalReaderConfig,
   paginatedQueryV2,
   pathToModelV2,
   readerFromQuery,

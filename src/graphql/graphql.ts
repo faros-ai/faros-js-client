@@ -970,7 +970,7 @@ export function createIncrementalReadersV2(
   return result;
 }
 
-interface IncrementalReaderConfig {
+export interface IncrementalReaderConfig {
   readonly model: string;
   readonly client: FarosClient;
   readonly graph: string;
