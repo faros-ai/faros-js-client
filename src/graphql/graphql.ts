@@ -943,8 +943,8 @@ interface IncrementalReadersConfig {
   readonly graph: string;
   readonly pageSize: number;
   readonly graphSchema: gql.GraphQLSchema;
-  readonly avoidCollisions: boolean;
-  readonly scalarsOnly: boolean;
+  readonly avoidCollisions?: boolean;
+  readonly scalarsOnly?: boolean;
 }
 
 export function createIncrementalReadersV2(
@@ -1014,6 +1014,11 @@ export interface DeleteReaderConfig {
 export function createDeleteReader(
   cfg: DeleteReaderConfig
 ): Reader | undefined {
+  const type = cfg.graphSchema.getType(cfg.model);
+  if (!isV2ModelType(type)) {
+    return undefined;
+  }
+
   const deleteQuery = `
     query delete($from: timestamptz!, $to: timestamptz!) {
       ${cfg.model}_history(where: {_and: [
