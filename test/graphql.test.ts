@@ -2,6 +2,7 @@ import 'jest-extended';
 
 import * as gql from 'graphql';
 
+import {FarosClient} from '../src/client';
 import * as sut from '../src/graphql/graphql';
 import {
   graphSchemaV2,
@@ -440,6 +441,39 @@ describe('graphql', () => {
     expect(sut.pathToModelV2(query, graphSchemaV2)).toEqual({
       modelName: 'cicd_Build',
       path: ['cicd_Build'],
+    });
+  });
+
+  test('create incremental reader', () => {
+    const reader = sut.createIncrementalReader({
+      model: 'cicd_Build',
+      client: {} as unknown as FarosClient,
+      graph: 'graph',
+      graphSchema: graphSchemaV2,
+      pageSize: 1,
+      avoidCollisions: false,
+      scalarsOnly: true,
+    });
+
+    expect(reader?.metadata).toMatchObject({
+      name: 'cicd_Build',
+      modelKeys: ['id'],
+      incremental: true,
+    });
+  });
+
+  test('create delete reader', () => {
+    const reader = sut.createDeleteReader({
+      model: 'cicd_Build',
+      client: {} as unknown as FarosClient,
+      graph: 'graph',
+      graphSchema: graphSchemaV2,
+      pageSize: 1,
+    });
+
+    expect(reader?.metadata).toMatchObject({
+      name: 'cicd_Build',
+      incremental: false,
     });
   });
 });

@@ -970,6 +970,69 @@ export function createIncrementalReadersV2(
   return result;
 }
 
+interface IncrementalReaderConfig {
+  readonly model: string;
+  readonly client: FarosClient;
+  readonly graph: string;
+  readonly graphSchema: gql.GraphQLSchema;
+  readonly pageSize: number;
+  readonly avoidCollisions: boolean;
+  readonly scalarsOnly: boolean;
+}
+
+export function createIncrementalReader(
+  cfg: IncrementalReaderConfig
+): Reader | undefined {
+  const type = cfg.graphSchema.getType(cfg.model);
+  if (isV2ModelType(type)) {
+    const avoidCollisions = cfg.avoidCollisions ?? true;
+    const scalarsOnly = cfg.scalarsOnly ?? false;
+    return readerFromQuery({
+      client: cfg.client,
+      graph: cfg.graph,
+      graphSchema: cfg.graphSchema,
+      pageSize: cfg.pageSize,
+      incremental: true,
+      query: buildIncrementalQueryV2({
+        type,
+        avoidCollisions,
+        scalarsOnly,
+      }),
+    });
+  }
+  return undefined;
+}
+
+export interface DeleteReaderConfig {
+  readonly model: string;
+  readonly client: FarosClient;
+  readonly graph: string;
+  readonly graphSchema: gql.GraphQLSchema;
+  readonly pageSize: number;
+}
+
+export function createDeleteReader(
+  cfg: DeleteReaderConfig
+): Reader | undefined {
+  const deleteQuery = `
+    query delete($from: timestamptz!, $to: timestamptz!) {
+      ${cfg.model}_history(where: {_and: [
+        {action: {_eq: "delete"}},
+        {actionAt: {_gte: $from, _lt: $to}}
+      ]}) {
+        id
+      }
+    }`;
+  const [deleteReader] = createNonIncrementalReaders({
+    client: cfg.client,
+    graph: cfg.graph,
+    pageSize: cfg.pageSize,
+    graphSchema: cfg.graphSchema,
+    queries: [{gql: deleteQuery, name: cfg.model}],
+  });
+  return deleteReader;
+}
+
 interface IncrementalQueriesConfig {
   readonly graphSchema: gql.GraphQLSchema;
   readonly primaryKeys?: Dictionary<ReadonlyArray<string>>;
