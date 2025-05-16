@@ -46,12 +46,16 @@ export {
 } from './graphql/query-builder';
 export {
   AnyRecord,
+  DeleteReaderConfig,
   FlattenContext,
+  IncrementalReaderConfig,
   PaginatedQuery,
   Reader,
   RecordIterable,
   buildIncrementalQueryV2,
+  createDeleteReader,
   createIncrementalQueriesV2,
+  createIncrementalReader,
   createIncrementalReadersV2,
   createNonIncrementalReaders,
   crossMerge,
