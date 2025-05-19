@@ -61,6 +61,7 @@ export {
   crossMerge,
   flattenIterable,
   flattenV2,
+  getGraphModels,
   paginatedQueryV2,
   pathToModelV2,
   readerFromQuery,

@@ -476,4 +476,12 @@ describe('graphql', () => {
       incremental: false,
     });
   });
+
+  test('get graph models', () => {
+    expect(sut.getGraphModels(graphSchemaV2)).toIncludeAllMembers([
+      'cicd_Artifact',
+      'cicd_Build',
+      'cicd_Pipeline',
+    ]);
+  });
 });
