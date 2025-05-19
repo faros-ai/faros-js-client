@@ -845,6 +845,16 @@ function isScalar(type: any): boolean {
   );
 }
 
+export function getGraphModels(graphSchema: gql.GraphQLSchema): string[] {
+  const models: string[] = [];
+  for (const [name, type] of Object.entries(graphSchema.getTypeMap())) {
+    if (isV2ModelType(type)) {
+      models.push(name);
+    }
+  }
+  return models;
+}
+
 interface IncrementalQueryConfig {
   readonly type: gql.GraphQLObjectType;
   readonly resolvedPrimaryKeys?: Dictionary<string>;
