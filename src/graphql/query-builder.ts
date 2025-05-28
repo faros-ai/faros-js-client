@@ -13,7 +13,7 @@ type MutationFieldValue =
   | number
   | boolean
   | any[]
-  | {category: string; detail: string}
+  | {category: string; detail?: string | null}
   | {[field: string]: string | number | boolean}
   | Ref
   | undefined
