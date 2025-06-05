@@ -1,6 +1,6 @@
 {
   "name": "faros-js-client",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Faros API client for JavaScript/TypeScript",
   "keywords": [
     "api-client",
