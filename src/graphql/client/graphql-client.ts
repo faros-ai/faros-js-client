@@ -897,7 +897,9 @@ export class GraphQLClient {
         }
       } else if (this.isValidField(model, field)) {
         const val = this.formatFieldValue(model, field, value);
-        object[field] = isNil(val) ? null : val;
+        if (val !== undefined) {
+          object[field] = val;
+        }
       }
     }
     if (origin) {
@@ -1035,7 +1037,7 @@ export class GraphQLClient {
 
   private formatFieldValue(model: string, field: string, value: any): any {
     if (isNil(value)) {
-      return undefined;
+      return value;
     }
     if (!this.isValidField(model, field)) {
       this.logger.debug(`Could not find type of ${field} in ${model}`);

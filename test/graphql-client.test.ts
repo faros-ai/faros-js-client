@@ -866,6 +866,71 @@ describe('graphql-client write batch upsert', () => {
     await client.flush();
     expect(queries).toEqual(responses.length);
   });
+  test('undefined field', async () => {
+    const responses = [
+      JSON.parse(`
+        {
+          "data": {
+            "insert_vcs_Organization": {
+              "returning": [
+                {
+                  "id": "id1",
+                  "refreshedAt": "2023-06-21T18:48:36.240969+00:00",
+                  "source": null,
+                  "uid": "u1"
+                }
+              ]
+            }
+          }
+        }
+      `),
+      JSON.parse(`
+        {
+          "data": {
+            "insert_vcs_Organization": {
+              "returning": [
+                {
+                  "id": "id2",
+                  "refreshedAt": "2023-06-21T18:48:36.240969+00:00",
+                  "source": null,
+                  "uid": "u2"
+                },
+                {
+                  "id": "id3",
+                  "refreshedAt": "2023-06-21T18:48:36.240969+00:00",
+                  "source": null,
+                  "uid": "u3"
+                }
+              ]
+            }
+          }
+        }
+      `),
+    ];
+    let queries = 0;
+    const backend: GraphQLBackend = {
+      healthCheck() {
+        return Promise.resolve();
+      },
+      postQuery(query: any) {
+        expect(query).toMatchSnapshot();
+        return responses[queries++];
+      },
+    };
+    const client = new GraphQLClient(
+      pino({name: 'test'}),
+      schemaLoader,
+      backend,
+      10,
+      1
+    );
+    await client.loadSchema();
+    await client.writeRecord('vcs_Organization', {uid: 'u1', htmlUrl: undefined}, 'mytestsource');
+    await client.writeRecord('vcs_Organization', {uid: 'u2', htmlUrl: null}, 'mytestsource');
+    await client.writeRecord('vcs_Organization', {uid: 'u3', htmlUrl: 'foo://bar'}, 'mytestsource');
+    await client.flush();
+    expect(queries).toEqual(responses.length);
+  });
   test('upsert same object', async () => {
     const res1 = JSON.parse(`
     {
