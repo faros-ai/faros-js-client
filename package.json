@@ -28,9 +28,6 @@
     "resources/"
   ],
   "main": "lib/",
-  "engines": {
-    "node": ">=22"
-  },
   "dependencies": {
     "axios": "^1.8.3",
     "axios-retry": "^4.0.0",
