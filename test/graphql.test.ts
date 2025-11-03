@@ -28,7 +28,7 @@ describe('graphql', () => {
         },
       },
     ];
-    const query = await loadQueryFile('commits-v2.gql');
+    const query = await loadQueryFile('commits.gql');
     const ctx = sut.flattenV2(query, graphSchemaV2);
     const flattenedNodes = sut.flattenIterable(ctx, nodes);
     expect(ctx.fieldTypes).toEqual(
@@ -59,7 +59,7 @@ describe('graphql', () => {
   test('flatten nodes V2 with jsonb array', () => {
     const query = `
       query ($from: timestamptz!, $to: timestamptz!) {
-        cicd_Artifact (where: {refreshedAt: {_gte: $from, _lt: $to}}) 
+        cicd_Artifact (where: {refreshedAt: {_gte: $from, _lt: $to}})
           { id tags uid }
       }`;
     const ctx = sut.flattenV2(query, graphSchemaV2);
@@ -106,7 +106,7 @@ describe('graphql', () => {
         ],
       },
     ];
-    const query = await loadQueryFile('incidents-v2.gql');
+    const query = await loadQueryFile('incidents.gql');
     const ctx = sut.flattenV2(query, graphSchemaV2);
     const flattenedNodes = sut.flattenIterable(ctx, nodes);
     expect(ctx.fieldTypes).toEqual(
@@ -167,7 +167,7 @@ describe('graphql', () => {
       },
     ];
 
-    const query = await loadQueryFile('pull_request-v2.gql');
+    const query = await loadQueryFile('pull_request.gql');
     const ctx = sut.flattenV2(query, graphSchemaV2);
     const flattenedNodes = sut.flattenIterable(ctx, nodes);
     expect(await toArray(flattenedNodes)).toMatchSnapshot();
@@ -179,22 +179,22 @@ describe('graphql', () => {
     );
   });
 
-  test('paginated offset/limit v2 query', async () => {
-    const query = await loadQueryFile('commits-v2.gql');
-    const paginatedQuery = sut.paginateWithOffsetLimitV2(query);
+  test('paginated offset/limit query', async () => {
+    const query = await loadQueryFile('commits.gql');
+    const paginatedQuery = sut.paginateWithOffsetLimit(query);
     const expectedQuery = await loadQueryFile(
-      'paginated-commits-offset-limit-v2.gql'
+      'paginated-commits-offset-limit.gql'
     );
     expect(paginatedQuery.query).toEqual(expectedQuery);
     expect(paginatedQuery.edgesPath).toEqual(['vcs_Commit']);
     expect(paginatedQuery.pageInfoPath).toBeEmpty();
   });
 
-  test('paginated keyset v2 query', async () => {
-    const query = await loadQueryFile('incidents-v2.gql');
-    const paginatedQuery = sut.paginateWithKeysetV2(query);
+  test('paginated keyset query', async () => {
+    const query = await loadQueryFile('incidents.gql');
+    const paginatedQuery = sut.paginateWithKeyset(query);
     const expectedQuery = await loadQueryFile(
-      'paginated-incidents-keyset-v2.gql'
+      'paginated-incidents-keyset.gql'
     );
     expect(paginatedQuery.query).toEqual(expectedQuery);
     expect(paginatedQuery.edgesPath).toEqual(['ims_Incident']);
@@ -202,11 +202,11 @@ describe('graphql', () => {
     expect(paginatedQuery.pageInfoPath).toBeEmpty();
   });
 
-  test('paginated keyset v2 query with existing where clause', async () => {
-    const query = await loadQueryFile('commits-v2.gql');
-    const paginatedQuery = sut.paginateWithKeysetV2(query);
+  test('paginated keyset query with existing where clause', async () => {
+    const query = await loadQueryFile('commits.gql');
+    const paginatedQuery = sut.paginateWithKeyset(query);
     const expectedQuery = await loadQueryFile(
-      'paginated-commits-keyset-v2.gql'
+      'paginated-commits-keyset.gql'
     );
     expect(paginatedQuery.query).toEqual(expectedQuery);
     expect(paginatedQuery.edgesPath).toEqual(['vcs_Commit']);

@@ -67,9 +67,9 @@ export function isModelQuery(
 export function paginatedQueryV2(query: string): PaginatedQuery {
   switch (process.env.GRAPHQL_V2_PAGINATOR) {
     case 'offset-limit':
-      return paginateWithOffsetLimitV2(query);
+      return paginateWithOffsetLimit(query);
     default:
-      return paginateWithKeysetV2(query);
+      return paginateWithKeyset(query);
   }
 }
 
@@ -132,10 +132,10 @@ function mergeWhereClauses(clauses: any[]): any {
 }
 
 /**
- * Paginate v2 queries with where clause and order by on id
+ * Paginate queries with where clause and order by on id
  * https://hasura.io/docs/latest/queries/postgres/pagination/#keyset-cursor-based-pagination
  */
-export function paginateWithKeysetV2(query: string): PaginatedQuery {
+export function paginateWithKeyset(query: string): PaginatedQuery {
   const edgesPath: string[] = [];
   const ast = gql.visit(gql.parse(query), {
     Document(node) {
@@ -264,7 +264,7 @@ export function paginateWithKeysetV2(query: string): PaginatedQuery {
 /**
  * Paginate v2 queries with limit and offsets.
  */
-export function paginateWithOffsetLimitV2(query: string): PaginatedQuery {
+export function paginateWithOffsetLimit(query: string): PaginatedQuery {
   const edgesPath: string[] = [];
   const ast = gql.visit(gql.parse(query), {
     Document(node) {
