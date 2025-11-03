@@ -261,9 +261,7 @@ export function paginateWithKeyset(query: string): PaginatedQuery {
   };
 }
 
-/**
- * Paginate v2 queries with limit and offsets.
- */
+/** Paginate queries using offset-limit */
 export function paginateWithOffsetLimit(query: string): PaginatedQuery {
   const edgesPath: string[] = [];
   const ast = gql.visit(gql.parse(query), {
