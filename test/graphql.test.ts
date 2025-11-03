@@ -167,7 +167,7 @@ describe('graphql', () => {
       },
     ];
 
-    const query = await loadQueryFile('pull_request.gql');
+    const query = await loadQueryFile('pull-request.gql');
     const ctx = sut.flattenV2(query, graphSchemaV2);
     const flattenedNodes = sut.flattenIterable(ctx, nodes);
     expect(await toArray(flattenedNodes)).toMatchSnapshot();
