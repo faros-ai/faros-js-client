@@ -74,14 +74,14 @@ describe('index', () => {
       apiKey: 'apiKey',
     });
 
-    const query = await loadQueryFile('deployments-v2.gql');
+    const query = await loadQueryFile('deployments.gql');
     const nodeUids: any[] = [];
     for await (const node of faros.nodeIterable('graph', query, 1)) {
       nodeUids.push(node.uid);
     }
     expect(nodeUids).toEqual(['deployment1', 'deployment2']);
 
-    const expectedQuery = await loadQueryFile('paginated-deployments-v2.gql');
+    const expectedQuery = await loadQueryFile('paginated-deployments.gql');
     expect(mockPost).toHaveBeenNthCalledWith(
       1,
       '/graphs/graph/graphql',
