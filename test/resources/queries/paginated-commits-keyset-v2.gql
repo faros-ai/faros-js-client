@@ -1,0 +1,34 @@
+query paginatedQuery(
+  $_timestamp: timestamptz = "-infinity",
+  $_id: String = "",
+  $_limit: Int,
+  $from: timestamptz,
+  $to: timestamptz
+) {
+  vcs_Commit(
+    where: {
+      _and: [
+        {refreshedAt: {_gte: $from, _lt: $to}}
+        {
+          refreshedAt: {_gte: $_timestamp}
+          _or: [
+            {refreshedAt: {_gt: $_timestamp}}
+            {
+              refreshedAt: {_eq: $_timestamp}
+              id: {_gt: $_id}
+            }
+          ],
+        }
+      ]
+    },
+    order_by: [{refreshedAt: asc}, {id: asc}]
+    limit: $_limit
+) {
+    _timestamp: refreshedAt
+    _id: id
+    id
+    author {
+      ownerId: id
+    }
+  }
+}

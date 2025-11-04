@@ -1133,29 +1133,38 @@ function paginateQuery(
   pageSize = 1000,
   args: Map<string, any> = new Map<string, any>()
 ): AsyncIterable<any> {
-  const {query, edgesPath, edgeIdPath} = paginatedQueryV2(rawQuery);
-  assert(edgesPath && edgeIdPath);
+  const {query, modelName, keysetFields} = paginatedQueryV2(rawQuery);
+  assert(modelName && keysetFields);
+  const keysetValues: Record<string, any> = {};
   return {
     async *[Symbol.asyncIterator](): AsyncIterator<any> {
-      let id = '';
       let hasNextPage = true;
       while (hasNextPage) {
         const data = await client(query, {
-          limit: pageSize,
-          id,
+          _limit: pageSize,
+          ...keysetValues,
           ...Object.fromEntries(args.entries()),
         });
-        const edges = get(data, edgesPath) || [];
-        for (const edge of edges) {
-          id = get(edge, edgeIdPath);
-          unset(edge, edgeIdPath);
-          if (!id) {
-            return;
+
+        const nodes = get(data, modelName) || [];
+        for (const node of nodes) {
+          for (const field of keysetFields) {
+            if (!node[field]) {
+              throw new Error(
+                'Terminating iterator: found node with empty keyset ' +
+                  `field '${field}'`
+              );
+            }
+
+            keysetValues[field] = node[field];
+            unset(node, field);
           }
-          yield edge;
+          yield node;
         }
-        // break on partial page
-        hasNextPage = edges.length === pageSize;
+
+        // Break on partial page
+        hasNextPage = nodes.length === pageSize;
+
       }
     },
   };

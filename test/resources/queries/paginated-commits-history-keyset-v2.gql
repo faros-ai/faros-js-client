@@ -1,0 +1,36 @@
+query paginatedQuery(
+  $_timestamp: timestamptz = "-infinity",
+  $_id: String = "",
+  $_limit: Int,
+  $from: timestamptz!,
+  $to: timestamptz!
+) {
+  vcs_Commit_history(
+    where: {
+      _and: [
+        {
+          _and: [
+            {action: {_eq: "delete"}},
+            {actionAt: {_gte: $from, _lt: $to}}
+          ]
+        },
+        {
+          actionAt: {_gte: $_timestamp}
+          _or: [
+            {actionAt: {_gt: $_timestamp}}
+            {
+              actionAt: {_eq: $_timestamp}
+              id: {_gt: $_id}
+            }
+          ],
+        }
+      ]
+    },
+    order_by: [{actionAt: asc}, {id: asc}]
+    limit: $_limit
+) {
+    _timestamp: actionAt
+    _id: id
+    id
+  }
+}
