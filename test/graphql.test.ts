@@ -179,39 +179,73 @@ describe('graphql', () => {
     );
   });
 
-  test('paginated offset/limit query', async () => {
-    const query = await loadQueryFile('commits.gql');
-    const paginatedQuery = sut.paginateWithOffsetLimit(query);
-    const expectedQuery = await loadQueryFile(
-      'paginated-commits-offset-limit.gql'
-    );
-    expect(paginatedQuery.query).toEqual(expectedQuery);
-    expect(paginatedQuery.edgesPath).toEqual(['vcs_Commit']);
-    expect(paginatedQuery.pageInfoPath).toBeEmpty();
-  });
+  describe('pagination', () => {
+    test('offset-limit', async () => {
+      const query = await loadQueryFile('commits.gql');
+      const paginatedQuery = sut.paginateWithOffsetLimit(query);
+      const expectedQuery = await loadQueryFile(
+        'paginated-commits-offset-limit.gql'
+      );
+      expect(paginatedQuery.query).toEqual(expectedQuery);
+      expect(paginatedQuery.modelName).toEqual('vcs_Commit');
+      expect(paginatedQuery.keysetFields).toBeUndefined();
+    });
 
-  test('paginated keyset query', async () => {
-    const query = await loadQueryFile('incidents.gql');
-    const paginatedQuery = sut.paginateWithKeyset(query);
-    const expectedQuery = await loadQueryFile(
-      'paginated-incidents-keyset.gql'
-    );
-    expect(paginatedQuery.query).toEqual(expectedQuery);
-    expect(paginatedQuery.edgesPath).toEqual(['ims_Incident']);
-    expect(paginatedQuery.edgeIdPath).toEqual(['_id']);
-    expect(paginatedQuery.pageInfoPath).toBeEmpty();
-  });
+    test('keyset v1', async () => {
+      const query = await loadQueryFile('incidents.gql');
+      const paginatedQuery = sut.paginateWithKeysetV1(query);
+      const expectedQuery = await loadQueryFile(
+        'paginated-incidents-keyset-v1.gql'
+      );
 
-  test('paginated keyset query with existing where clause', async () => {
-    const query = await loadQueryFile('commits.gql');
-    const paginatedQuery = sut.paginateWithKeyset(query);
-    const expectedQuery = await loadQueryFile(
-      'paginated-commits-keyset.gql'
-    );
-    expect(paginatedQuery.query).toEqual(expectedQuery);
-    expect(paginatedQuery.edgesPath).toEqual(['vcs_Commit']);
-    expect(paginatedQuery.edgeIdPath).toEqual(['_id']);
-    expect(paginatedQuery.pageInfoPath).toBeEmpty();
+      expect(paginatedQuery.query).toEqual(expectedQuery);
+      expect(paginatedQuery.modelName).toEqual('ims_Incident');
+      expect(paginatedQuery.keysetFields).toEqual(['_id']);
+    });
+
+    test('keyset v1 with existing where clause', async () => {
+      const query = await loadQueryFile('commits.gql');
+      const paginatedQuery = sut.paginateWithKeysetV1(query);
+      const expectedQuery = await loadQueryFile(
+        'paginated-commits-keyset-v1.gql'
+      );
+      expect(paginatedQuery.query).toEqual(expectedQuery);
+      expect(paginatedQuery.modelName).toEqual('vcs_Commit');
+      expect(paginatedQuery.keysetFields).toEqual(['_id']);
+    });
+
+    test('keyset v2', async () => {
+      const query = await loadQueryFile('incidents.gql');
+      const paginatedQuery = sut.paginateWithKeysetV2(query);
+      const expectedQuery = await loadQueryFile(
+        'paginated-incidents-keyset-v2.gql'
+      );
+      expect(paginatedQuery.query).toEqual(expectedQuery);
+      expect(paginatedQuery.modelName).toEqual('ims_Incident');
+      expect(paginatedQuery.keysetFields).toEqual(['_timestamp', '_id']);
+    });
+
+    test('keyset v2 with existing where clause', async () => {
+      const query = await loadQueryFile('commits.gql');
+      const paginatedQuery = sut.paginateWithKeysetV2(query);
+      const expectedQuery = await loadQueryFile(
+        'paginated-commits-keyset-v2.gql'
+      );
+      expect(paginatedQuery.query).toEqual(expectedQuery);
+      expect(paginatedQuery.modelName).toEqual('vcs_Commit');
+      expect(paginatedQuery.keysetFields).toEqual(['_timestamp', '_id']);
+    });
+
+    test('keyset v2 on history model', async () => {
+      const query = await loadQueryFile('commits-history.gql');
+      const paginatedQuery = sut.paginateWithKeysetV2(query);
+      const expectedQuery = await loadQueryFile(
+        'paginated-commits-history-keyset-v2.gql'
+      );
+      expect(paginatedQuery.query).toEqual(expectedQuery);
+      expect(paginatedQuery.modelName).toEqual('vcs_Commit_history');
+      expect(paginatedQuery.keysetFields).toEqual(['_timestamp', '_id']);
+    });
   });
 
   test('build incremental V2', () => {
@@ -355,7 +389,7 @@ describe('graphql', () => {
         graphSchema: graphSchemaV2ForPrimaryKeysTest,
         primaryKeys,
         references,
-        avoidCollisions: false
+        avoidCollisions: false,
       })
     ).toMatchSnapshot();
   });
@@ -371,7 +405,7 @@ describe('graphql', () => {
     expect(() =>
       sut.createIncrementalQueriesV2({
         graphSchema: graphSchemaV2ForPrimaryKeysTest,
-        primaryKeys
+        primaryKeys,
       })
     ).toThrowErrorMatchingInlineSnapshot(
       '"expected organizationId to be a field of cicd_Pipeline"'
@@ -396,7 +430,7 @@ describe('graphql', () => {
       sut.createIncrementalQueriesV2({
         graphSchema: graphSchemaV2ForPrimaryKeysTest,
         primaryKeys,
-        references
+        references,
       })
     ).toThrowErrorMatchingSnapshot();
   });
@@ -426,7 +460,7 @@ describe('graphql', () => {
         graphSchema: graphSchemaV2ForForeignKeyExclusionTest,
         primaryKeys,
         references,
-        avoidCollisions: false
+        avoidCollisions: false,
       })
     ).toMatchSnapshot();
   });

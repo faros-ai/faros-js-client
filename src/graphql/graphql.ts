@@ -6,7 +6,7 @@ import {jsonToGraphQLQuery, VariableType} from 'json-to-graphql-query';
 import _ from 'lodash';
 import {Dictionary} from 'ts-essentials';
 import {Memoize} from 'typescript-memoize';
-import {VError} from 'verror';
+import VError from 'verror';
 
 import {FarosClient} from '../client';
 import {PathToModel, Query, Reference} from './types';
@@ -17,10 +17,8 @@ type AsyncOrSyncIterable<T> = AsyncIterable<T> | Iterable<T>;
 
 export interface PaginatedQuery {
   readonly query: string;
-  readonly edgesPath: ReadonlyArray<string>;
-  // Relative to edge path
-  readonly edgeIdPath?: ReadonlyArray<string>;
-  readonly pageInfoPath: ReadonlyArray<string>;
+  readonly modelName: string;
+  readonly keysetFields?: string[];
 }
 
 export interface FlattenContext {
@@ -68,27 +66,36 @@ export function paginatedQueryV2(query: string): PaginatedQuery {
   switch (process.env.GRAPHQL_V2_PAGINATOR) {
     case 'offset-limit':
       return paginateWithOffsetLimit(query);
+    case 'keyset-v2':
+      return paginateWithKeysetV2(query);
     default:
-      return paginateWithKeyset(query);
+      return paginateWithKeysetV1(query);
   }
+}
+
+interface CreateVariableDefinition {
+  readonly name: string;
+  readonly type: string;
+  readonly default?: gql.ConstValueNode;
 }
 
 function createOperationDefinition(
   node: gql.OperationDefinitionNode,
-  varDefs: [string, string][]
+  varDefs: CreateVariableDefinition[]
 ): gql.OperationDefinitionNode {
   const variableDefinitions: VariableDefinitionNode[] = varDefs.map(
-    ([varName, varType]) => {
+    (varDef): VariableDefinitionNode => {
       return {
         kind: Kind.VARIABLE_DEFINITION,
         variable: {
           kind: Kind.VARIABLE,
-          name: {kind: Kind.NAME, value: varName},
+          name: {kind: Kind.NAME, value: varDef.name},
         },
         type: {
           kind: Kind.NAMED_TYPE,
-          name: {kind: Kind.NAME, value: varType},
+          name: {kind: Kind.NAME, value: varDef.type},
         },
+        ...(varDef.default ? {defaultValue: varDef.default} : {}),
       };
     }
   );
@@ -135,8 +142,8 @@ function mergeWhereClauses(clauses: any[]): any {
  * Paginate queries with where clause and order by on id
  * https://hasura.io/docs/latest/queries/postgres/pagination/#keyset-cursor-based-pagination
  */
-export function paginateWithKeyset(query: string): PaginatedQuery {
-  const edgesPath: string[] = [];
+export function paginateWithKeysetV1(query: string): PaginatedQuery {
+  let modelName: string | undefined;
   const ast = gql.visit(gql.parse(query), {
     Document(node) {
       if (node.definitions.length !== 1) {
@@ -154,17 +161,21 @@ export function paginateWithKeyset(query: string): PaginatedQuery {
 
       // Add pagination variables to query operation
       return createOperationDefinition(node, [
-        ['id', 'String'],
-        ['limit', 'Int'],
+        {
+          name: '_id',
+          type: 'String',
+          default: {kind: gql.Kind.STRING, value: ''},
+        },
+
+        {name: '_limit', type: 'Int'},
       ]);
     },
     Field: {
       enter(node) {
-        if (edgesPath.length) {
-          // Skip rest of nodes once edges path has been set
+        if (modelName) {
           return false;
         }
-        edgesPath.push(node.name.value);
+        modelName = node.name.value;
 
         const existingWhereArgs =
           node.arguments?.filter((n) => n.name.value === 'where') ?? [];
@@ -195,7 +206,7 @@ export function paginateWithKeyset(query: string): PaginatedQuery {
                           kind: gql.Kind.VARIABLE,
                           name: {
                             kind: gql.Kind.NAME,
-                            value: 'id',
+                            value: '_id',
                           },
                         },
                       },
@@ -206,6 +217,7 @@ export function paginateWithKeyset(query: string): PaginatedQuery {
             },
           },
         ];
+
         if (whereArgs.length > 1) {
           whereArgs = [mergeWhereClauses(whereArgs)];
         }
@@ -233,7 +245,7 @@ export function paginateWithKeyset(query: string): PaginatedQuery {
               name: {kind: 'Name', value: 'limit'},
               value: {
                 kind: 'Variable',
-                name: {kind: 'Name', value: 'limit'},
+                name: {kind: 'Name', value: '_limit'},
               },
             },
           ],
@@ -253,17 +265,26 @@ export function paginateWithKeyset(query: string): PaginatedQuery {
     },
   });
 
+  if (!modelName) {
+    throw new VError(
+      {info: {query}},
+      'Cannot paginate query using keyset v1: Unable to determine model name'
+    );
+  }
+
   return {
     query: gql.print(ast),
-    edgesPath,
-    edgeIdPath: ['_id'],
-    pageInfoPath: [],
+    modelName,
+    keysetFields: ['_id'],
   };
 }
 
-/** Paginate queries using offset-limit */
-export function paginateWithOffsetLimit(query: string): PaginatedQuery {
-  const edgesPath: string[] = [];
+/**
+ * Paginate queries using timestamp and id fields
+ * https://hasura.io/docs/latest/queries/postgres/pagination/#keyset-cursor-based-pagination
+ */
+export function paginateWithKeysetV2(query: string): PaginatedQuery {
+  let modelName: string | undefined;
   const ast = gql.visit(gql.parse(query), {
     Document(node) {
       if (node.definitions.length !== 1) {
@@ -279,17 +300,305 @@ export function paginateWithOffsetLimit(query: string): PaginatedQuery {
 
       // Add pagination variables to query operation
       return createOperationDefinition(node, [
-        ['offset', 'Int'],
-        ['limit', 'Int'],
+        {
+          name: '_timestamp',
+          type: 'timestamptz',
+          default: {kind: gql.Kind.STRING, value: '-infinity'},
+        },
+        {
+          name: '_id',
+          type: 'String',
+          default: {kind: gql.Kind.STRING, value: ''},
+        },
+        {name: '_limit', type: 'Int'},
       ]);
     },
     Field: {
       enter(node) {
-        if (edgesPath.length) {
+        if (modelName) {
           // Skip rest of nodes once edges path has been set
           return false;
         }
-        edgesPath.push(node.name.value);
+        modelName = node.name.value;
+
+        let timestampField: string;
+        if (modelName.endsWith('_history')) {
+          timestampField = 'actionAt';
+        } else {
+          timestampField = 'refreshedAt';
+        }
+
+        const existingWhereArgs =
+          node.arguments?.filter((n) => n.name.value === 'where') ?? [];
+        let whereArgs: gql.ArgumentNode[] = [
+          // where: {
+          //   _and: [
+          //     {...existingWhereArgs},
+          //     {
+          //       # This predicate is logically "redundant" with the "_or"
+          //       # predicate below, but we add it so the planner can push
+          //       # it into the index scan
+          //       {timestampField: {_gte: $_timestamp}},
+          //       # Break ties using the primary key (id)
+          //       _or: [
+          //         {timestampField: {_gt: $_timestamp}},
+          //         {timestampField: {_eq: $_timestamp}, id: {_gt: $_id}}
+          //       ]
+          //     }
+          //   ]
+          // }
+          ...existingWhereArgs,
+          {
+            kind: gql.Kind.ARGUMENT,
+            name: {kind: gql.Kind.NAME, value: 'where'},
+            value: {
+              kind: gql.Kind.OBJECT,
+              fields: [
+                // {timestampField: {_gte: $_timestamp}}
+                {
+                  kind: gql.Kind.OBJECT_FIELD,
+                  name: {
+                    kind: gql.Kind.NAME,
+                    value: timestampField,
+                  },
+                  value: {
+                    kind: gql.Kind.OBJECT,
+                    fields: [
+                      {
+                        kind: gql.Kind.OBJECT_FIELD,
+                        name: {
+                          kind: gql.Kind.NAME,
+                          value: '_gte',
+                        },
+                        value: {
+                          kind: gql.Kind.VARIABLE,
+                          name: {
+                            kind: gql.Kind.NAME,
+                            value: '_timestamp',
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+                // _or: [
+                //   {timestampField: {_gt: $_timestamp}},
+                //   {timestampField: {_eq: $_timestamp}, id: {_gt: $_id}}
+                // ]
+                {
+                  kind: gql.Kind.OBJECT_FIELD,
+                  name: {
+                    kind: gql.Kind.NAME,
+                    value: '_or',
+                  },
+                  value: {
+                    kind: gql.Kind.LIST,
+                    values: [
+                      {
+                        kind: gql.Kind.OBJECT,
+                        fields: [
+                          {
+                            kind: gql.Kind.OBJECT_FIELD,
+                            name: {
+                              kind: gql.Kind.NAME,
+                              value: timestampField,
+                            },
+                            value: {
+                              kind: gql.Kind.OBJECT,
+                              fields: [
+                                {
+                                  kind: gql.Kind.OBJECT_FIELD,
+                                  name: {
+                                    kind: gql.Kind.NAME,
+                                    value: '_gt',
+                                  },
+                                  value: {
+                                    kind: gql.Kind.VARIABLE,
+                                    name: {
+                                      kind: gql.Kind.NAME,
+                                      value: '_timestamp',
+                                    },
+                                  },
+                                },
+                              ],
+                            },
+                          },
+                        ],
+                      },
+                      {
+                        kind: gql.Kind.OBJECT,
+                        fields: [
+                          {
+                            kind: gql.Kind.OBJECT_FIELD,
+                            name: {
+                              kind: gql.Kind.NAME,
+                              value: timestampField,
+                            },
+                            value: {
+                              kind: gql.Kind.OBJECT,
+                              fields: [
+                                {
+                                  kind: gql.Kind.OBJECT_FIELD,
+                                  name: {
+                                    kind: gql.Kind.NAME,
+                                    value: '_eq',
+                                  },
+                                  value: {
+                                    kind: gql.Kind.VARIABLE,
+                                    name: {
+                                      kind: gql.Kind.NAME,
+                                      value: '_timestamp',
+                                    },
+                                  },
+                                },
+                              ],
+                            },
+                          },
+                          {
+                            kind: gql.Kind.OBJECT_FIELD,
+                            name: {
+                              kind: gql.Kind.NAME,
+                              value: 'id',
+                            },
+                            value: {
+                              kind: gql.Kind.OBJECT,
+                              fields: [
+                                {
+                                  kind: gql.Kind.OBJECT_FIELD,
+                                  name: {
+                                    kind: gql.Kind.NAME,
+                                    value: '_gt',
+                                  },
+                                  value: {
+                                    kind: gql.Kind.VARIABLE,
+                                    name: {
+                                      kind: gql.Kind.NAME,
+                                      value: '_id',
+                                    },
+                                  },
+                                },
+                              ],
+                            },
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ];
+
+        if (whereArgs.length > 1) {
+          whereArgs = [mergeWhereClauses(whereArgs)];
+        }
+
+        return {
+          ...node,
+          arguments: [
+            ...whereArgs,
+            {
+              kind: 'Argument',
+              name: {kind: 'Name', value: 'order_by'},
+              value: {
+                kind: 'ListValue',
+                values: [
+                  {
+                    kind: 'ObjectValue',
+                    fields: [
+                      {
+                        kind: 'ObjectField',
+                        name: {kind: 'Name', value: timestampField},
+                        value: {kind: 'EnumValue', value: 'asc'},
+                      },
+                    ],
+                  },
+                  {
+                    kind: 'ObjectValue',
+                    fields: [
+                      {
+                        kind: 'ObjectField',
+                        name: {kind: 'Name', value: 'id'},
+                        value: {kind: 'EnumValue', value: 'asc'},
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+            {
+              kind: 'Argument',
+              name: {kind: 'Name', value: 'limit'},
+              value: {
+                kind: 'Variable',
+                name: {kind: 'Name', value: '_limit'},
+              },
+            },
+          ],
+          selectionSet: {
+            kind: 'SelectionSet',
+            selections: [
+              {
+                kind: 'Field',
+                alias: {kind: 'Name', value: '_timestamp'},
+                name: {kind: 'Name', value: timestampField},
+              },
+              {
+                kind: 'Field',
+                alias: {kind: 'Name', value: '_id'},
+                name: {kind: 'Name', value: 'id'},
+              },
+              ...(node.selectionSet?.selections ?? []),
+            ],
+          },
+        };
+      },
+    },
+  });
+
+  if (!modelName) {
+    throw new VError(
+      {info: {query}},
+      'Cannot paginate query using keyset v2: Unable to determine model name'
+    );
+  }
+
+  return {
+    query: gql.print(ast),
+    modelName,
+    keysetFields: ['_timestamp', '_id'],
+  };
+}
+
+export function paginateWithOffsetLimit(query: string): PaginatedQuery {
+  let modelName: string | undefined;
+  const ast = gql.visit(gql.parse(query), {
+    Document(node) {
+      if (node.definitions.length !== 1) {
+        throw invalidQuery(
+          'document should contain a single query operation definition'
+        );
+      }
+    },
+    OperationDefinition(node) {
+      if (node.operation !== 'query') {
+        throw invalidQuery('only query operations are supported');
+      }
+
+      // Add pagination variables to query operation
+      return createOperationDefinition(node, [
+        {name: '_offset', type: 'Int'},
+        {name: '_limit', type: 'Int'},
+      ]);
+    },
+    Field: {
+      enter(node) {
+        if (modelName) {
+          return false;
+        }
+        modelName = node.name.value;
+
         // copy existing where args
         const existing = (node.arguments ?? []).filter((n) =>
           ALLOWED_ARG_TYPES.has(n.name.value)
@@ -303,7 +612,7 @@ export function paginateWithOffsetLimit(query: string): PaginatedQuery {
               name: {kind: 'Name', value: 'offset'},
               value: {
                 kind: 'Variable',
-                name: {kind: 'Name', value: 'offset'},
+                name: {kind: 'Name', value: '_offset'},
               },
             },
             {
@@ -311,7 +620,7 @@ export function paginateWithOffsetLimit(query: string): PaginatedQuery {
               name: {kind: 'Name', value: 'limit'},
               value: {
                 kind: 'Variable',
-                name: {kind: 'Name', value: 'limit'},
+                name: {kind: 'Name', value: '_limit'},
               },
             },
             {
@@ -339,10 +648,16 @@ export function paginateWithOffsetLimit(query: string): PaginatedQuery {
     },
   });
 
+  if (!modelName) {
+    throw new VError(
+      {info: {query}},
+      'Cannot paginate query using offset-limit: unable to determine model name'
+    );
+  }
+
   return {
     query: gql.print(ast),
-    edgesPath,
-    pageInfoPath: [],
+    modelName,
   };
 }
 
@@ -1081,7 +1396,7 @@ export function createIncrementalQueriesV2(
           resolvedPrimaryKeys,
           references: typeReferences,
           avoidCollisions,
-          scalarsOnly
+          scalarsOnly,
         })
       );
     }
