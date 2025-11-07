@@ -67,8 +67,8 @@ export {
   paginateWithKeysetV1,
   paginateWithKeysetV2,
   paginateWithOffsetLimit,
-  type Paginator,
   pathToModelV2,
+  type QueryPaginator,
   readerFromQuery,
   toIncrementalV2,
 } from './graphql/graphql';

@@ -62,7 +62,7 @@ export function isModelQuery(
   );
 }
 
-export type Paginator = (query: string) => PaginatedQuery;
+export type QueryPaginator = (query: string) => PaginatedQuery;
 
 export function paginatedQueryV2(query: string): PaginatedQuery {
   switch (process.env.GRAPHQL_V2_PAGINATOR) {
