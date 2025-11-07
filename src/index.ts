@@ -64,7 +64,11 @@ export {
   flattenV2,
   getGraphModels,
   paginatedQueryV2,
+  paginateWithKeysetV1,
+  paginateWithKeysetV2,
+  paginateWithOffsetLimit,
   pathToModelV2,
+  type QueryPaginator,
   readerFromQuery,
   toIncrementalV2,
 } from './graphql/graphql';
