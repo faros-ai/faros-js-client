@@ -1351,6 +1351,7 @@ export function createDeleteReader(
         {actionAt: {_gte: $from, _lt: $to}}
       ]}) {
         id
+        actionAt
       }
     }`;
   const [deleteReader] = createNonIncrementalReaders({
