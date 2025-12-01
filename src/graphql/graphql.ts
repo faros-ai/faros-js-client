@@ -978,101 +978,97 @@ export async function* crossMerge(
 }
 
 /** Flattens an iterable of nested node objects */
-export function flattenIterable(
+export async function* flattenIterable(
   ctx: FlattenContext,
   nodes: RecordIterable
-): AsyncIterable<AnyRecord> {
-  return {
-    async *[Symbol.asyncIterator](): AsyncIterator<AnyRecord> {
-      // Only leaves at the current node depth are assigned values
-      // Others leaves are assigned in recursive calls
-      const currentLeafPaths = new Map<string, string[]>();
-      const nextNodePaths = new Set<string>();
-      const sortedAscendingListPaths = Array.from(ctx.listPaths || []).sort(
-        (a, b) => a.length - b.length
+): AsyncIterableIterator<AnyRecord> {
+  // Only leaves at the current node depth are assigned values
+  // Others leaves are assigned in recursive calls
+  const currentLeafPaths = new Map<string, string[]>();
+  const nextNodePaths = new Set<string>();
+  const sortedAscendingListPaths = Array.from(ctx.listPaths || []).sort(
+    (a, b) => a.length - b.length
+  );
+
+  function asRelative(leafPath: string): string {
+    return ctx.currentPath
+      ? leafPath.replace(`${ctx.currentPath}.`, '')
+      : leafPath;
+  }
+
+  // prefix match on paths sorted ascending gives common
+  // nested list where there are lists within lists
+  // this prevents multiple recursions on lists within lists
+  function nextNestedList(leafPath: string): string | undefined {
+    for (const listPath of sortedAscendingListPaths) {
+      if (listPath === ctx.currentPath) {
+        continue;
+      }
+      if (leafPath.startsWith(listPath)) {
+        return listPath;
+      }
+    }
+    return undefined;
+  }
+
+  for (const leafPath of ctx.leafPaths) {
+    if (leafPath.startsWith(ctx.currentPath)) {
+      const leafName = fieldName(leafPath);
+      const relativePath = asRelative(leafPath);
+      const relativeParts = relativePath.split('.');
+      const nestedList = nextNestedList(leafPath);
+      if (nestedList) {
+        nextNodePaths.add(asRelative(nestedList));
+        continue;
+      } else {
+        const nodesIndex = relativeParts.indexOf(NODES);
+        if (nodesIndex >= 0) {
+          const nextPath = relativeParts.slice(0, nodesIndex + 1).join('.');
+          nextNodePaths.add(nextPath);
+          continue;
+        }
+      }
+      currentLeafPaths.set(leafName, relativeParts);
+    }
+  }
+
+  for await (const node of nodes || []) {
+    const record: any = {};
+    for (const [name, parts] of currentLeafPaths) {
+      record[name] = _.get(node, parts);
+    }
+
+    const nextIters: RecordIterable[] = [[record]];
+    for (const nodePath of nextNodePaths) {
+      const nextNodes = _.get(node, nodePath.split('.'));
+      const nextCurrentPath = `${ctx.currentPath}.${nodePath}`;
+      const nextListPaths = sortedAscendingListPaths.filter((p) =>
+        p.startsWith(nextCurrentPath)
       );
+      const nextCtx = {
+        ...ctx,
+        currentPath: nextCurrentPath,
+        depth: ctx.depth + 1,
+        listPaths: nextListPaths,
+      };
+      nextIters.push(flattenIterable(nextCtx, nextNodes));
+    }
 
-      function asRelative(leafPath: string): string {
-        return ctx.currentPath
-          ? leafPath.replace(`${ctx.currentPath}.`, '')
-          : leafPath;
-      }
-
-      // prefix match on paths sorted ascending gives common
-      // nested list where there are lists within lists
-      // this prevents multiple recursions on lists within lists
-      function nextNestedList(leafPath: string): string | undefined {
-        for (const listPath of sortedAscendingListPaths) {
-          if (listPath === ctx.currentPath) {
-            continue;
-          }
-          if (leafPath.startsWith(listPath)) {
-            return listPath;
-          }
-        }
-        return undefined;
-      }
-
-      for (const leafPath of ctx.leafPaths) {
-        if (leafPath.startsWith(ctx.currentPath)) {
-          const leafName = fieldName(leafPath);
-          const relativePath = asRelative(leafPath);
-          const relativeParts = relativePath.split('.');
-          const nestedList = nextNestedList(leafPath);
-          if (nestedList) {
-            nextNodePaths.add(asRelative(nestedList));
-            continue;
-          } else {
-            const nodesIndex = relativeParts.indexOf(NODES);
-            if (nodesIndex >= 0) {
-              const nextPath = relativeParts.slice(0, nodesIndex + 1).join('.');
-              nextNodePaths.add(nextPath);
-              continue;
-            }
-          }
-          currentLeafPaths.set(leafName, relativeParts);
+    for await (const nextRecord of crossMerge(nextIters)) {
+      // Only apply defaults at the end, otherwise they can override
+      // actual values in the data
+      if (!ctx.depth) {
+        for (const [name, defaultValue] of ctx.leafToDefault) {
+          nextRecord[name] = nextRecord[name] ?? defaultValue;
         }
       }
-
-      for await (const node of nodes || []) {
-        const record: any = {};
-        for (const [name, parts] of currentLeafPaths) {
-          record[name] = _.get(node, parts);
-        }
-
-        const nextIters: RecordIterable[] = [[record]];
-        for (const nodePath of nextNodePaths) {
-          const nextNodes = _.get(node, nodePath.split('.'));
-          const nextCurrentPath = `${ctx.currentPath}.${nodePath}`;
-          const nextListPaths = sortedAscendingListPaths.filter((p) =>
-            p.startsWith(nextCurrentPath)
-          );
-          const nextCtx = {
-            ...ctx,
-            currentPath: nextCurrentPath,
-            depth: ctx.depth + 1,
-            listPaths: nextListPaths,
-          };
-          nextIters.push(flattenIterable(nextCtx, nextNodes));
-        }
-
-        for await (const nextRecord of crossMerge(nextIters)) {
-          // Only apply defaults at the end, otherwise they can override
-          // actual values in the data
-          if (!ctx.depth) {
-            for (const [name, defaultValue] of ctx.leafToDefault) {
-              nextRecord[name] = nextRecord[name] ?? defaultValue;
-            }
-          }
-          yield nextRecord;
-        }
-      }
-    },
-  };
+      yield nextRecord;
+    }
+  }
 }
 
 export interface Reader {
-  execute(args: Map<string, any>): AsyncIterable<AnyRecord>;
+  execute(args: Map<string, any>): AsyncIterableIterator<AnyRecord>;
 
   metadata: {
     name: string;
@@ -1105,7 +1101,7 @@ export function readerFromQuery(cfg: ReaderFromQueryConfig): Reader {
   }
 
   return {
-    execute(args: Map<string, any>): AsyncIterable<AnyRecord> {
+    execute(args: Map<string, any>): AsyncIterableIterator<AnyRecord> {
       const nodes = cfg.client.nodeIterable(
         cfg.graph,
         cfg.query.gql,
