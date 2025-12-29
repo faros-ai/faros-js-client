@@ -54,6 +54,7 @@ export {
   Reader,
   RecordIterable,
   buildIncrementalQueryV2,
+  createDataReader,
   createDeleteReader,
   createIncrementalQueriesV2,
   createIncrementalReader,

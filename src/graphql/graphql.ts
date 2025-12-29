@@ -1090,9 +1090,11 @@ interface ReaderFromQueryConfig {
   readonly query: Query;
   readonly pageSize: number;
   readonly incremental?: boolean;
+  readonly paginator?: QueryPaginator;
 }
 
 export function readerFromQuery(cfg: ReaderFromQueryConfig): Reader {
+  const paginator = cfg.paginator ?? paginatedQueryV2;
   const flattenCtx = flattenV2(cfg.query.gql, cfg.graphSchema);
   if (!(flattenCtx.leafPaths.length && flattenCtx.fieldTypes.size)) {
     throw new VError(
@@ -1101,13 +1103,14 @@ export function readerFromQuery(cfg: ReaderFromQueryConfig): Reader {
       cfg.query.gql
     );
   }
+
   return {
     execute(args: Map<string, any>): AsyncIterable<AnyRecord> {
       const nodes = cfg.client.nodeIterable(
         cfg.graph,
         cfg.query.gql,
         cfg.pageSize,
-        paginatedQueryV2,
+        paginator,
         args
       );
       return flattenIterable(flattenCtx, nodes);
@@ -1128,6 +1131,7 @@ interface NonIncrementalReadersConfig {
   readonly graphSchema: gql.GraphQLSchema;
   readonly queries: ReadonlyArray<Query>;
   readonly pageSize: number;
+  readonly paginator?: QueryPaginator;
 }
 
 export function createNonIncrementalReaders(
@@ -1140,6 +1144,7 @@ export function createNonIncrementalReaders(
       graphSchema: cfg.graphSchema,
       query,
       pageSize: cfg.pageSize,
+      paginator: cfg.paginator,
       incremental: false,
     })
   );
@@ -1301,6 +1306,7 @@ export interface IncrementalReaderConfig {
   readonly graph: string;
   readonly graphSchema: gql.GraphQLSchema;
   readonly pageSize: number;
+  readonly paginator?: QueryPaginator;
   readonly avoidCollisions: boolean;
   readonly scalarsOnly: boolean;
 }
@@ -1317,6 +1323,7 @@ export function createIncrementalReader(
       graph: cfg.graph,
       graphSchema: cfg.graphSchema,
       pageSize: cfg.pageSize,
+      paginator: cfg.paginator,
       incremental: true,
       query: buildIncrementalQueryV2({
         type,
@@ -1328,12 +1335,35 @@ export function createIncrementalReader(
   return undefined;
 }
 
+export interface DataReaderConfig {
+  readonly model: string;
+  readonly client: FarosClient;
+  readonly graph: string;
+  readonly graphSchema: gql.GraphQLSchema;
+  readonly pageSize: number;
+  readonly paginator?: QueryPaginator;
+}
+
+export function createDataReader(cfg: DataReaderConfig): Reader | undefined {
+  return createIncrementalReader({
+    client: cfg.client,
+    graph: cfg.graph,
+    graphSchema: cfg.graphSchema,
+    model: cfg.model,
+    pageSize: cfg.pageSize,
+    paginator: cfg.paginator,
+    avoidCollisions: false,
+    scalarsOnly: true,
+  });
+}
+
 export interface DeleteReaderConfig {
   readonly model: string;
   readonly client: FarosClient;
   readonly graph: string;
   readonly graphSchema: gql.GraphQLSchema;
   readonly pageSize: number;
+  readonly paginator?: QueryPaginator;
 }
 
 export function createDeleteReader(
@@ -1351,12 +1381,14 @@ export function createDeleteReader(
         {actionAt: {_gte: $from, _lt: $to}}
       ]}) {
         id
+        actionAt
       }
     }`;
   const [deleteReader] = createNonIncrementalReaders({
     client: cfg.client,
     graph: cfg.graph,
     pageSize: cfg.pageSize,
+    paginator: cfg.paginator,
     graphSchema: cfg.graphSchema,
     queries: [{gql: deleteQuery, name: cfg.model}],
   });
