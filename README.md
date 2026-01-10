@@ -89,7 +89,7 @@ const mutations = [
     {
       // Override the conflict clause with the unique constraint
       constraint: 'org_ApplicationOwnership_application_id_unique',
-      update_columns: ['teamId'], // Origin will be added automatically
+      update_columns: ['teamId', 'refreshedAt'], // Origin will be added automatically
     }
   )
 ]
