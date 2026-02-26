@@ -2,6 +2,8 @@ export interface FarosClientConfig {
   readonly url: string;
   readonly apiKey: string;
   readonly phantoms?: Phantom;
+  readonly retries?: number;
+  readonly retryDelay?: number;
 }
 
 export enum GraphVersion {
