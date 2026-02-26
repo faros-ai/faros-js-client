@@ -55,7 +55,9 @@ export class FarosClient {
         maxBodyLength: Infinity, // rely on server to enforce request body size
         maxContentLength: Infinity, // accept any response size
       },
-      logger
+      logger,
+      cfg.retries,
+      cfg.retryDelay
     );
 
     this.phantoms = cfg.phantoms || Phantom.IncludeNestedOnly;
