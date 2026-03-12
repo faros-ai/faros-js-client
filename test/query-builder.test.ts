@@ -295,34 +295,41 @@ describe('query builder', () => {
       expect(queryString).toContain('delete_cicd_Build');
     });
 
-    test('groups same-type inserts before and after a delete', () => {
+    test('delete breaks grouping of same-type inserts', () => {
       const app1 = {name: 'app1', platform: 'plat1'};
       const app2 = {name: 'app2', platform: 'plat2'};
-      const org1 = {uid: 'org1', source: 'src1'};
-      const org2 = {uid: 'org2', source: 'src2'};
+      const app3 = {name: 'app3', platform: 'plat3'};
+      const app4 = {name: 'app4', platform: 'plat4'};
       const mutations = [
+        // Two apps before the delete — should be grouped
         qb.upsert({compute_Application: app1}),
-        qb.upsert({cicd_Organization: org1}),
-        qb.delete({cicd_Build}),
         qb.upsert({compute_Application: app2}),
-        qb.upsert({cicd_Organization: org2}),
+        qb.delete({cicd_Build}),
+        // Two apps after the delete — separate group
+        qb.upsert({compute_Application: app3}),
+        qb.upsert({compute_Application: app4}),
       ];
       const queryString = bulkBatchMutation(mutations);
       expect(queryString).toMatchSnapshot();
-      // Apps grouped into one bulk insert at position of first app
+      // Delete breaks groups: two bulk inserts for same type
       expect(queryString!.match(/insert_compute_Application/g))
-        .toHaveLength(1);
-      // Orgs grouped into one bulk insert at position of first org
-      expect(queryString!.match(/insert_cicd_Organization/g))
-        .toHaveLength(1);
-      // Delete preserved between the two groups
+        .toHaveLength(2);
       expect(queryString).toContain('delete_cicd_Build');
-      // Order: apps, orgs, delete (first app before first org)
-      const appIdx = queryString!.indexOf('insert_compute_Application');
-      const orgIdx = queryString!.indexOf('insert_cicd_Organization');
+      // Verify grouping: app1+app2 in first, app3+app4 in second
+      expect(queryString).toContain('app1');
+      expect(queryString).toContain('app2');
+      expect(queryString).toContain('app3');
+      expect(queryString).toContain('app4');
+      // Order preserved: bulk(app1,app2), delete, bulk(app3,app4)
+      const firstAppIdx = queryString!.indexOf(
+        'insert_compute_Application'
+      );
       const delIdx = queryString!.indexOf('delete_cicd_Build');
-      expect(appIdx).toBeLessThan(orgIdx);
-      expect(orgIdx).toBeLessThan(delIdx);
+      const secondAppIdx = queryString!.indexOf(
+        'insert_compute_Application', firstAppIdx + 1
+      );
+      expect(firstAppIdx).toBeLessThan(delIdx);
+      expect(delIdx).toBeLessThan(secondAppIdx);
     });
 
     test('same model with different on_conflict stays separate', () => {
