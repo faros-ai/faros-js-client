@@ -1,6 +1,8 @@
+import {GraphQLClient} from '../src/graphql/client/graphql-client';
 import * as sut from '../src/graphql/query-builder';
 
 const ORIGIN = 'test-origin';
+const bulkBatchMutation = GraphQLClient.bulkBatchMutation;
 
 describe('query builder', () => {
   const qb = new sut.QueryBuilder(ORIGIN);
@@ -41,7 +43,7 @@ describe('query builder', () => {
       qb.upsert({cicd_Build}),
       qb.upsert({cicd_Deployment}),
     ];
-    const queryString = sut.batchMutation(mutations);
+    const queryString = bulkBatchMutation(mutations);
     expect(queryString).toMatchSnapshot();
   });
 
@@ -63,7 +65,7 @@ describe('query builder', () => {
     };
 
     const mutations = [qb.upsert({qa_TestCase})];
-    const queryString = sut.batchMutation(mutations);
+    const queryString = bulkBatchMutation(mutations);
     expect(queryString).toMatchSnapshot();
   });
 
@@ -78,7 +80,7 @@ describe('query builder', () => {
     };
 
     const mutations = [qb.upsert({qa_TestCase})];
-    const queryString = sut.batchMutation(mutations);
+    const queryString = bulkBatchMutation(mutations);
     expect(queryString).toMatchSnapshot();
   });
 
@@ -93,13 +95,13 @@ describe('query builder', () => {
     };
 
     const mutations = [qb.delete({qa_TestCase})];
-    const queryString = sut.batchMutation(mutations);
+    const queryString = bulkBatchMutation(mutations);
     expect(queryString).toMatchSnapshot();
   });
 
   test('delete mutations with model refs', () => {
     const mutations = [qb.delete({cicd_Deployment}), qb.delete({cicd_Build})];
-    const queryString = sut.batchMutation(mutations);
+    const queryString = bulkBatchMutation(mutations);
     expect(queryString).toMatchSnapshot();
   });
 
@@ -109,7 +111,7 @@ describe('query builder', () => {
       organization: qb.ref(undefined),
     };
     const mutations = [qb.upsert({cicd_Pipeline})];
-    const queryString = sut.batchMutation(mutations);
+    const queryString = bulkBatchMutation(mutations);
     expect(queryString).toMatchSnapshot();
   });
 
@@ -119,7 +121,7 @@ describe('query builder', () => {
       organization: qb.ref(undefined),
     };
     const mutations = [qb.delete({cicd_Pipeline})];
-    const queryString = sut.batchMutation(mutations);
+    const queryString = bulkBatchMutation(mutations);
     expect(queryString).toMatchSnapshot();
   });
 
@@ -130,7 +132,7 @@ describe('query builder', () => {
       qb.upsert({compute_Application: app1}),
       qb.upsert({compute_Application: app2}),
     ];
-    const queryString = sut.batchMutation(mutations);
+    const queryString = bulkBatchMutation(mutations);
     expect(queryString).toMatchSnapshot();
     // Verify single bulk insert, not two individual ones
     expect(queryString).toContain('insert_compute_Application (objects:');
@@ -145,7 +147,7 @@ describe('query builder', () => {
       qb.delete({cicd_Build}),
       qb.upsert({cicd_Organization}),
     ];
-    const queryString = sut.batchMutation(mutations);
+    const queryString = bulkBatchMutation(mutations);
     expect(queryString).toMatchSnapshot();
     // Inserts use bulk format
     expect(queryString).toContain('insert_compute_Application (objects:');
@@ -162,7 +164,7 @@ describe('query builder', () => {
         {constraint: 'custom_constraint', update_columns: ['name']}
       ),
     ];
-    const queryString = sut.batchMutation(mutations);
+    const queryString = bulkBatchMutation(mutations);
     // Two separate bulk inserts for the same model due to different on_conflict
     expect(queryString!.match(/insert_compute_Application/g)).toHaveLength(2);
     expect(queryString).toContain('compute_Application_pkey');
@@ -176,7 +178,7 @@ describe('query builder', () => {
       qb.upsert({cicd_Organization}),
       qb.upsert({cicd_Pipeline}),
     ];
-    const queryString = sut.batchMutation(mutations);
+    const queryString = bulkBatchMutation(mutations);
     expect(queryString).not.toMatch(/_one[\s(]/);
   });
 
@@ -196,7 +198,7 @@ describe('query builder', () => {
         }
       ),
     ];
-    const queryString = sut.batchMutation(mutations);
+    const queryString = bulkBatchMutation(mutations);
     expect(queryString).toMatchSnapshot();
   });
 });

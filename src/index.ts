@@ -42,7 +42,6 @@ export {
   FarosModel,
   QueryBuilder,
   mask,
-  batchMutation,
   Ref
 } from './graphql/query-builder';
 export {

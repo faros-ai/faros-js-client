@@ -813,6 +813,59 @@ export class GraphQLClient {
     return undefined;
   }
 
+  /**
+   * Like batchMutation, but groups insert_*_one mutations by model and
+   * on_conflict into bulk insert_* mutations with objects arrays.
+   * Non-insert mutations (e.g. deletes) are kept as individual operations.
+   *
+   * @return batch gql mutation or undefined if the input is undefined, empty
+   * or doesn't contain any mutations.
+   */
+  static bulkBatchMutation(queries: any[]): string | undefined {
+    if (!queries?.length) {
+      return undefined;
+    }
+
+    const insertGroups = new Map<
+      string,
+      {bulkType: string; objects: any[]; onConflict: any}
+    >();
+    const nonInsertQueries: any[] = [];
+
+    for (const query of queries) {
+      if (!query.mutation) continue;
+      const queryType = Object.keys(query.mutation)[0];
+      const queryBody = query.mutation[queryType];
+
+      if (queryType.startsWith('insert_') && queryType.endsWith('_one')) {
+        const bulkType = queryType.slice(0, -4);
+        const onConflict = queryBody.__args?.on_conflict;
+        const groupKey = `${bulkType}:${JSON.stringify(onConflict)}`;
+
+        if (!insertGroups.has(groupKey)) {
+          insertGroups.set(groupKey, {bulkType, objects: [], onConflict});
+        }
+        insertGroups.get(groupKey)!.objects.push(queryBody.__args.object);
+      } else {
+        nonInsertQueries.push(query);
+      }
+    }
+
+    // Build bulk insert mutations and combine with non-insert mutations
+    const bulkQueries: any[] = [];
+    for (const {bulkType, objects, onConflict} of insertGroups.values()) {
+      const args: any = {objects};
+      if (onConflict) {
+        args.on_conflict = onConflict;
+      }
+      bulkQueries.push({
+        mutation: {[bulkType]: {__args: args, affected_rows: true}},
+      });
+    }
+
+    return GraphQLClient.batchMutation([...bulkQueries, ...nonInsertQueries]);
+  }
+
   private createWhereClause(
     model: string,
     record: Dictionary<any>
