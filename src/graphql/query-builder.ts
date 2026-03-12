@@ -1,6 +1,7 @@
 import {EnumType} from 'json-to-graphql-query';
 import {isNil} from 'lodash';
 
+import {GraphQLClient} from './client/graphql-client';
 import {
   ConflictClause,
   DeleteMutationObject,
@@ -196,5 +197,12 @@ export function arrayLiteral(arr: any[]): string | object {
 
 export function mask(object: any): string[] {
   return Object.keys(object);
+}
+
+/** @see GraphQLClient.batchMutation */
+export function batchMutation(
+  mutations: Mutation[]
+): string | undefined {
+  return GraphQLClient.batchMutation(mutations);
 }
 

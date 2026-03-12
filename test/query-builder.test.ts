@@ -313,11 +313,15 @@ describe('query builder', () => {
     test('groups same-type inserts with nested refs', () => {
       const pipeline1 = {
         uid: 'pipeline-1',
-        organization: qb.ref({cicd_Organization: {uid: 'org-1', source: 'GitHub'}}),
+        organization: qb.ref({
+          cicd_Organization: {uid: 'org-1', source: 'GitHub'},
+        }),
       };
       const pipeline2 = {
         uid: 'pipeline-2',
-        organization: qb.ref({cicd_Organization: {uid: 'org-2', source: 'GitHub'}}),
+        organization: qb.ref({
+          cicd_Organization: {uid: 'org-2', source: 'GitHub'},
+        }),
       };
       const mutations = [
         qb.upsert({cicd_Pipeline: pipeline1}),
