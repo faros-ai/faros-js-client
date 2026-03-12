@@ -310,6 +310,29 @@ describe('query builder', () => {
       expect(queryString).toMatchSnapshot();
     });
 
+    test('groups same-type inserts with nested refs', () => {
+      const pipeline1 = {
+        uid: 'pipeline-1',
+        organization: qb.ref({cicd_Organization: {uid: 'org-1', source: 'GitHub'}}),
+      };
+      const pipeline2 = {
+        uid: 'pipeline-2',
+        organization: qb.ref({cicd_Organization: {uid: 'org-2', source: 'GitHub'}}),
+      };
+      const mutations = [
+        qb.upsert({cicd_Pipeline: pipeline1}),
+        qb.upsert({cicd_Pipeline: pipeline2}),
+      ];
+      const queryString = bulkBatchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+      // Both pipelines grouped into one bulk insert
+      expect(queryString!.match(/insert_cicd_Pipeline/g)).toHaveLength(1);
+      // Nested refs preserved inside the objects array
+      expect(queryString).toContain('org-1');
+      expect(queryString).toContain('org-2');
+      expect(queryString).toContain('cicd_Organization_pkey');
+    });
+
     test('no insert_*_one appears in output', () => {
       const mutations = [
         qb.upsert({compute_Application}),

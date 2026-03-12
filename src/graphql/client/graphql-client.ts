@@ -833,7 +833,7 @@ export class GraphQLClient {
     const nonInsertQueries: any[] = [];
 
     for (const query of queries) {
-      if (!query.mutation) continue;
+      if (!query.mutation) {continue;}
       const queryType = Object.keys(query.mutation)[0];
       const queryBody = query.mutation[queryType];
 
@@ -842,10 +842,16 @@ export class GraphQLClient {
         const onConflict = queryBody.__args?.on_conflict;
         const groupKey = `${bulkType}:${JSON.stringify(onConflict)}`;
 
-        if (!insertGroups.has(groupKey)) {
-          insertGroups.set(groupKey, {bulkType, objects: [], onConflict});
+        const group = insertGroups.get(groupKey);
+        if (group) {
+          group.objects.push(queryBody.__args.object);
+        } else {
+          insertGroups.set(groupKey, {
+            bulkType,
+            objects: [queryBody.__args.object],
+            onConflict,
+          });
         }
-        insertGroups.get(groupKey)!.objects.push(queryBody.__args.object);
       } else {
         nonInsertQueries.push(query);
       }
