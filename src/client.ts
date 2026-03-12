@@ -8,8 +8,8 @@ import * as zlib from 'zlib';
 
 import {makeAxiosInstanceWithRetry} from './axios';
 import {wrapApiError} from './errors';
+import {GraphQLClient} from './graphql/client/graphql-client';
 import {paginatedQueryV2, type QueryPaginator} from './graphql/graphql';
-import {batchMutation} from './graphql/query-builder';
 import {Mutation, Schema} from './graphql/types';
 import {
   Account,
@@ -197,7 +197,15 @@ export class FarosClient {
   }
 
   async sendMutations(graph: string, mutations: Mutation[]): Promise<any> {
-    const gql = batchMutation(mutations);
+    const gql = GraphQLClient.batchMutation(mutations);
+    if (gql) {
+      return await this.gql(graph, gql);
+    }
+    return undefined;
+  }
+
+  async sendBulkMutations(graph: string, mutations: Mutation[]): Promise<any> {
+    const gql = GraphQLClient.bulkBatchMutation(mutations);
     if (gql) {
       return await this.gql(graph, gql);
     }

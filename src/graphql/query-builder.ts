@@ -1,6 +1,7 @@
-import {EnumType, jsonToGraphQLQuery} from 'json-to-graphql-query';
+import {EnumType} from 'json-to-graphql-query';
 import {isNil} from 'lodash';
 
+import {GraphQLClient} from './client/graphql-client';
 import {
   ConflictClause,
   DeleteMutationObject,
@@ -198,45 +199,10 @@ export function mask(object: any): string[] {
   return Object.keys(object);
 }
 
-/**
- * Constructs a gql query from an array of json mutations.
- * The outputted qql mutation might look like:
- *
- *   mutation  {
- *     i1: insert_cicd_Artifact_one(object: {uid: "u1b"}) {
- *       id
- *       refreshedAt
- *     }
- *     i2: insert_cicd_Artifact_one(object: {uid: "u2b"}) {
- *       id
- *       refreshedAt
- *     }
- *   }
- *
- *  Notable here are the i1/i2 aliases.
- *  These are required when multiple operations share the same
- *  name (e.g. insert_cicd_Artifact_one) and are supported in
- *  jsonToGraphQLQuery with __aliasFor directive.
- *
- *  @return batch gql mutation or undefined if the input is undefined, empty
- *  or doesn't contain any mutations.
- */
-export function batchMutation(mutations: Mutation[]): string | undefined {
-  if (mutations.length) {
-    const queryObj: any = {};
-    mutations.forEach((query, idx) => {
-      if (query.mutation) {
-        const queryType = Object.keys(query.mutation)[0];
-        const queryBody = query.mutation[queryType];
-        queryObj[`m${idx}`] = {
-          __aliasFor: queryType,
-          ...queryBody,
-        };
-      }
-    });
-    if (Object.keys(queryObj).length > 0) {
-      return jsonToGraphQLQuery({mutation: queryObj});
-    }
-  }
-  return undefined;
+/** @see GraphQLClient.batchMutation */
+export function batchMutation(
+  mutations: Mutation[]
+): string | undefined {
+  return GraphQLClient.batchMutation(mutations);
 }
+

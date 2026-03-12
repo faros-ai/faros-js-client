@@ -39,10 +39,10 @@ export {
 } from './graphql/types';
 export {HasuraSchemaLoader} from './graphql/hasura-schema-loader';
 export {
+  batchMutation,
   FarosModel,
   QueryBuilder,
   mask,
-  batchMutation,
   Ref
 } from './graphql/query-builder';
 export {
