@@ -123,6 +123,63 @@ describe('query builder', () => {
     expect(queryString).toMatchSnapshot();
   });
 
+  test('groups multiple same-type inserts into bulk insert', () => {
+    const app1 = {name: 'app1', platform: 'plat1'};
+    const app2 = {name: 'app2', platform: 'plat2'};
+    const mutations = [
+      qb.upsert({compute_Application: app1}),
+      qb.upsert({compute_Application: app2}),
+    ];
+    const queryString = sut.batchMutation(mutations);
+    expect(queryString).toMatchSnapshot();
+    // Verify single bulk insert, not two individual ones
+    expect(queryString).toContain('insert_compute_Application (objects:');
+    expect(queryString).not.toContain('insert_compute_Application_one');
+    // Both objects in a single mutation
+    expect(queryString!.match(/insert_compute_Application/g)).toHaveLength(1);
+  });
+
+  test('mixed inserts and deletes', () => {
+    const mutations = [
+      qb.upsert({compute_Application}),
+      qb.delete({cicd_Build}),
+      qb.upsert({cicd_Organization}),
+    ];
+    const queryString = sut.batchMutation(mutations);
+    expect(queryString).toMatchSnapshot();
+    // Inserts use bulk format
+    expect(queryString).toContain('insert_compute_Application (objects:');
+    expect(queryString).toContain('insert_cicd_Organization (objects:');
+    // Delete kept as-is
+    expect(queryString).toContain('delete_cicd_Build');
+  });
+
+  test('same model with different on_conflict stays separate', () => {
+    const mutations = [
+      qb.upsert({compute_Application}),
+      qb.upsert(
+        {compute_Application: {name: 'other', platform: 'other'}},
+        {constraint: 'custom_constraint', update_columns: ['name']}
+      ),
+    ];
+    const queryString = sut.batchMutation(mutations);
+    // Two separate bulk inserts for the same model due to different on_conflict
+    expect(queryString!.match(/insert_compute_Application/g)).toHaveLength(2);
+    expect(queryString).toContain('compute_Application_pkey');
+    expect(queryString).toContain('custom_constraint');
+    expect(queryString).toMatchSnapshot();
+  });
+
+  test('no insert_*_one appears in output', () => {
+    const mutations = [
+      qb.upsert({compute_Application}),
+      qb.upsert({cicd_Organization}),
+      qb.upsert({cicd_Pipeline}),
+    ];
+    const queryString = sut.batchMutation(mutations);
+    expect(queryString).not.toMatch(/_one[\s(]/);
+  });
+
   test('upsert with conflict override', () => {
     const org_ApplicationOwnership = {
       team: qb.ref({org_Team: {uid: 'test_team'}}),
