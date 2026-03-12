@@ -197,6 +197,14 @@ export class FarosClient {
   }
 
   async sendMutations(graph: string, mutations: Mutation[]): Promise<any> {
+    const gql = GraphQLClient.batchMutation(mutations);
+    if (gql) {
+      return await this.gql(graph, gql);
+    }
+    return undefined;
+  }
+
+  async sendBulkMutations(graph: string, mutations: Mutation[]): Promise<any> {
     const gql = GraphQLClient.bulkBatchMutation(mutations);
     if (gql) {
       return await this.gql(graph, gql);

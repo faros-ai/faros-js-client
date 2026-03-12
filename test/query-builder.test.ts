@@ -2,7 +2,6 @@ import {GraphQLClient} from '../src/graphql/client/graphql-client';
 import * as sut from '../src/graphql/query-builder';
 
 const ORIGIN = 'test-origin';
-const bulkBatchMutation = GraphQLClient.bulkBatchMutation;
 
 describe('query builder', () => {
   const qb = new sut.QueryBuilder(ORIGIN);
@@ -35,171 +34,291 @@ describe('query builder', () => {
     },
   };
 
-  test('creates mutations', () => {
-    const mutations = [
-      qb.upsert({compute_Application}),
-      qb.upsert({cicd_Organization}),
-      qb.upsert({cicd_Pipeline}),
-      qb.upsert({cicd_Build}),
-      qb.upsert({cicd_Deployment}),
-    ];
-    const queryString = bulkBatchMutation(mutations);
-    expect(queryString).toMatchSnapshot();
+  describe('batchMutation', () => {
+    const batchMutation = GraphQLClient.batchMutation;
+
+    test('creates mutations', () => {
+      const mutations = [
+        qb.upsert({compute_Application}),
+        qb.upsert({cicd_Organization}),
+        qb.upsert({cicd_Pipeline}),
+        qb.upsert({cicd_Build}),
+        qb.upsert({cicd_Deployment}),
+      ];
+      const queryString = batchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+    });
+
+    test('creates mutations with non-model objects', () => {
+      const qa_TestCase = {
+        uid: '<uid>',
+        source: '<source>',
+        name: '<name>',
+        before: [{description: '<description>', condition: '<condition>'}],
+        after: [{description: '<description>', condition: '<condition>'}],
+        tags: ['tag1', 'tag2'],
+        qa_DeviceInfo: {
+          name: 'name',
+          os: 'os',
+          browser: 'browser',
+          isSupported: true,
+          size: 10,
+        },
+      };
+
+      const mutations = [qb.upsert({qa_TestCase})];
+      const queryString = batchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+    });
+
+    test('creates mutations with undefined and null fields', () => {
+      const qa_TestCase = {
+        uid: '<uid>',
+        source: '<source>',
+        name: '<name>',
+        before: null,
+        after: undefined,
+        tags: ['tag1', 'tag2'],
+      };
+
+      const mutations = [qb.upsert({qa_TestCase})];
+      const queryString = batchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+    });
+
+    test('delete mutations with non-model objects', () => {
+      const qa_TestCase = {
+        uid: '<uid>',
+        source: '<source>',
+        name: '<name>',
+        before: null,
+        after: undefined,
+        tags: ['tag1', 'tag2'],
+      };
+
+      const mutations = [qb.delete({qa_TestCase})];
+      const queryString = batchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+    });
+
+    test('delete mutations with model refs', () => {
+      const mutations = [
+        qb.delete({cicd_Deployment}),
+        qb.delete({cicd_Build}),
+      ];
+      const queryString = batchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+    });
+
+    test('upsert undefined ref', () => {
+      const cicd_Pipeline = {
+        uid: '<pipeline_uid>',
+        organization: qb.ref(undefined),
+      };
+      const mutations = [qb.upsert({cicd_Pipeline})];
+      const queryString = batchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+    });
+
+    test('delete undefined ref', () => {
+      const cicd_Pipeline = {
+        uid: '<pipeline_uid>',
+        organization: qb.ref(undefined),
+      };
+      const mutations = [qb.delete({cicd_Pipeline})];
+      const queryString = batchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+    });
+
+    test('upsert with conflict override', () => {
+      const org_ApplicationOwnership = {
+        team: qb.ref({org_Team: {uid: 'test_team'}}),
+        application: qb.ref({
+          compute_Application: {name: 'test_app', platform: 'test_platform'},
+        }),
+      };
+      const mutations = [
+        qb.upsert(
+          {org_ApplicationOwnership},
+          {
+            constraint: 'org_ApplicationOwnership_application_id_unique',
+            update_columns: ['teamId'],
+          }
+        ),
+      ];
+      const queryString = batchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+    });
   });
 
-  test('creates mutations with non-model objects', () => {
-    const qa_TestCase = {
-      uid: '<uid>',
-      source: '<source>',
-      name: '<name>',
-      before: [{description: '<description>', condition: '<condition>'}],
-      after: [{description: '<description>', condition: '<condition>'}],
-      tags: ['tag1', 'tag2'],
-      qa_DeviceInfo: {
-        name: 'name',
-        os: 'os',
-        browser: 'browser',
-        isSupported: true,
-        size: 10,
-      },
-    };
+  describe('bulkBatchMutation', () => {
+    const bulkBatchMutation = GraphQLClient.bulkBatchMutation;
 
-    const mutations = [qb.upsert({qa_TestCase})];
-    const queryString = bulkBatchMutation(mutations);
-    expect(queryString).toMatchSnapshot();
-  });
+    test('creates mutations', () => {
+      const mutations = [
+        qb.upsert({compute_Application}),
+        qb.upsert({cicd_Organization}),
+        qb.upsert({cicd_Pipeline}),
+        qb.upsert({cicd_Build}),
+        qb.upsert({cicd_Deployment}),
+      ];
+      const queryString = bulkBatchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+    });
 
-  test('creates mutations with undefined and null fields', () => {
-    const qa_TestCase = {
-      uid: '<uid>',
-      source: '<source>',
-      name: '<name>',
-      before: null,
-      after: undefined,
-      tags: ['tag1', 'tag2'],
-    };
+    test('creates mutations with non-model objects', () => {
+      const qa_TestCase = {
+        uid: '<uid>',
+        source: '<source>',
+        name: '<name>',
+        before: [{description: '<description>', condition: '<condition>'}],
+        after: [{description: '<description>', condition: '<condition>'}],
+        tags: ['tag1', 'tag2'],
+        qa_DeviceInfo: {
+          name: 'name',
+          os: 'os',
+          browser: 'browser',
+          isSupported: true,
+          size: 10,
+        },
+      };
 
-    const mutations = [qb.upsert({qa_TestCase})];
-    const queryString = bulkBatchMutation(mutations);
-    expect(queryString).toMatchSnapshot();
-  });
+      const mutations = [qb.upsert({qa_TestCase})];
+      const queryString = bulkBatchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+    });
 
-  test('delete mutations with non-model objects', () => {
-    const qa_TestCase = {
-      uid: '<uid>',
-      source: '<source>',
-      name: '<name>',
-      before: null,
-      after: undefined,
-      tags: ['tag1', 'tag2'],
-    };
+    test('creates mutations with undefined and null fields', () => {
+      const qa_TestCase = {
+        uid: '<uid>',
+        source: '<source>',
+        name: '<name>',
+        before: null,
+        after: undefined,
+        tags: ['tag1', 'tag2'],
+      };
 
-    const mutations = [qb.delete({qa_TestCase})];
-    const queryString = bulkBatchMutation(mutations);
-    expect(queryString).toMatchSnapshot();
-  });
+      const mutations = [qb.upsert({qa_TestCase})];
+      const queryString = bulkBatchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+    });
 
-  test('delete mutations with model refs', () => {
-    const mutations = [qb.delete({cicd_Deployment}), qb.delete({cicd_Build})];
-    const queryString = bulkBatchMutation(mutations);
-    expect(queryString).toMatchSnapshot();
-  });
+    test('delete mutations with non-model objects', () => {
+      const qa_TestCase = {
+        uid: '<uid>',
+        source: '<source>',
+        name: '<name>',
+        before: null,
+        after: undefined,
+        tags: ['tag1', 'tag2'],
+      };
 
-  test('upsert undefined ref', () => {
-    const cicd_Pipeline = {
-      uid: '<pipeline_uid>',
-      organization: qb.ref(undefined),
-    };
-    const mutations = [qb.upsert({cicd_Pipeline})];
-    const queryString = bulkBatchMutation(mutations);
-    expect(queryString).toMatchSnapshot();
-  });
+      const mutations = [qb.delete({qa_TestCase})];
+      const queryString = bulkBatchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+    });
 
-  test('delete undefined ref', () => {
-    const cicd_Pipeline = {
-      uid: '<pipeline_uid>',
-      organization: qb.ref(undefined),
-    };
-    const mutations = [qb.delete({cicd_Pipeline})];
-    const queryString = bulkBatchMutation(mutations);
-    expect(queryString).toMatchSnapshot();
-  });
+    test('delete mutations with model refs', () => {
+      const mutations = [
+        qb.delete({cicd_Deployment}),
+        qb.delete({cicd_Build}),
+      ];
+      const queryString = bulkBatchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+    });
 
-  test('groups multiple same-type inserts into bulk insert', () => {
-    const app1 = {name: 'app1', platform: 'plat1'};
-    const app2 = {name: 'app2', platform: 'plat2'};
-    const mutations = [
-      qb.upsert({compute_Application: app1}),
-      qb.upsert({compute_Application: app2}),
-    ];
-    const queryString = bulkBatchMutation(mutations);
-    expect(queryString).toMatchSnapshot();
-    // Verify single bulk insert, not two individual ones
-    expect(queryString).toContain('insert_compute_Application (objects:');
-    expect(queryString).not.toContain('insert_compute_Application_one');
-    // Both objects in a single mutation
-    expect(queryString!.match(/insert_compute_Application/g)).toHaveLength(1);
-  });
+    test('upsert undefined ref', () => {
+      const cicd_Pipeline = {
+        uid: '<pipeline_uid>',
+        organization: qb.ref(undefined),
+      };
+      const mutations = [qb.upsert({cicd_Pipeline})];
+      const queryString = bulkBatchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+    });
 
-  test('mixed inserts and deletes', () => {
-    const mutations = [
-      qb.upsert({compute_Application}),
-      qb.delete({cicd_Build}),
-      qb.upsert({cicd_Organization}),
-    ];
-    const queryString = bulkBatchMutation(mutations);
-    expect(queryString).toMatchSnapshot();
-    // Inserts use bulk format
-    expect(queryString).toContain('insert_compute_Application (objects:');
-    expect(queryString).toContain('insert_cicd_Organization (objects:');
-    // Delete kept as-is
-    expect(queryString).toContain('delete_cicd_Build');
-  });
+    test('delete undefined ref', () => {
+      const cicd_Pipeline = {
+        uid: '<pipeline_uid>',
+        organization: qb.ref(undefined),
+      };
+      const mutations = [qb.delete({cicd_Pipeline})];
+      const queryString = bulkBatchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+    });
 
-  test('same model with different on_conflict stays separate', () => {
-    const mutations = [
-      qb.upsert({compute_Application}),
-      qb.upsert(
-        {compute_Application: {name: 'other', platform: 'other'}},
-        {constraint: 'custom_constraint', update_columns: ['name']}
-      ),
-    ];
-    const queryString = bulkBatchMutation(mutations);
-    // Two separate bulk inserts for the same model due to different on_conflict
-    expect(queryString!.match(/insert_compute_Application/g)).toHaveLength(2);
-    expect(queryString).toContain('compute_Application_pkey');
-    expect(queryString).toContain('custom_constraint');
-    expect(queryString).toMatchSnapshot();
-  });
+    test('upsert with conflict override', () => {
+      const org_ApplicationOwnership = {
+        team: qb.ref({org_Team: {uid: 'test_team'}}),
+        application: qb.ref({
+          compute_Application: {name: 'test_app', platform: 'test_platform'},
+        }),
+      };
+      const mutations = [
+        qb.upsert(
+          {org_ApplicationOwnership},
+          {
+            constraint: 'org_ApplicationOwnership_application_id_unique',
+            update_columns: ['teamId'],
+          }
+        ),
+      ];
+      const queryString = bulkBatchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+    });
 
-  test('no insert_*_one appears in output', () => {
-    const mutations = [
-      qb.upsert({compute_Application}),
-      qb.upsert({cicd_Organization}),
-      qb.upsert({cicd_Pipeline}),
-    ];
-    const queryString = bulkBatchMutation(mutations);
-    expect(queryString).not.toMatch(/_one[\s(]/);
-  });
+    test('groups multiple same-type inserts into bulk insert', () => {
+      const app1 = {name: 'app1', platform: 'plat1'};
+      const app2 = {name: 'app2', platform: 'plat2'};
+      const mutations = [
+        qb.upsert({compute_Application: app1}),
+        qb.upsert({compute_Application: app2}),
+      ];
+      const queryString = bulkBatchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+      // Verify single bulk insert, not two individual ones
+      expect(queryString).toContain('insert_compute_Application (objects:');
+      expect(queryString).not.toContain('insert_compute_Application_one');
+      expect(queryString!.match(/insert_compute_Application/g)).toHaveLength(1);
+    });
 
-  test('upsert with conflict override', () => {
-    const org_ApplicationOwnership = {
-      team: qb.ref({org_Team: {uid: 'test_team'}}),
-      application: qb.ref({
-        compute_Application: {name: 'test_app', platform: 'test_platform'},
-      }),
-    };
-    const mutations = [
-      qb.upsert(
-        {org_ApplicationOwnership},
-        {
-          constraint: 'org_ApplicationOwnership_application_id_unique',
-          update_columns: ['teamId'],
-        }
-      ),
-    ];
-    const queryString = bulkBatchMutation(mutations);
-    expect(queryString).toMatchSnapshot();
+    test('mixed inserts and deletes', () => {
+      const mutations = [
+        qb.upsert({compute_Application}),
+        qb.delete({cicd_Build}),
+        qb.upsert({cicd_Organization}),
+      ];
+      const queryString = bulkBatchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+      expect(queryString).toContain('insert_compute_Application (objects:');
+      expect(queryString).toContain('insert_cicd_Organization (objects:');
+      expect(queryString).toContain('delete_cicd_Build');
+    });
+
+    test('same model with different on_conflict stays separate', () => {
+      const mutations = [
+        qb.upsert({compute_Application}),
+        qb.upsert(
+          {compute_Application: {name: 'other', platform: 'other'}},
+          {constraint: 'custom_constraint', update_columns: ['name']}
+        ),
+      ];
+      const queryString = bulkBatchMutation(mutations);
+      expect(queryString!.match(/insert_compute_Application/g)).toHaveLength(2);
+      expect(queryString).toContain('compute_Application_pkey');
+      expect(queryString).toContain('custom_constraint');
+      expect(queryString).toMatchSnapshot();
+    });
+
+    test('no insert_*_one appears in output', () => {
+      const mutations = [
+        qb.upsert({compute_Application}),
+        qb.upsert({cicd_Organization}),
+        qb.upsert({cicd_Pipeline}),
+      ];
+      const queryString = bulkBatchMutation(mutations);
+      expect(queryString).not.toMatch(/_one[\s(]/);
+    });
   });
 });
 
