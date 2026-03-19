@@ -1382,6 +1382,7 @@ export function createDeleteReader(
       ]}) {
         id
         actionAt
+        origin
       }
     }`;
   const [deleteReader] = createNonIncrementalReaders({
