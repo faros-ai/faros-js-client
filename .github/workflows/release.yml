@@ -17,29 +17,30 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v4
-
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          run_install: false
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-
+          cache: 'pnpm'
       - name: Extract tag version
         id: extract-tag-version
         run: |
           TAG="${GITHUB_REF:10}"
           TAG_VERSION="${TAG//v/}"
           echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_ENV
-
       - name: Build
         run: |
-          npm ci
-          npm run build
-
+          pnpm install --frozen-lockfile
+          pnpm run build
       - name: Publish
         run: |
-          npm version --no-commit-hooks --no-git-tag-version ${{ env.TAG_VERSION }} && \
-          npm publish --access public --tag latest
+          pnpm version --no-commit-hooks --no-git-tag-version ${{ env.TAG_VERSION }} && \
+          pnpm publish --access public --tag latest --no-git-checks
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

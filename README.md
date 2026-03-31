@@ -4,7 +4,7 @@
 
 ## Installation
 ```bash
-$ npm i --save faros-js-client
+$ pnpm add faros-js-client
 ```
 ## Documentation
 
