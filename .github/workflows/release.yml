@@ -24,6 +24,7 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
 
+      # TODO: Remove once we upgrade to Node 24 (which bundles npm 11)
       - name: Upgrade npm
         run: npm install -g npm@11
 

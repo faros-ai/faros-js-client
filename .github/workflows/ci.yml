@@ -25,6 +25,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+      # TODO: Remove once we upgrade to Node 24 (which bundles npm 11)
       - name: Upgrade npm
         run: npm install -g npm@11
       - name: Build
