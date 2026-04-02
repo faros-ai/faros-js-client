@@ -21,7 +21,9 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # Pin to 22.22.1 due to npm self-upgrade regression in 22.22.2
+          # https://github.com/nodejs/node/issues/62425
+          node-version: 22.22.1
           registry-url: https://registry.npmjs.org
 
       # TODO: Remove once we upgrade to Node 24 (which bundles npm 11)
