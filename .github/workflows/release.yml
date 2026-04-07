@@ -9,6 +9,9 @@ jobs:
     name: Publish package
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      id-token: write  # Required for OIDC with npmjs
+      contents: read
     env:
       FORCE_COLOR: true
       HUSKY_SKIP_INSTALL: 1
@@ -46,6 +49,3 @@ jobs:
         run: |
           npm version --no-commit-hooks --no-git-tag-version ${{ env.TAG_VERSION }} && \
           npm publish --access public --tag latest
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
