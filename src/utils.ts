@@ -148,18 +148,24 @@ export class Utils {
     if (!str) {
       return str;
     }
+    // Remove emojis and collapse multiple spaces
+    const cleaned = str
+      .replace(/\p{Extended_Pictographic}|\p{Regional_Indicator}/gu, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
     const length = maxLength ?? MAX_TEXT_LENGTH;
     let result: string;
-    if (str.length <= length) {
-      result = str;
+    if (cleaned.length <= length) {
+      result = cleaned;
     } else {
       // If the last character is part of a unicode surrogate pair,
       // include the next character
-      const lastChar = str.codePointAt(length - 1) ?? 0;
+      const lastChar = cleaned.codePointAt(length - 1) ?? 0;
       result =
         lastChar > 65535
-          ? str.substring(0, length + 1)
-          : str.substring(0, length);
+          ? cleaned.substring(0, length + 1)
+          : cleaned.substring(0, length);
     }
     // eslint-disable-next-line no-control-regex
     return result.replace(/\u0000/g, '');

@@ -213,10 +213,31 @@ describe('parse primary keys', () => {
 
   describe('clean and truncate', () => {
     test('should truncate strings', () => {
-      const str = 'abc123😍\u0000';
-      expect(sut.Utils.cleanAndTruncate(str)).toEqual('abc123😍');
+      const str = 'abc123\u0000';
+      expect(sut.Utils.cleanAndTruncate(str)).toEqual('abc123');
       expect(sut.Utils.cleanAndTruncate(str, 3)).toEqual('abc');
-      expect(sut.Utils.cleanAndTruncate(str, 7)).toEqual('abc123😍');
+    });
+
+    test('should remove emojis', () => {
+      expect(sut.Utils.cleanAndTruncate('Doe, Jane 🥦')).toEqual('Doe, Jane');
+      expect(sut.Utils.cleanAndTruncate('Hello 👋 World 🌍!')).toEqual(
+        'Hello World !'
+      );
+    });
+
+    test('should remove flag emojis', () => {
+      expect(sut.Utils.cleanAndTruncate('José García 🇪🇸')).toEqual(
+        'José García'
+      );
+    });
+
+    test('should collapse multiple spaces after emoji removal', () => {
+      expect(sut.Utils.cleanAndTruncate('Name  🎉  Here')).toEqual('Name Here');
+    });
+
+    test('should handle empty and undefined strings', () => {
+      expect(sut.Utils.cleanAndTruncate('')).toEqual('');
+      expect(sut.Utils.cleanAndTruncate(undefined)).toEqual(undefined);
     });
   });
 });
