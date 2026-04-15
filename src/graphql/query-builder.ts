@@ -152,7 +152,7 @@ export class QueryBuilder {
 
     for (const [k, v] of Object.entries(fields ?? {})) {
       if (isNil(v)) {
-        mutObj[k] = null;
+        mutObj[k] = {_is_null: true};
       } else if (v instanceof Ref) {
         if (v.model) {
           mutObj[k] = this.deleteMutationObj(v.model, true);
