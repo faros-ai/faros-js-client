@@ -130,6 +130,21 @@ describe('query builder', () => {
       expect(queryString).toMatchSnapshot();
     });
 
+    test('delete mutation with null field inside ref', () => {
+      const org_ApplicationOwnership = {
+        application: qb.ref({
+          compute_Application: {name: '<app_name>', platform: null},
+        }),
+        team: qb.ref({org_Team: {uid: '<team_uid>'}}),
+      };
+      const mutations = [qb.delete({org_ApplicationOwnership})];
+      const queryString = batchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+      // Verify null platform uses _is_null instead of bare null
+      expect(queryString).toContain('_is_null: true');
+      expect(queryString).not.toMatch(/platform: null/);
+    });
+
     test('upsert with conflict override', () => {
       const org_ApplicationOwnership = {
         team: qb.ref({org_Team: {uid: 'test_team'}}),
@@ -245,6 +260,20 @@ describe('query builder', () => {
       const mutations = [qb.delete({cicd_Pipeline})];
       const queryString = bulkBatchMutation(mutations);
       expect(queryString).toMatchSnapshot();
+    });
+
+    test('delete mutation with null field inside ref', () => {
+      const org_ApplicationOwnership = {
+        application: qb.ref({
+          compute_Application: {name: '<app_name>', platform: null},
+        }),
+        team: qb.ref({org_Team: {uid: '<team_uid>'}}),
+      };
+      const mutations = [qb.delete({org_ApplicationOwnership})];
+      const queryString = bulkBatchMutation(mutations);
+      expect(queryString).toMatchSnapshot();
+      expect(queryString).toContain('_is_null: true');
+      expect(queryString).not.toMatch(/platform: null/);
     });
 
     test('upsert with conflict override', () => {
