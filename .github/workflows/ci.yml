@@ -22,7 +22,7 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           # Pin to 22.22.1 due to npm self-upgrade regression in 22.22.2
           # https://github.com/nodejs/node/issues/62425
