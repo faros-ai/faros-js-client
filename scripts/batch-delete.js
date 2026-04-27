@@ -26,7 +26,7 @@ const {FarosClient} = require('../lib');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pino = require('pino');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const {randomUUID} = require('crypto');
+const {randomUUID} = require('node:crypto');
 
 async function execGql(client, graph, query) {
   const res = await client.rawGql(graph, query);
@@ -65,7 +65,7 @@ const program = new Command('batch-delete')
       logger
     );
 
-    const pageSize = parseInt(opts.pageSize, 10);
+    const pageSize = Number.parseInt(opts.pageSize, 10);
     if (!Number.isFinite(pageSize) || pageSize < 1) {
       logger.error(
         `Invalid --page-size "${opts.pageSize}". Must be a positive integer.`
@@ -135,7 +135,6 @@ const program = new Command('batch-delete')
       const records = data[model] || [];
 
       if (records.length === 0) {
-        hasMore = false;
         break;
       }
 
