@@ -28,7 +28,7 @@ const pino = require('pino');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const {randomUUID} = require('crypto');
 
-async function execGql(client, graph, query, logger) {
+async function execGql(client, graph, query) {
   const res = await client.rawGql(graph, query);
   if (res.errors?.length) {
     const messages = res.errors.map((e) => e.message).join('; ');
@@ -131,7 +131,7 @@ const program = new Command('batch-delete')
         }
       }`;
 
-      const data = await execGql(client, graph, query, logger);
+      const data = await execGql(client, graph, query);
       const records = data[model] || [];
 
       if (records.length === 0) {
@@ -166,7 +166,7 @@ const program = new Command('batch-delete')
         }
       }`;
 
-      const result = await execGql(client, graph, mutation, logger);
+      const result = await execGql(client, graph, mutation);
       const affected = result[`delete_${model}`].affected_rows;
       totalDeleted += affected;
 
