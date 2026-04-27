@@ -24,6 +24,8 @@ const {Command} = require('commander');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const {FarosClient} = require('../lib');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
+const {EnumType, jsonToGraphQLQuery} = require('json-to-graphql-query');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const pino = require('pino');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const {randomUUID} = require('node:crypto');
@@ -38,6 +40,17 @@ async function execGql(client, graph, query) {
     throw new Error('GraphQL response contained no data');
   }
   return res.data;
+}
+
+function buildWhereConditions(opts) {
+  const conditions = {};
+  if (opts.origin) {
+    conditions.origin = {_eq: opts.origin};
+  }
+  if (opts.before) {
+    conditions.refreshedAt = {_lt: opts.before};
+  }
+  return conditions;
 }
 
 const program = new Command('batch-delete')
@@ -73,18 +86,19 @@ const program = new Command('batch-delete')
       process.exit(1);
     }
 
+    if (opts.before && Number.isNaN(Date.parse(opts.before))) {
+      logger.error(
+        `Invalid --before "${opts.before}". Must be a valid ISO 8601 timestamp ` +
+          '(e.g. 2024-01-01T00:00:00Z).'
+      );
+      process.exit(1);
+    }
+
     const model = opts.model;
     const graph = opts.graph;
     const session = opts.session || randomUUID();
 
-    // Build the where clause from provided filters
-    const conditions = {};
-    if (opts.origin) {
-      conditions.origin = {_eq: opts.origin};
-    }
-    if (opts.before) {
-      conditions.refreshedAt = {_lt: opts.before};
-    }
+    const conditions = buildWhereConditions(opts);
 
     if (Object.keys(conditions).length === 0) {
       logger.error(
@@ -93,13 +107,6 @@ const program = new Command('batch-delete')
       );
       process.exit(1);
     }
-
-    const whereClause = Object.entries(conditions)
-      .map(([field, op]) => {
-        const [operator, value] = Object.entries(op)[0];
-        return `${field}: {${operator}: "${value}"}`;
-      })
-      .join(', ');
 
     logger.info(
       {model, graph, conditions, session, dryRun: opts.dryRun},
@@ -113,25 +120,27 @@ const program = new Command('batch-delete')
     let hasMore = true;
 
     while (hasMore) {
-      // Build keyset condition: id > lastId for pagination
-      const paginationFilter = lastId
-        ? `id: {_gt: "${lastId}"}`
-        : '';
-      const allConditions = [whereClause, paginationFilter]
-        .filter(Boolean)
-        .join(', ');
+      const whereClause = {...conditions};
+      if (lastId) {
+        whereClause.id = {_gt: lastId};
+      }
 
-      const query = `query {
-        ${model}(
-          where: {${allConditions}}
-          order_by: {id: asc}
-          limit: ${pageSize}
-        ) {
-          id
-        }
-      }`;
+      const queryObj = {
+        query: {
+          [model]: {
+            __args: {
+              where: whereClause,
+              order_by: {id: new EnumType('asc')},
+              limit: pageSize,
+            },
+            id: true,
+          },
+        },
+      };
 
-      const data = await execGql(client, graph, query);
+      const data = await execGql(
+        client, graph, jsonToGraphQLQuery(queryObj)
+      );
       const records = data[model] || [];
 
       if (records.length === 0) {
@@ -150,23 +159,27 @@ const program = new Command('batch-delete')
       // Delete this batch with the original conditions as guardrails,
       // prefixed with setCtx for session affinity / replica consistency
       const ids = records.map((r) => r.id);
-      const idsStr = ids.map((id) => `"${id}"`).join(', ');
-      const mutation = `mutation {
-        ctx: setCtx(args: {session: "${session}"}) { success }
-        delete_${model}(
-          where: {
-            _and: {
-              ${whereClause}
-              id: {_in: [${idsStr}]}
-            }
-          }
-        ) {
-          affected_rows
-        }
-      }`;
+      const mutationObj = {
+        mutation: {
+          ctx: {
+            __aliasFor: `setCtx(args: {session: "${session}"}) { success }`,
+          },
+          del: {
+            __aliasFor: `delete_${model}`,
+            __args: {
+              where: {
+                _and: {...conditions, id: {_in: ids}},
+              },
+            },
+            affected_rows: true,
+          },
+        },
+      };
 
-      const result = await execGql(client, graph, mutation);
-      const affected = result[`delete_${model}`].affected_rows;
+      const result = await execGql(
+        client, graph, jsonToGraphQLQuery(mutationObj)
+      );
+      const affected = result.del.affected_rows;
       totalDeleted += affected;
 
       logger.info(
