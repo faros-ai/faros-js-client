@@ -15,7 +15,8 @@
  *     --origin my-source \
  *     --before 2024-01-01T00:00:00Z \
  *     [--dry-run] \
- *     [--page-size 100]
+ *     [--page-size 100] \
+ *     [--session <id>]
  */
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -24,6 +25,20 @@ const {Command} = require('commander');
 const {FarosClient} = require('../lib');
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const pino = require('pino');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const {randomUUID} = require('crypto');
+
+async function execGql(client, graph, query, logger) {
+  const res = await client.rawGql(graph, query);
+  if (res.errors?.length) {
+    const messages = res.errors.map((e) => e.message).join('; ');
+    throw new Error(`GraphQL errors: ${messages}`);
+  }
+  if (!res.data) {
+    throw new Error('GraphQL response contained no data');
+  }
+  return res.data;
+}
 
 const program = new Command('batch-delete')
   .description('Batch-delete records from a model by origin and/or refreshedAt')
@@ -38,16 +53,29 @@ const program = new Command('batch-delete')
   )
   .option('--page-size <n>', 'Batch size for queries and deletes', '100')
   .option('--dry-run', 'Only count matching records; do not delete', false)
+  .option(
+    '--session <id>',
+    'Session id for setCtx (for replica consistency). ' +
+      'If omitted, a random UUID is generated.'
+  )
   .action(async (opts) => {
-    const logger = pino.default({name: 'batch-delete'});
+    const logger = pino({name: 'batch-delete'});
     const client = new FarosClient(
       {url: opts.url, apiKey: opts.apiKey},
       logger
     );
 
     const pageSize = parseInt(opts.pageSize, 10);
+    if (!Number.isFinite(pageSize) || pageSize < 1) {
+      logger.error(
+        `Invalid --page-size "${opts.pageSize}". Must be a positive integer.`
+      );
+      process.exit(1);
+    }
+
     const model = opts.model;
     const graph = opts.graph;
+    const session = opts.session || randomUUID();
 
     // Build the where clause from provided filters
     const conditions = {};
@@ -73,7 +101,10 @@ const program = new Command('batch-delete')
       })
       .join(', ');
 
-    logger.info({model, graph, conditions, dryRun: opts.dryRun}, 'Starting batch delete');
+    logger.info(
+      {model, graph, conditions, session, dryRun: opts.dryRun},
+      'Starting batch delete'
+    );
 
     // Paginate through matching IDs using keyset pagination
     let totalFound = 0;
@@ -100,7 +131,7 @@ const program = new Command('batch-delete')
         }
       }`;
 
-      const data = await client.gql(graph, query);
+      const data = await execGql(client, graph, query, logger);
       const records = data[model] || [];
 
       if (records.length === 0) {
@@ -117,10 +148,12 @@ const program = new Command('batch-delete')
         continue;
       }
 
-      // Delete this batch with the original conditions as guardrails
+      // Delete this batch with the original conditions as guardrails,
+      // prefixed with setCtx for session affinity / replica consistency
       const ids = records.map((r) => r.id);
       const idsStr = ids.map((id) => `"${id}"`).join(', ');
       const mutation = `mutation {
+        ctx: setCtx(args: {session: "${session}"}) { success }
         delete_${model}(
           where: {
             _and: {
@@ -133,7 +166,7 @@ const program = new Command('batch-delete')
         }
       }`;
 
-      const result = await client.gql(graph, mutation);
+      const result = await execGql(client, graph, mutation, logger);
       const affected = result[`delete_${model}`].affected_rows;
       totalDeleted += affected;
 
