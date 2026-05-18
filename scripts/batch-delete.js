@@ -68,7 +68,7 @@ const program = new Command('batch-delete')
   .option('--dry-run', 'Only count matching records; do not delete', false)
   .option(
     '--session <id>',
-    'Session id for setCtx (for replica consistency). ' +
+    'Session id for setCtx (for deletion recovery). ' +
       'If omitted, a random UUID is generated.'
   )
   .action(async (opts) => {
@@ -157,7 +157,7 @@ const program = new Command('batch-delete')
       }
 
       // Delete this batch with the original conditions as guardrails,
-      // prefixed with setCtx for session affinity / replica consistency
+      // prefixed with setCtx for deletion recovery
       const ids = records.map((r) => r.id);
       const mutationObj = {
         mutation: {
