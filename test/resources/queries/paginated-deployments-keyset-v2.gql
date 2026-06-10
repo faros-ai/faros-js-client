@@ -2,13 +2,12 @@ query paginatedQuery(
   $_timestamp: timestamptz = "-infinity",
   $_id: String = "",
   $_limit: Int,
-  $from: timestamptz,
-  $to: timestamptz
+  $from: timestamptz
 ) {
-  vcs_Commit(
+  cicd_Deployment(
     where: {
       _and: [
-        {refreshedAt: {_gte: $from, _lt: $to}}
+        {refreshedAt: {_gte: $from}}
         {
           refreshedAt: {_gte: $_timestamp}
           _or: [
@@ -23,12 +22,17 @@ query paginatedQuery(
     },
     order_by: [{refreshedAt: asc}, {id: asc}]
     limit: $_limit
-) {
+  ) {
     _timestamp: refreshedAt
     _id: id
-    id
-    author {
-      ownerId: id
+    deploymentUid: uid
+    application {
+      appName: name
+    }
+    changeset {
+      commit {
+        sha
+      }
     }
   }
 }

@@ -39,10 +39,10 @@ export {
 } from './graphql/types';
 export {HasuraSchemaLoader} from './graphql/hasura-schema-loader';
 export {
+  batchMutation,
   FarosModel,
   QueryBuilder,
   mask,
-  batchMutation,
   Ref
 } from './graphql/query-builder';
 export {
@@ -54,6 +54,7 @@ export {
   Reader,
   RecordIterable,
   buildIncrementalQueryV2,
+  createDataReader,
   createDeleteReader,
   createIncrementalQueriesV2,
   createIncrementalReader,
@@ -64,7 +65,11 @@ export {
   flattenV2,
   getGraphModels,
   paginatedQueryV2,
+  paginateWithKeysetV1,
+  paginateWithKeysetV2,
+  paginateWithOffsetLimit,
   pathToModelV2,
+  type QueryPaginator,
   readerFromQuery,
   toIncrementalV2,
 } from './graphql/graphql';

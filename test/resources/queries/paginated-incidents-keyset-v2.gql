@@ -1,5 +1,23 @@
-query paginatedQuery($id: String, $limit: Int) {
-  ims_Incident(where: {id: {_gt: $id}}, order_by: {id: asc}, limit: $limit) {
+query paginatedQuery(
+  $_timestamp: timestamptz = "-infinity",
+  $_id: String = "",
+  $_limit: Int
+) {
+  ims_Incident(
+    where: {
+      refreshedAt: {_gte: $_timestamp}
+      _or: [
+        {refreshedAt: {_gt: $_timestamp}}
+        {
+          refreshedAt: {_eq: $_timestamp}
+          id: {_gt: $_id}
+        }
+      ],
+    },
+    order_by: [{refreshedAt: asc}, {id: asc}]
+    limit: $_limit
+  ) {
+    _timestamp: refreshedAt
     _id: id
     incidentUid: uid
     impactedApplications {

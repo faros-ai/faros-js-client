@@ -95,11 +95,11 @@ exports[`graphql-client write batch upsert record with timestamptz primary key f
 exports[`graphql-client write batch upsert record with timestamptz primary key field 4`] = `"mutation { insert_vcs_UserToolUsage (objects: [{usedAt: "2021-10-14T00:53:33-06:00", origin: "mytestsource", userToolId: "f1e4d99accb71ba8ac1b8a1204f84b8211909212"}], on_conflict: {constraint: vcs_UserToolUsage_pkey, update_columns: [origin, refreshedAt]}) { returning { id refreshedAt usedAt userToolId } } }"`;
 
 exports[`graphql-client write batch upsert resetData 1`] = `
-"query paginatedQuery($id: String, $limit: Int) {
+"query paginatedQuery($_id: String = "", $_limit: Int) {
   vcs_Organization(
-    where: {_and: [{_and: {refreshedAt: {_lt: "2200-01-01T00:00:00.000Z"}, origin: {_eq: "foo"}}}, {id: {_gt: $id}}]}
+    where: {_and: [{_and: {refreshedAt: {_lt: "2200-01-01T00:00:00.000Z"}, origin: {_eq: "foo"}}}, {id: {_gt: $_id}}]}
     order_by: {id: asc}
-    limit: $limit
+    limit: $_limit
   ) {
     _id: id
     id
@@ -109,8 +109,7 @@ exports[`graphql-client write batch upsert resetData 1`] = `
 
 exports[`graphql-client write batch upsert resetData 2`] = `
 {
-  "id": "",
-  "limit": 3,
+  "_limit": 3,
 }
 `;
 
@@ -119,11 +118,11 @@ exports[`graphql-client write batch upsert resetData 3`] = `"mutation { del: del
 exports[`graphql-client write batch upsert resetData 4`] = `undefined`;
 
 exports[`graphql-client write batch upsert resetData 5`] = `
-"query paginatedQuery($id: String, $limit: Int) {
+"query paginatedQuery($_id: String = "", $_limit: Int) {
   vcs_Organization(
-    where: {_and: [{_and: {refreshedAt: {_lt: "2200-01-01T00:00:00.000Z"}, origin: {_eq: "foo"}}}, {id: {_gt: $id}}]}
+    where: {_and: [{_and: {refreshedAt: {_lt: "2200-01-01T00:00:00.000Z"}, origin: {_eq: "foo"}}}, {id: {_gt: $_id}}]}
     order_by: {id: asc}
-    limit: $limit
+    limit: $_limit
   ) {
     _id: id
     id
@@ -133,8 +132,8 @@ exports[`graphql-client write batch upsert resetData 5`] = `
 
 exports[`graphql-client write batch upsert resetData 6`] = `
 {
-  "id": "0011f5f8600d14dae163a37286aa1cd5e6bf6a71",
-  "limit": 3,
+  "_id": "0011f5f8600d14dae163a37286aa1cd5e6bf6a71",
+  "_limit": 3,
 }
 `;
 
@@ -147,6 +146,10 @@ exports[`graphql-client write batch upsert self-referent model 1`] = `"mutation 
 exports[`graphql-client write batch upsert self-referent model 2`] = `"mutation { insert_org_Employee (objects: [{uid: "9", origin: "mytestsource"}], on_conflict: {constraint: org_Employee_pkey, update_columns: [origin, refreshedAt]}) { returning { id refreshedAt uid } } }"`;
 
 exports[`graphql-client write batch upsert self-referent model 3`] = `"mutation { insert_org_Employee (objects: [{uid: "10", origin: "mytestsource", managerId: "t1|gql-e2e-v2|7"}, {uid: "7", origin: "mytestsource", managerId: "t1|gql-e2e-v2|9"}, {uid: "8", origin: "mytestsource", managerId: "t1|gql-e2e-v2|9"}], on_conflict: {constraint: org_Employee_pkey, update_columns: [managerId, origin, refreshedAt]}) { returning { id refreshedAt uid } } }"`;
+
+exports[`graphql-client write batch upsert undefined field 1`] = `"mutation { insert_vcs_Organization (objects: [{uid: "u1", origin: "mytestsource"}], on_conflict: {constraint: vcs_Organization_pkey, update_columns: [origin, refreshedAt]}) { returning { id refreshedAt source uid } } }"`;
+
+exports[`graphql-client write batch upsert undefined field 2`] = `"mutation { insert_vcs_Organization (objects: [{uid: "u2", htmlUrl: null, origin: "mytestsource"}, {uid: "u3", htmlUrl: "foo://bar", origin: "mytestsource"}], on_conflict: {constraint: vcs_Organization_pkey, update_columns: [htmlUrl, origin, refreshedAt]}) { returning { id refreshedAt source uid } } }"`;
 
 exports[`graphql-client write batch upsert update as upsert 1`] = `"mutation { insert_vcs_Organization (objects: [{uid: "playg", source: "Bitbucket"}], on_conflict: {constraint: vcs_Organization_pkey, update_columns: [source, uid]}) { returning { id refreshedAt source uid } } }"`;
 

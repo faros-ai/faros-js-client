@@ -1,0 +1,12 @@
+query delete($from: timestamptz!, $to: timestamptz!) {
+  vcs_Commit_history(
+    where: {
+      _and: [
+        {action: {_eq: "delete"}},
+        {actionAt: {_gte: $from, _lt: $to}}
+      ]
+    }
+  ) {
+    id
+  }
+}
