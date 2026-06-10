@@ -54,6 +54,14 @@ type query_root {
     """limit the number of rows returned"""
     limit: Int
   ): [cicd_Artifact!]!
+
+  """
+  fetch data from the table: "cicd_Build_history"
+  """
+  cicd_Build_history(
+    """limit the number of rows returned"""
+    limit: Int
+  ): [cicd_Build_history!]!
 }
 
 type ims_Incident {
@@ -286,3 +294,34 @@ type cicd_Artifact {
   uid: String!
 }
 
+"""
+columns and relationships of "cicd_Build_history"
+"""
+type cicd_Build_history {
+  action: String
+  actionAt: timestamptz!
+  actionBy: String
+  agentId: String
+  createdAt: timestamptz
+  endedAt: timestamptz
+  environmentVariables(
+    """JSON select path"""
+    path: String
+  ): jsonb
+  id: String!
+  isPhantom: Boolean
+  name: String
+  number: Int
+  origin: String
+  pipelineId: String
+  refreshedAt: timestamptz!
+  startedAt: timestamptz
+  status(
+    """JSON select path"""
+    path: String
+  ): jsonb
+  statusCategory: String
+  statusDetail: String
+  uid: String!
+  url: String
+}

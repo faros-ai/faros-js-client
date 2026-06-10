@@ -2,6 +2,7 @@ import 'jest-extended';
 
 import * as gql from 'graphql';
 
+import {FarosClient} from '../src/client';
 import * as sut from '../src/graphql/graphql';
 import {
   graphSchemaV2,
@@ -27,7 +28,7 @@ describe('graphql', () => {
         },
       },
     ];
-    const query = await loadQueryFile('commits-v2.gql');
+    const query = await loadQueryFile('commits.gql');
     const ctx = sut.flattenV2(query, graphSchemaV2);
     const flattenedNodes = sut.flattenIterable(ctx, nodes);
     expect(ctx.fieldTypes).toEqual(
@@ -58,7 +59,7 @@ describe('graphql', () => {
   test('flatten nodes V2 with jsonb array', () => {
     const query = `
       query ($from: timestamptz!, $to: timestamptz!) {
-        cicd_Artifact (where: {refreshedAt: {_gte: $from, _lt: $to}}) 
+        cicd_Artifact (where: {refreshedAt: {_gte: $from, _lt: $to}})
           { id tags uid }
       }`;
     const ctx = sut.flattenV2(query, graphSchemaV2);
@@ -105,7 +106,7 @@ describe('graphql', () => {
         ],
       },
     ];
-    const query = await loadQueryFile('incidents-v2.gql');
+    const query = await loadQueryFile('incidents.gql');
     const ctx = sut.flattenV2(query, graphSchemaV2);
     const flattenedNodes = sut.flattenIterable(ctx, nodes);
     expect(ctx.fieldTypes).toEqual(
@@ -166,7 +167,7 @@ describe('graphql', () => {
       },
     ];
 
-    const query = await loadQueryFile('pull_request-v2.gql');
+    const query = await loadQueryFile('pull-request.gql');
     const ctx = sut.flattenV2(query, graphSchemaV2);
     const flattenedNodes = sut.flattenIterable(ctx, nodes);
     expect(await toArray(flattenedNodes)).toMatchSnapshot();
@@ -178,39 +179,73 @@ describe('graphql', () => {
     );
   });
 
-  test('paginated offset/limit v2 query', async () => {
-    const query = await loadQueryFile('commits-v2.gql');
-    const paginatedQuery = sut.paginateWithOffsetLimitV2(query);
-    const expectedQuery = await loadQueryFile(
-      'paginated-commits-offset-limit-v2.gql'
-    );
-    expect(paginatedQuery.query).toEqual(expectedQuery);
-    expect(paginatedQuery.edgesPath).toEqual(['vcs_Commit']);
-    expect(paginatedQuery.pageInfoPath).toBeEmpty();
-  });
+  describe('pagination', () => {
+    test('offset-limit', async () => {
+      const query = await loadQueryFile('commits.gql');
+      const paginatedQuery = sut.paginateWithOffsetLimit(query);
+      const expectedQuery = await loadQueryFile(
+        'paginated-commits-offset-limit.gql'
+      );
+      expect(paginatedQuery.query).toEqual(expectedQuery);
+      expect(paginatedQuery.modelName).toEqual('vcs_Commit');
+      expect(paginatedQuery.keysetFields).toBeUndefined();
+    });
 
-  test('paginated keyset v2 query', async () => {
-    const query = await loadQueryFile('incidents-v2.gql');
-    const paginatedQuery = sut.paginateWithKeysetV2(query);
-    const expectedQuery = await loadQueryFile(
-      'paginated-incidents-keyset-v2.gql'
-    );
-    expect(paginatedQuery.query).toEqual(expectedQuery);
-    expect(paginatedQuery.edgesPath).toEqual(['ims_Incident']);
-    expect(paginatedQuery.edgeIdPath).toEqual(['_id']);
-    expect(paginatedQuery.pageInfoPath).toBeEmpty();
-  });
+    test('keyset v1', async () => {
+      const query = await loadQueryFile('incidents.gql');
+      const paginatedQuery = sut.paginateWithKeysetV1(query);
+      const expectedQuery = await loadQueryFile(
+        'paginated-incidents-keyset-v1.gql'
+      );
 
-  test('paginated keyset v2 query with existing where clause', async () => {
-    const query = await loadQueryFile('commits-v2.gql');
-    const paginatedQuery = sut.paginateWithKeysetV2(query);
-    const expectedQuery = await loadQueryFile(
-      'paginated-commits-keyset-v2.gql'
-    );
-    expect(paginatedQuery.query).toEqual(expectedQuery);
-    expect(paginatedQuery.edgesPath).toEqual(['vcs_Commit']);
-    expect(paginatedQuery.edgeIdPath).toEqual(['_id']);
-    expect(paginatedQuery.pageInfoPath).toBeEmpty();
+      expect(paginatedQuery.query).toEqual(expectedQuery);
+      expect(paginatedQuery.modelName).toEqual('ims_Incident');
+      expect(paginatedQuery.keysetFields).toEqual(['_id']);
+    });
+
+    test('keyset v1 with existing where clause', async () => {
+      const query = await loadQueryFile('commits.gql');
+      const paginatedQuery = sut.paginateWithKeysetV1(query);
+      const expectedQuery = await loadQueryFile(
+        'paginated-commits-keyset-v1.gql'
+      );
+      expect(paginatedQuery.query).toEqual(expectedQuery);
+      expect(paginatedQuery.modelName).toEqual('vcs_Commit');
+      expect(paginatedQuery.keysetFields).toEqual(['_id']);
+    });
+
+    test('keyset v2', async () => {
+      const query = await loadQueryFile('incidents.gql');
+      const paginatedQuery = sut.paginateWithKeysetV2(query);
+      const expectedQuery = await loadQueryFile(
+        'paginated-incidents-keyset-v2.gql'
+      );
+      expect(paginatedQuery.query).toEqual(expectedQuery);
+      expect(paginatedQuery.modelName).toEqual('ims_Incident');
+      expect(paginatedQuery.keysetFields).toEqual(['_timestamp', '_id']);
+    });
+
+    test('keyset v2 with existing where clause', async () => {
+      const query = await loadQueryFile('commits.gql');
+      const paginatedQuery = sut.paginateWithKeysetV2(query);
+      const expectedQuery = await loadQueryFile(
+        'paginated-commits-keyset-v2.gql'
+      );
+      expect(paginatedQuery.query).toEqual(expectedQuery);
+      expect(paginatedQuery.modelName).toEqual('vcs_Commit');
+      expect(paginatedQuery.keysetFields).toEqual(['_timestamp', '_id']);
+    });
+
+    test('keyset v2 on history model', async () => {
+      const query = await loadQueryFile('commits-history.gql');
+      const paginatedQuery = sut.paginateWithKeysetV2(query);
+      const expectedQuery = await loadQueryFile(
+        'paginated-commits-history-keyset-v2.gql'
+      );
+      expect(paginatedQuery.query).toEqual(expectedQuery);
+      expect(paginatedQuery.modelName).toEqual('vcs_Commit_history');
+      expect(paginatedQuery.keysetFields).toEqual(['_timestamp', '_id']);
+    });
   });
 
   test('build incremental V2', () => {
@@ -354,7 +389,7 @@ describe('graphql', () => {
         graphSchema: graphSchemaV2ForPrimaryKeysTest,
         primaryKeys,
         references,
-        avoidCollisions: false
+        avoidCollisions: false,
       })
     ).toMatchSnapshot();
   });
@@ -370,7 +405,7 @@ describe('graphql', () => {
     expect(() =>
       sut.createIncrementalQueriesV2({
         graphSchema: graphSchemaV2ForPrimaryKeysTest,
-        primaryKeys
+        primaryKeys,
       })
     ).toThrowErrorMatchingInlineSnapshot(
       '"expected organizationId to be a field of cicd_Pipeline"'
@@ -395,7 +430,7 @@ describe('graphql', () => {
       sut.createIncrementalQueriesV2({
         graphSchema: graphSchemaV2ForPrimaryKeysTest,
         primaryKeys,
-        references
+        references,
       })
     ).toThrowErrorMatchingSnapshot();
   });
@@ -425,7 +460,7 @@ describe('graphql', () => {
         graphSchema: graphSchemaV2ForForeignKeyExclusionTest,
         primaryKeys,
         references,
-        avoidCollisions: false
+        avoidCollisions: false,
       })
     ).toMatchSnapshot();
   });
@@ -441,5 +476,46 @@ describe('graphql', () => {
       modelName: 'cicd_Build',
       path: ['cicd_Build'],
     });
+  });
+
+  test('create incremental reader', () => {
+    const reader = sut.createIncrementalReader({
+      model: 'cicd_Build',
+      client: {} as unknown as FarosClient,
+      graph: 'graph',
+      graphSchema: graphSchemaV2,
+      pageSize: 1,
+      avoidCollisions: false,
+      scalarsOnly: true,
+    });
+
+    expect(reader?.metadata).toMatchObject({
+      name: 'cicd_Build',
+      modelKeys: ['id'],
+      incremental: true,
+    });
+  });
+
+  test('create delete reader', () => {
+    const reader = sut.createDeleteReader({
+      model: 'cicd_Build',
+      client: {} as unknown as FarosClient,
+      graph: 'graph',
+      graphSchema: graphSchemaV2,
+      pageSize: 1,
+    });
+
+    expect(reader?.metadata).toMatchObject({
+      name: 'cicd_Build',
+      incremental: false,
+    });
+  });
+
+  test('get graph models', () => {
+    expect(sut.getGraphModels(graphSchemaV2)).toIncludeAllMembers([
+      'cicd_Artifact',
+      'cicd_Build',
+      'cicd_Pipeline',
+    ]);
   });
 });

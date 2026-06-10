@@ -6,7 +6,7 @@ import {jsonToGraphQLQuery, VariableType} from 'json-to-graphql-query';
 import _ from 'lodash';
 import {Dictionary} from 'ts-essentials';
 import {Memoize} from 'typescript-memoize';
-import {VError} from 'verror';
+import VError from 'verror';
 
 import {FarosClient} from '../client';
 import {PathToModel, Query, Reference} from './types';
@@ -17,10 +17,8 @@ type AsyncOrSyncIterable<T> = AsyncIterable<T> | Iterable<T>;
 
 export interface PaginatedQuery {
   readonly query: string;
-  readonly edgesPath: ReadonlyArray<string>;
-  // Relative to edge path
-  readonly edgeIdPath?: ReadonlyArray<string>;
-  readonly pageInfoPath: ReadonlyArray<string>;
+  readonly modelName: string;
+  readonly keysetFields?: string[];
 }
 
 export interface FlattenContext {
@@ -64,31 +62,42 @@ export function isModelQuery(
   );
 }
 
+export type QueryPaginator = (query: string) => PaginatedQuery;
+
 export function paginatedQueryV2(query: string): PaginatedQuery {
   switch (process.env.GRAPHQL_V2_PAGINATOR) {
     case 'offset-limit':
-      return paginateWithOffsetLimitV2(query);
-    default:
+      return paginateWithOffsetLimit(query);
+    case 'keyset-v2':
       return paginateWithKeysetV2(query);
+    default:
+      return paginateWithKeysetV1(query);
   }
+}
+
+interface CreateVariableDefinition {
+  readonly name: string;
+  readonly type: string;
+  readonly default?: gql.ConstValueNode;
 }
 
 function createOperationDefinition(
   node: gql.OperationDefinitionNode,
-  varDefs: [string, string][]
+  varDefs: CreateVariableDefinition[]
 ): gql.OperationDefinitionNode {
   const variableDefinitions: VariableDefinitionNode[] = varDefs.map(
-    ([varName, varType]) => {
+    (varDef): VariableDefinitionNode => {
       return {
         kind: Kind.VARIABLE_DEFINITION,
         variable: {
           kind: Kind.VARIABLE,
-          name: {kind: Kind.NAME, value: varName},
+          name: {kind: Kind.NAME, value: varDef.name},
         },
         type: {
           kind: Kind.NAMED_TYPE,
-          name: {kind: Kind.NAME, value: varType},
+          name: {kind: Kind.NAME, value: varDef.type},
         },
+        ...(varDef.default ? {defaultValue: varDef.default} : {}),
       };
     }
   );
@@ -132,11 +141,11 @@ function mergeWhereClauses(clauses: any[]): any {
 }
 
 /**
- * Paginate v2 queries with where clause and order by on id
+ * Paginate queries with where clause and order by on id
  * https://hasura.io/docs/latest/queries/postgres/pagination/#keyset-cursor-based-pagination
  */
-export function paginateWithKeysetV2(query: string): PaginatedQuery {
-  const edgesPath: string[] = [];
+export function paginateWithKeysetV1(query: string): PaginatedQuery {
+  let modelName: string | undefined;
   const ast = gql.visit(gql.parse(query), {
     Document(node) {
       if (node.definitions.length !== 1) {
@@ -154,17 +163,21 @@ export function paginateWithKeysetV2(query: string): PaginatedQuery {
 
       // Add pagination variables to query operation
       return createOperationDefinition(node, [
-        ['id', 'String'],
-        ['limit', 'Int'],
+        {
+          name: '_id',
+          type: 'String',
+          default: {kind: gql.Kind.STRING, value: ''},
+        },
+
+        {name: '_limit', type: 'Int'},
       ]);
     },
     Field: {
       enter(node) {
-        if (edgesPath.length) {
-          // Skip rest of nodes once edges path has been set
+        if (modelName) {
           return false;
         }
-        edgesPath.push(node.name.value);
+        modelName = node.name.value;
 
         const existingWhereArgs =
           node.arguments?.filter((n) => n.name.value === 'where') ?? [];
@@ -195,7 +208,7 @@ export function paginateWithKeysetV2(query: string): PaginatedQuery {
                           kind: gql.Kind.VARIABLE,
                           name: {
                             kind: gql.Kind.NAME,
-                            value: 'id',
+                            value: '_id',
                           },
                         },
                       },
@@ -206,6 +219,7 @@ export function paginateWithKeysetV2(query: string): PaginatedQuery {
             },
           },
         ];
+
         if (whereArgs.length > 1) {
           whereArgs = [mergeWhereClauses(whereArgs)];
         }
@@ -233,7 +247,7 @@ export function paginateWithKeysetV2(query: string): PaginatedQuery {
               name: {kind: 'Name', value: 'limit'},
               value: {
                 kind: 'Variable',
-                name: {kind: 'Name', value: 'limit'},
+                name: {kind: 'Name', value: '_limit'},
               },
             },
           ],
@@ -253,19 +267,26 @@ export function paginateWithKeysetV2(query: string): PaginatedQuery {
     },
   });
 
+  if (!modelName) {
+    throw new VError(
+      {info: {query}},
+      'Cannot paginate query using keyset v1: Unable to determine model name'
+    );
+  }
+
   return {
     query: gql.print(ast),
-    edgesPath,
-    edgeIdPath: ['_id'],
-    pageInfoPath: [],
+    modelName,
+    keysetFields: ['_id'],
   };
 }
 
 /**
- * Paginate v2 queries with limit and offsets.
+ * Paginate queries using timestamp and id fields
+ * https://hasura.io/docs/latest/queries/postgres/pagination/#keyset-cursor-based-pagination
  */
-export function paginateWithOffsetLimitV2(query: string): PaginatedQuery {
-  const edgesPath: string[] = [];
+export function paginateWithKeysetV2(query: string): PaginatedQuery {
+  let modelName: string | undefined;
   const ast = gql.visit(gql.parse(query), {
     Document(node) {
       if (node.definitions.length !== 1) {
@@ -281,17 +302,305 @@ export function paginateWithOffsetLimitV2(query: string): PaginatedQuery {
 
       // Add pagination variables to query operation
       return createOperationDefinition(node, [
-        ['offset', 'Int'],
-        ['limit', 'Int'],
+        {
+          name: '_timestamp',
+          type: 'timestamptz',
+          default: {kind: gql.Kind.STRING, value: '-infinity'},
+        },
+        {
+          name: '_id',
+          type: 'String',
+          default: {kind: gql.Kind.STRING, value: ''},
+        },
+        {name: '_limit', type: 'Int'},
       ]);
     },
     Field: {
       enter(node) {
-        if (edgesPath.length) {
+        if (modelName) {
           // Skip rest of nodes once edges path has been set
           return false;
         }
-        edgesPath.push(node.name.value);
+        modelName = node.name.value;
+
+        let timestampField: string;
+        if (modelName.endsWith('_history')) {
+          timestampField = 'actionAt';
+        } else {
+          timestampField = 'refreshedAt';
+        }
+
+        const existingWhereArgs =
+          node.arguments?.filter((n) => n.name.value === 'where') ?? [];
+        let whereArgs: gql.ArgumentNode[] = [
+          // where: {
+          //   _and: [
+          //     {...existingWhereArgs},
+          //     {
+          //       # This predicate is logically "redundant" with the "_or"
+          //       # predicate below, but we add it so the planner can push
+          //       # it into the index scan
+          //       {timestampField: {_gte: $_timestamp}},
+          //       # Break ties using the primary key (id)
+          //       _or: [
+          //         {timestampField: {_gt: $_timestamp}},
+          //         {timestampField: {_eq: $_timestamp}, id: {_gt: $_id}}
+          //       ]
+          //     }
+          //   ]
+          // }
+          ...existingWhereArgs,
+          {
+            kind: gql.Kind.ARGUMENT,
+            name: {kind: gql.Kind.NAME, value: 'where'},
+            value: {
+              kind: gql.Kind.OBJECT,
+              fields: [
+                // {timestampField: {_gte: $_timestamp}}
+                {
+                  kind: gql.Kind.OBJECT_FIELD,
+                  name: {
+                    kind: gql.Kind.NAME,
+                    value: timestampField,
+                  },
+                  value: {
+                    kind: gql.Kind.OBJECT,
+                    fields: [
+                      {
+                        kind: gql.Kind.OBJECT_FIELD,
+                        name: {
+                          kind: gql.Kind.NAME,
+                          value: '_gte',
+                        },
+                        value: {
+                          kind: gql.Kind.VARIABLE,
+                          name: {
+                            kind: gql.Kind.NAME,
+                            value: '_timestamp',
+                          },
+                        },
+                      },
+                    ],
+                  },
+                },
+                // _or: [
+                //   {timestampField: {_gt: $_timestamp}},
+                //   {timestampField: {_eq: $_timestamp}, id: {_gt: $_id}}
+                // ]
+                {
+                  kind: gql.Kind.OBJECT_FIELD,
+                  name: {
+                    kind: gql.Kind.NAME,
+                    value: '_or',
+                  },
+                  value: {
+                    kind: gql.Kind.LIST,
+                    values: [
+                      {
+                        kind: gql.Kind.OBJECT,
+                        fields: [
+                          {
+                            kind: gql.Kind.OBJECT_FIELD,
+                            name: {
+                              kind: gql.Kind.NAME,
+                              value: timestampField,
+                            },
+                            value: {
+                              kind: gql.Kind.OBJECT,
+                              fields: [
+                                {
+                                  kind: gql.Kind.OBJECT_FIELD,
+                                  name: {
+                                    kind: gql.Kind.NAME,
+                                    value: '_gt',
+                                  },
+                                  value: {
+                                    kind: gql.Kind.VARIABLE,
+                                    name: {
+                                      kind: gql.Kind.NAME,
+                                      value: '_timestamp',
+                                    },
+                                  },
+                                },
+                              ],
+                            },
+                          },
+                        ],
+                      },
+                      {
+                        kind: gql.Kind.OBJECT,
+                        fields: [
+                          {
+                            kind: gql.Kind.OBJECT_FIELD,
+                            name: {
+                              kind: gql.Kind.NAME,
+                              value: timestampField,
+                            },
+                            value: {
+                              kind: gql.Kind.OBJECT,
+                              fields: [
+                                {
+                                  kind: gql.Kind.OBJECT_FIELD,
+                                  name: {
+                                    kind: gql.Kind.NAME,
+                                    value: '_eq',
+                                  },
+                                  value: {
+                                    kind: gql.Kind.VARIABLE,
+                                    name: {
+                                      kind: gql.Kind.NAME,
+                                      value: '_timestamp',
+                                    },
+                                  },
+                                },
+                              ],
+                            },
+                          },
+                          {
+                            kind: gql.Kind.OBJECT_FIELD,
+                            name: {
+                              kind: gql.Kind.NAME,
+                              value: 'id',
+                            },
+                            value: {
+                              kind: gql.Kind.OBJECT,
+                              fields: [
+                                {
+                                  kind: gql.Kind.OBJECT_FIELD,
+                                  name: {
+                                    kind: gql.Kind.NAME,
+                                    value: '_gt',
+                                  },
+                                  value: {
+                                    kind: gql.Kind.VARIABLE,
+                                    name: {
+                                      kind: gql.Kind.NAME,
+                                      value: '_id',
+                                    },
+                                  },
+                                },
+                              ],
+                            },
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ];
+
+        if (whereArgs.length > 1) {
+          whereArgs = [mergeWhereClauses(whereArgs)];
+        }
+
+        return {
+          ...node,
+          arguments: [
+            ...whereArgs,
+            {
+              kind: 'Argument',
+              name: {kind: 'Name', value: 'order_by'},
+              value: {
+                kind: 'ListValue',
+                values: [
+                  {
+                    kind: 'ObjectValue',
+                    fields: [
+                      {
+                        kind: 'ObjectField',
+                        name: {kind: 'Name', value: timestampField},
+                        value: {kind: 'EnumValue', value: 'asc'},
+                      },
+                    ],
+                  },
+                  {
+                    kind: 'ObjectValue',
+                    fields: [
+                      {
+                        kind: 'ObjectField',
+                        name: {kind: 'Name', value: 'id'},
+                        value: {kind: 'EnumValue', value: 'asc'},
+                      },
+                    ],
+                  },
+                ],
+              },
+            },
+            {
+              kind: 'Argument',
+              name: {kind: 'Name', value: 'limit'},
+              value: {
+                kind: 'Variable',
+                name: {kind: 'Name', value: '_limit'},
+              },
+            },
+          ],
+          selectionSet: {
+            kind: 'SelectionSet',
+            selections: [
+              {
+                kind: 'Field',
+                alias: {kind: 'Name', value: '_timestamp'},
+                name: {kind: 'Name', value: timestampField},
+              },
+              {
+                kind: 'Field',
+                alias: {kind: 'Name', value: '_id'},
+                name: {kind: 'Name', value: 'id'},
+              },
+              ...(node.selectionSet?.selections ?? []),
+            ],
+          },
+        };
+      },
+    },
+  });
+
+  if (!modelName) {
+    throw new VError(
+      {info: {query}},
+      'Cannot paginate query using keyset v2: Unable to determine model name'
+    );
+  }
+
+  return {
+    query: gql.print(ast),
+    modelName,
+    keysetFields: ['_timestamp', '_id'],
+  };
+}
+
+export function paginateWithOffsetLimit(query: string): PaginatedQuery {
+  let modelName: string | undefined;
+  const ast = gql.visit(gql.parse(query), {
+    Document(node) {
+      if (node.definitions.length !== 1) {
+        throw invalidQuery(
+          'document should contain a single query operation definition'
+        );
+      }
+    },
+    OperationDefinition(node) {
+      if (node.operation !== 'query') {
+        throw invalidQuery('only query operations are supported');
+      }
+
+      // Add pagination variables to query operation
+      return createOperationDefinition(node, [
+        {name: '_offset', type: 'Int'},
+        {name: '_limit', type: 'Int'},
+      ]);
+    },
+    Field: {
+      enter(node) {
+        if (modelName) {
+          return false;
+        }
+        modelName = node.name.value;
+
         // copy existing where args
         const existing = (node.arguments ?? []).filter((n) =>
           ALLOWED_ARG_TYPES.has(n.name.value)
@@ -305,7 +614,7 @@ export function paginateWithOffsetLimitV2(query: string): PaginatedQuery {
               name: {kind: 'Name', value: 'offset'},
               value: {
                 kind: 'Variable',
-                name: {kind: 'Name', value: 'offset'},
+                name: {kind: 'Name', value: '_offset'},
               },
             },
             {
@@ -313,7 +622,7 @@ export function paginateWithOffsetLimitV2(query: string): PaginatedQuery {
               name: {kind: 'Name', value: 'limit'},
               value: {
                 kind: 'Variable',
-                name: {kind: 'Name', value: 'limit'},
+                name: {kind: 'Name', value: '_limit'},
               },
             },
             {
@@ -341,10 +650,16 @@ export function paginateWithOffsetLimitV2(query: string): PaginatedQuery {
     },
   });
 
+  if (!modelName) {
+    throw new VError(
+      {info: {query}},
+      'Cannot paginate query using offset-limit: unable to determine model name'
+    );
+  }
+
   return {
     query: gql.print(ast),
-    edgesPath,
-    pageInfoPath: [],
+    modelName,
   };
 }
 
@@ -775,9 +1090,11 @@ interface ReaderFromQueryConfig {
   readonly query: Query;
   readonly pageSize: number;
   readonly incremental?: boolean;
+  readonly paginator?: QueryPaginator;
 }
 
 export function readerFromQuery(cfg: ReaderFromQueryConfig): Reader {
+  const paginator = cfg.paginator ?? paginatedQueryV2;
   const flattenCtx = flattenV2(cfg.query.gql, cfg.graphSchema);
   if (!(flattenCtx.leafPaths.length && flattenCtx.fieldTypes.size)) {
     throw new VError(
@@ -786,13 +1103,14 @@ export function readerFromQuery(cfg: ReaderFromQueryConfig): Reader {
       cfg.query.gql
     );
   }
+
   return {
     execute(args: Map<string, any>): AsyncIterable<AnyRecord> {
       const nodes = cfg.client.nodeIterable(
         cfg.graph,
         cfg.query.gql,
         cfg.pageSize,
-        paginatedQueryV2,
+        paginator,
         args
       );
       return flattenIterable(flattenCtx, nodes);
@@ -813,6 +1131,7 @@ interface NonIncrementalReadersConfig {
   readonly graphSchema: gql.GraphQLSchema;
   readonly queries: ReadonlyArray<Query>;
   readonly pageSize: number;
+  readonly paginator?: QueryPaginator;
 }
 
 export function createNonIncrementalReaders(
@@ -825,6 +1144,7 @@ export function createNonIncrementalReaders(
       graphSchema: cfg.graphSchema,
       query,
       pageSize: cfg.pageSize,
+      paginator: cfg.paginator,
       incremental: false,
     })
   );
@@ -843,6 +1163,16 @@ function isScalar(type: any): boolean {
     gql.isScalarType(unwrapped) ||
     (gql.isListType(unwrapped) && gql.isScalarType(unwrapped.ofType))
   );
+}
+
+export function getGraphModels(graphSchema: gql.GraphQLSchema): string[] {
+  const models: string[] = [];
+  for (const [name, type] of Object.entries(graphSchema.getTypeMap())) {
+    if (isV2ModelType(type)) {
+      models.push(name);
+    }
+  }
+  return models;
 }
 
 interface IncrementalQueryConfig {
@@ -943,8 +1273,8 @@ interface IncrementalReadersConfig {
   readonly graph: string;
   readonly pageSize: number;
   readonly graphSchema: gql.GraphQLSchema;
-  readonly avoidCollisions: boolean;
-  readonly scalarsOnly: boolean;
+  readonly avoidCollisions?: boolean;
+  readonly scalarsOnly?: boolean;
 }
 
 export function createIncrementalReadersV2(
@@ -968,6 +1298,102 @@ export function createIncrementalReadersV2(
     throw new VError('failed to create v2 incremental readers');
   }
   return result;
+}
+
+export interface IncrementalReaderConfig {
+  readonly model: string;
+  readonly client: FarosClient;
+  readonly graph: string;
+  readonly graphSchema: gql.GraphQLSchema;
+  readonly pageSize: number;
+  readonly paginator?: QueryPaginator;
+  readonly avoidCollisions: boolean;
+  readonly scalarsOnly: boolean;
+}
+
+export function createIncrementalReader(
+  cfg: IncrementalReaderConfig
+): Reader | undefined {
+  const type = cfg.graphSchema.getType(cfg.model);
+  if (isV2ModelType(type)) {
+    const avoidCollisions = cfg.avoidCollisions ?? true;
+    const scalarsOnly = cfg.scalarsOnly ?? false;
+    return readerFromQuery({
+      client: cfg.client,
+      graph: cfg.graph,
+      graphSchema: cfg.graphSchema,
+      pageSize: cfg.pageSize,
+      paginator: cfg.paginator,
+      incremental: true,
+      query: buildIncrementalQueryV2({
+        type,
+        avoidCollisions,
+        scalarsOnly,
+      }),
+    });
+  }
+  return undefined;
+}
+
+export interface DataReaderConfig {
+  readonly model: string;
+  readonly client: FarosClient;
+  readonly graph: string;
+  readonly graphSchema: gql.GraphQLSchema;
+  readonly pageSize: number;
+  readonly paginator?: QueryPaginator;
+}
+
+export function createDataReader(cfg: DataReaderConfig): Reader | undefined {
+  return createIncrementalReader({
+    client: cfg.client,
+    graph: cfg.graph,
+    graphSchema: cfg.graphSchema,
+    model: cfg.model,
+    pageSize: cfg.pageSize,
+    paginator: cfg.paginator,
+    avoidCollisions: false,
+    scalarsOnly: true,
+  });
+}
+
+export interface DeleteReaderConfig {
+  readonly model: string;
+  readonly client: FarosClient;
+  readonly graph: string;
+  readonly graphSchema: gql.GraphQLSchema;
+  readonly pageSize: number;
+  readonly paginator?: QueryPaginator;
+}
+
+export function createDeleteReader(
+  cfg: DeleteReaderConfig
+): Reader | undefined {
+  const type = cfg.graphSchema.getType(cfg.model);
+  if (!isV2ModelType(type)) {
+    return undefined;
+  }
+
+  const deleteQuery = `
+    query delete($from: timestamptz!, $to: timestamptz!) {
+      ${cfg.model}_history(where: {_and: [
+        {action: {_eq: "delete"}},
+        {actionAt: {_gte: $from, _lt: $to}}
+      ]}) {
+        id
+        actionAt
+        origin
+      }
+    }`;
+  const [deleteReader] = createNonIncrementalReaders({
+    client: cfg.client,
+    graph: cfg.graph,
+    pageSize: cfg.pageSize,
+    paginator: cfg.paginator,
+    graphSchema: cfg.graphSchema,
+    queries: [{gql: deleteQuery, name: cfg.model}],
+  });
+  return deleteReader;
 }
 
 interface IncrementalQueriesConfig {
@@ -1005,7 +1431,7 @@ export function createIncrementalQueriesV2(
           resolvedPrimaryKeys,
           references: typeReferences,
           avoidCollisions,
-          scalarsOnly
+          scalarsOnly,
         })
       );
     }

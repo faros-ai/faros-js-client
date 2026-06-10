@@ -1,6 +1,6 @@
 import {AxiosInstance, AxiosRequestConfig, Method} from 'axios';
 import * as gql from 'graphql';
-import {get as traverse, isEmpty, unset} from 'lodash';
+import _ from 'lodash';
 import pino, {Logger} from 'pino';
 import {Dictionary} from 'ts-essentials';
 import {promisify} from 'util';
@@ -8,8 +8,8 @@ import * as zlib from 'zlib';
 
 import {makeAxiosInstanceWithRetry} from './axios';
 import {wrapApiError} from './errors';
-import {paginatedQueryV2} from './graphql/graphql';
-import {batchMutation} from './graphql/query-builder';
+import {GraphQLClient} from './graphql/client/graphql-client';
+import {paginatedQueryV2, type QueryPaginator} from './graphql/graphql';
 import {Mutation, Schema} from './graphql/types';
 import {
   Account,
@@ -55,7 +55,9 @@ export class FarosClient {
         maxBodyLength: Infinity, // rely on server to enforce request body size
         maxContentLength: Infinity, // accept any response size
       },
-      logger
+      logger,
+      cfg.retries,
+      cfg.retryDelay
     );
 
     this.phantoms = cfg.phantoms || Phantom.IncludeNestedOnly;
@@ -195,7 +197,15 @@ export class FarosClient {
   }
 
   async sendMutations(graph: string, mutations: Mutation[]): Promise<any> {
-    const gql = batchMutation(mutations);
+    const gql = GraphQLClient.batchMutation(mutations);
+    if (gql) {
+      return await this.gql(graph, gql);
+    }
+    return undefined;
+  }
+
+  async sendBulkMutations(graph: string, mutations: Mutation[]): Promise<any> {
+    const gql = GraphQLClient.bulkBatchMutation(mutations);
     if (gql) {
       return await this.gql(graph, gql);
     }
@@ -305,77 +315,66 @@ export class FarosClient {
     graph: string,
     rawQuery: string,
     pageSize = 100,
-    paginator = paginatedQueryV2,
+    paginator: QueryPaginator = paginatedQueryV2,
     args: Map<string, any> = new Map<string, any>()
   ): AsyncIterable<any> {
-    const {query, edgesPath, edgeIdPath, pageInfoPath} = paginator(rawQuery);
+    const {query, modelName, keysetFields} = paginator(rawQuery);
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     const self = this;
-    if (edgeIdPath?.length) {
+    if (keysetFields?.length) {
+      const keysetValues: Record<string, any> = {};
       return {
         async *[Symbol.asyncIterator](): AsyncIterator<any> {
-          let id = '';
           let hasNextPage = true;
           while (hasNextPage) {
             const data = await self.gqlNoDirectives(graph, query, {
-              limit: pageSize,
-              id,
+              _limit: pageSize,
+              ...keysetValues,
               ...Object.fromEntries(args.entries()),
             });
-            const edges = traverse(data, edgesPath) || [];
-            for (const edge of edges) {
-              id = traverse(edge, edgeIdPath);
-              unset(edge, edgeIdPath);
-              if (!id) {
-                return;
+
+            const nodes = _.get(data, modelName) || [];
+            for (const node of nodes) {
+              for (const field of keysetFields) {
+                if (!node[field]) {
+                  throw new Error(
+                    'Terminating iterator: found node with empty keyset ' +
+                      `field '${field}'`
+                  );
+                }
+
+                keysetValues[field] = node[field];
+                _.unset(node, field);
               }
-              yield edge;
+              yield node;
             }
-            // break on partial page
-            hasNextPage = edges.length === pageSize;
-          }
-        },
-      };
-    } else if (isEmpty(pageInfoPath)) {
-      // use offset and limit
-      return {
-        async *[Symbol.asyncIterator](): AsyncIterator<any> {
-          let offset = 0;
-          let hasNextPage = true;
-          while (hasNextPage) {
-            const data = await self.gqlNoDirectives(graph, query, {
-              limit: pageSize,
-              offset,
-              ...Object.fromEntries(args.entries()),
-            });
-            const edges = traverse(data, edgesPath) || [];
-            for (const edge of edges) {
-              yield edge;
-            }
-            offset += pageSize;
-            // break on partial page
-            hasNextPage = edges.length === pageSize;
+
+            // Break on partial page
+            hasNextPage = nodes.length === pageSize;
           }
         },
       };
     }
-    // use relay-styled cursors
+
+    // Use offset and limit
     return {
       async *[Symbol.asyncIterator](): AsyncIterator<any> {
-        let cursor: string | undefined;
+        let _offset = 0;
         let hasNextPage = true;
         while (hasNextPage) {
           const data = await self.gqlNoDirectives(graph, query, {
-            pageSize,
-            cursor,
+            _offset,
+            _limit: pageSize,
             ...Object.fromEntries(args.entries()),
           });
-          const edges = traverse(data, edgesPath) || [];
-          for (const edge of edges) {
-            yield edge.node;
-            cursor = edge.cursor;
+
+          const nodes = _.get(data, modelName) || [];
+          for (const node of nodes) {
+            yield node;
           }
-          hasNextPage = traverse(data, pageInfoPath)?.hasNextPage ?? false;
+          _offset += pageSize;
+          // break on partial page
+          hasNextPage = nodes.length === pageSize;
         }
       },
     };

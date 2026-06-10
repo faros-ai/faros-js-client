@@ -1,8 +1,8 @@
-query paginatedQuery($id: String, $limit: Int, $from: timestamptz) {
+query paginatedQuery($_id: String = "", $_limit: Int, $from: timestamptz) {
   cicd_Deployment(
-    where: {_and: [{refreshedAt: {_gte: $from}}, {id: {_gt: $id}}]}
+    where: {_and: [{refreshedAt: {_gte: $from}}, {id: {_gt: $_id}}]}
     order_by: {id: asc}
-    limit: $limit
+    limit: $_limit
   ) {
     _id: id
     deploymentUid: uid
