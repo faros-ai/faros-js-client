@@ -1056,7 +1056,6 @@ describe('graphql-client write batch upsert', () => {
     await client.resetData(
       {getOrigin: () => 'foo'},
       ['vcs_Organization'],
-      false,
       false
     );
     expect(queries).toEqual(responses.length);
