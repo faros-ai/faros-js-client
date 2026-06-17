@@ -376,8 +376,7 @@ export class GraphQLClient {
   async resetData(
     originProvider: OriginProvider,
     models: ReadonlyArray<string>,
-    isResetSync: boolean,
-    keepReferencedRecords: boolean
+    isResetSync: boolean
   ): Promise<void> {
     const schema = this.getSchema();
 
@@ -425,15 +424,6 @@ export class GraphQLClient {
         refreshedAt: {_lt: minRefreshedAt},
         ...originFilter,
       };
-      if (keepReferencedRecords) {
-        deleteConditions._not = {
-          _or: schema.backReferences[model].map((br) => {
-            return {
-              [br.field]: {},
-            };
-          }),
-        };
-      }
       const query = {
         [model]: {
           __args: {
