@@ -1053,12 +1053,146 @@ describe('graphql-client write batch upsert', () => {
       3
     );
     await client.loadSchema();
+    // No records were written, so the full reset must be allowed explicitly
+    await client.resetData(
+      {getOrigin: () => 'foo'},
+      ['vcs_Organization'],
+      false,
+      {fullResetModels: ['vcs_Organization']}
+    );
+    expect(queries).toEqual(responses.length);
+  });
+
+  function resetClient(
+    responses: ReadonlyArray<any>,
+    queries: string[],
+    logger: any = pino({name: 'test'}),
+    updateResetLimit = true
+  ): GraphQLClient {
+    const backend: GraphQLBackend = {
+      healthCheck() {
+        return Promise.resolve();
+      },
+      postQuery(query: any) {
+        queries.push(query);
+        return Promise.resolve(responses[queries.length - 1]);
+      },
+    };
+    return new GraphQLClient(
+      logger,
+      schemaLoader,
+      backend,
+      10,
+      1,
+      updateResetLimit,
+      3
+    );
+  }
+
+  test('resetData skips models when no records were written', async () => {
+    const queries: string[] = [];
+    const logger = {info: jest.fn(), debug: jest.fn(), warn: jest.fn()};
+    const client = resetClient([], queries, logger);
+    await client.loadSchema();
+    await client.resetData(
+      {getOrigin: () => 'foo'},
+      ['vcs_Organization', 'vcs_Repository'],
+      false
+    );
+    expect(queries).toHaveLength(0);
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'Skipping reset of 2 model(s): vcs_Organization, vcs_Repository'
+      )
+    );
+  });
+
+  test('resetData only resets full reset models when no records were written', async () => {
+    const queries: string[] = [];
+    const client = resetClient([{data: {vcs_Organization: []}}], queries);
+    await client.loadSchema();
+    await client.resetData(
+      {getOrigin: () => 'foo'},
+      ['vcs_Organization', 'vcs_Repository'],
+      false,
+      {fullResetModels: ['vcs_Organization', 'vcs_Branch']}
+    );
+    expect(queries).toHaveLength(1);
+    expect(queries[0]).toContain('vcs_Organization(');
+    expect(queries[0]).toContain('refreshedAt: {_lt: "2200-01-01T00:00:00.000Z"}');
+  });
+
+  test('resetData resets all models of reset syncs when no records were written', async () => {
+    const queries: string[] = [];
+    const client = resetClient(
+      [{data: {vcs_Repository: []}}, {data: {vcs_Organization: []}}],
+      queries
+    );
+    await client.loadSchema();
+    await client.resetData(
+      {getOrigin: () => 'foo'},
+      ['vcs_Organization', 'vcs_Repository'],
+      true
+    );
+    expect(queries).toHaveLength(2);
+    for (const query of queries) {
+      expect(query).toContain('refreshedAt: {_lt: "2200-01-01T00:00:00.000Z"}');
+      expect(query).toContain('{origin: {_like: "foo__bucket__%"}}');
+    }
+  });
+
+  test('resetData resets models before the refreshedAt of written records', async () => {
+    const queries: string[] = [];
+    const client = resetClient(
+      [
+        {
+          data: {
+            insert_vcs_User: {
+              returning: [
+                {
+                  id: '0add74f62dd2509722f89e77805409f364c087df',
+                  refreshedAt: '2024-01-10T00:17:08.106684+00:00',
+                  source: null,
+                  uid: 'jeniii',
+                },
+              ],
+            },
+          },
+        },
+        {data: {vcs_Organization: []}},
+      ],
+      queries
+    );
+    await client.loadSchema();
+    await client.writeRecord('vcs_User', {uid: 'jeniii'}, 'foo');
     await client.resetData(
       {getOrigin: () => 'foo'},
       ['vcs_Organization'],
       false
     );
-    expect(queries).toEqual(responses.length);
+    expect(queries).toHaveLength(2);
+    expect(queries[0]).toContain('insert_vcs_User');
+    expect(queries[1]).toContain('vcs_Organization(');
+    expect(queries[1]).toContain('refreshedAt: {_lt: "2024-01-10T00:17:08.106Z"}');
+  });
+
+  test('resetData does not skip models when the reset limit is not updated', async () => {
+    const queries: string[] = [];
+    const client = resetClient(
+      [{data: {vcs_Organization: []}}],
+      queries,
+      pino({name: 'test'}),
+      false
+    );
+    await client.loadSchema();
+    await client.resetData(
+      {getOrigin: () => 'foo'},
+      ['vcs_Organization'],
+      false
+    );
+    expect(queries).toHaveLength(1);
+    expect(queries[0]).toContain('vcs_Organization(');
+    expect(queries[0]).not.toContain('2200-01-01');
   });
 });
 

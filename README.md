@@ -98,6 +98,34 @@ const mutations = [
 await faros.sendMutations('default', mutations);
 ```
 
+## Resetting Data with the GraphQL Client
+
+`GraphQLClient.resetData(originProvider, models, isResetSync, options?)`
+deletes records of the given models for an origin that were not refreshed by
+the records written through the client. By default (`updateResetLimit` is
+`true`), the reset cutoff starts at January 1, 2200 and is lowered to the
+earliest `refreshedAt` of the root records written by the client. Records of
+the origin refreshed before the cutoff are deleted.
+
+Until the client writes a root record, the cutoff matches every record of the
+origin. In that case, `resetData` skips the reset of each model and logs a
+warning, unless the full deletion is intended:
+
+- `isResetSync` is `true`, e.g. when a connection is cleared or reset.
+- The model is listed in `options.fullResetModels`, e.g. when a source
+  explicitly requested to delete all records of the model.
+
+```ts
+// Deletes all vcs_TeamMembership records of the origin even if no records
+// were written. Other models are only reset after records are written.
+await client.resetData(
+  {getOrigin: () => 'example-origin'},
+  ['vcs_TeamMembership', 'vcs_Repository'],
+  false,
+  {fullResetModels: ['vcs_TeamMembership']}
+);
+```
+
 Please read the [Faros documentation][farosdocs] to learn more.
 
 [farosdocs]: https://docs.faros.ai

@@ -77,6 +77,16 @@ interface UpsertResult {
   readonly durationMs: number;
 }
 
+export interface ResetDataOptions {
+  /**
+   * Models that may be reset even if no root record has been written, i.e.
+   * models whose records should all be deleted for the origin, such as
+   * models a source explicitly requested to delete in full. Only models
+   * that are also passed to resetData are reset.
+   */
+  readonly fullResetModels?: ReadonlyArray<string>;
+}
+
 export class UpsertBuffer {
   private readonly upsertBuffer: Map<string, Upsert[]> = new Map();
 
@@ -301,6 +311,8 @@ export class GraphQLClient {
   private readonly updateResetLimit: boolean;
   private readonly resetPageSize: number;
   private resetLimitMillis: number;
+  // Whether a written root record has lowered resetLimitMillis
+  private resetLimitLowered = false;
 
   constructor(
     logger: Logger,
@@ -373,15 +385,43 @@ export class GraphQLClient {
     return this.schema;
   }
 
+  /**
+   * Deletes records of the given models for the origin that were refreshed
+   * before the reset limit. When updateResetLimit is enabled, the limit
+   * starts at January 1, 2200 and is lowered to the earliest refreshedAt of
+   * the root records written by this client. Until a root record is written,
+   * the limit matches every record of the origin, so a model is then only
+   * reset if its full deletion is intended: on reset syncs, or if it is
+   * listed in options.fullResetModels. Other models are skipped.
+   */
   async resetData(
     originProvider: OriginProvider,
     models: ReadonlyArray<string>,
-    isResetSync: boolean
+    isResetSync: boolean,
+    options?: ResetDataOptions
   ): Promise<void> {
     const schema = this.getSchema();
 
     // ensure deletes are executed after processing records
     await this.flush();
+
+    let modelsToReset = models;
+    if (this.updateResetLimit && !this.resetLimitLowered && !isResetSync) {
+      const fullResetModels = new Set(options?.fullResetModels);
+      const skippedModels = models.filter((m) => !fullResetModels.has(m));
+      if (skippedModels.length) {
+        this.logger.warn(
+          'No records have been written, so the reset limit would match ' +
+          `every record of origin ${originProvider.getOrigin()}. Skipping ` +
+          `reset of ${skippedModels.length} model(s): ` +
+          skippedModels.join(', ')
+        );
+        modelsToReset = models.filter((m) => fullResetModels.has(m));
+        if (!modelsToReset.length) {
+          return;
+        }
+      }
+    }
 
     const minRefreshedAt = new Date(this.resetLimitMillis).toISOString();
     const deleteSessionId = randomUUID().toString();
@@ -417,7 +457,7 @@ export class GraphQLClient {
 
     for (const model of intersection(
       schema.sortedModelDependencies,
-      models
+      modelsToReset
     )) {
       this.logger.info(`Resetting ${model} data`);
       const deleteConditions: any = {
@@ -471,6 +511,15 @@ export class GraphQLClient {
         `${numMarkedForDeletion} marked for deletion`
       );
     }
+  }
+
+  private lowerResetLimit(refreshedAt: string): void {
+    const recordRefreshedAtMs = new Date(refreshedAt).getTime();
+    this.resetLimitMillis = Math.min(
+      recordRefreshedAtMs,
+      this.resetLimitMillis
+    );
+    this.resetLimitLowered = true;
   }
 
   /**
@@ -588,11 +637,7 @@ export class GraphQLClient {
       upserts.forEach((u) => (u.id = obj.id));
 
       if (this.updateResetLimit && op.isRoot) {
-        const recordRefreshedAtMs = new Date(obj.refreshedAt).getTime();
-        this.resetLimitMillis = Math.min(
-          recordRefreshedAtMs,
-          this.resetLimitMillis
-        );
+        this.lowerResetLimit(obj.refreshedAt);
       }
     }
     return {
@@ -745,11 +790,7 @@ export class GraphQLClient {
           for (const mutationRes of Object.values(res.data)) {
             const refreshedAt = get(mutationRes, 'refreshedAt');
             if (refreshedAt) {
-              const recordRefreshedAtMs = new Date(refreshedAt).getTime();
-              this.resetLimitMillis = Math.min(
-                recordRefreshedAtMs,
-                this.resetLimitMillis
-              );
+              this.lowerResetLimit(refreshedAt);
             }
           }
         }
