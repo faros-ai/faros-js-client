@@ -101,3 +101,76 @@ await faros.sendMutations('default', mutations);
 Please read the [Faros documentation][farosdocs] to learn more.
 
 [farosdocs]: https://docs.faros.ai
+
+## Development
+
+```sh
+export CHAINGUARD_TOKEN=$(chainctl auth token --audience=libraries.cgr.dev)
+npm ci
+npm run build
+npm run lint
+npm test
+```
+
+### Dependencies
+
+Packages come from [Chainguard Libraries](https://www.chainguard.dev/libraries/javascript),
+not `registry.npmjs.org`. The tracked `.npmrc` already points npm at
+`libraries.cgr.dev` and reads the credential from `${CHAINGUARD_TOKEN}`. This only
+affects installing this repository's own dependencies; consumers of
+`faros-js-client` are unaffected, and releases are still published to
+`registry.npmjs.org` through `publishConfig` in `package.json`.
+
+For account setup and access requests, see
+[Chainguard Libraries at Faros](https://docs.google.com/document/d/12RlO2rMscDyLnp1tesy2XV9pfqLyijrASnhJUxgt2no/edit).
+
+#### Authenticate
+
+Export a token before any `npm` command. The token is short-lived, so re-run
+this when installs start failing on authentication:
+
+```sh
+export CHAINGUARD_TOKEN=$(chainctl auth token --audience=libraries.cgr.dev)
+```
+
+Keep the `${CHAINGUARD_TOKEN}` placeholder in `.npmrc` — that file is tracked by
+git, so a literal token there would be committed.
+
+#### Add a package
+
+```sh
+npm install <package>
+chainctl libraries update-hashes --replace package-lock.json
+npm run check:lockfile
+git add package.json package-lock.json
+```
+
+`update-hashes` rewrites the lockfile `resolved` URLs and integrity hashes to
+match the tarballs Chainguard actually serves. `--replace` is required: without
+it the original hash is kept alongside Chainguard's, so the lockfile would still
+accept the upstream npm tarball.
+
+`npm run check:lockfile` catches both problems — entries still resolving from
+`registry.npmjs.org` and entries with more than one hash. It also fails on any
+`resolved` host outside `KNOWN_HOSTS`. CI runs it too. This matters because
+`npm ci` fetches the `resolved` URL recorded in `package-lock.json` rather than
+the `registry` set in `.npmrc`. A 404 during install usually means the version is
+not rebuilt by Chainguard yet, or is still inside the `min-release-age` cooldown
+in `.npmrc`.
+
+#### `allow-remote` in `.npmrc`
+
+npm 12 defaults `allow-remote` to `none` and only exempts lockfile tarballs
+whose URL sits under the configured `registry`. Chainguard serves rebuilt
+packages from `libraries.cgr.dev/javascript/` and everything not yet rebuilt
+from `libraries.cgr.dev/javascript-upstream/`, so part of this lockfile falls
+outside the registry path and `npm ci` fails with `EALLOWREMOTE`. `.npmrc`
+therefore sets `allow-remote=all`.
+
+With that gate off, `npm run check:lockfile` is the only thing keeping the
+lockfile from resolving a tarball off an arbitrary host, which is why it fails
+rather than warns on unknown hosts. Add a host to `KNOWN_HOSTS` in
+`scripts/check-chainguard-lockfile.mjs` only when it is deliberate.
+
+npm 11 and older do not know the `allow-remote` key and print
+`Unknown project config "allow-remote"`. The warning is harmless.
