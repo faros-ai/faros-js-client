@@ -1,4 +1,13 @@
 version: 2
+
+registries:
+  chainguard-npm:
+    type: npm-registry
+    url: https://libraries.cgr.dev/javascript/
+    username: ${{secrets.CHAINGUARD_PULL_TOKEN_USERNAME}}
+    password: ${{secrets.CHAINGUARD_PULL_TOKEN_PASSWORD}}
+    replaces-base: true
+
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -6,6 +15,8 @@ updates:
       interval: "monthly"
   - package-ecosystem: "npm"
     directory: "/"
+    registries:
+      - chainguard-npm
     schedule:
       interval: "monthly"
     labels:
