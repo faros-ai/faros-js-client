@@ -411,7 +411,7 @@ export class GraphQLClient {
       const skippedModels = models.filter((m) => !fullResetModels.has(m));
       if (skippedModels.length) {
         this.logger.warn(
-          'No records have been written, so the reset limit would match ' +
+          'No root records have been written, so the reset limit would match ' +
           `every record of origin ${originProvider.getOrigin()}. Skipping ` +
           `reset of ${skippedModels.length} model(s): ` +
           skippedModels.join(', ')
