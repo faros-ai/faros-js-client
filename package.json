@@ -38,7 +38,7 @@
     "commander": "^13.1.0",
     "date-format": "^4.0.14",
     "fs-extra": "^11.2.0",
-    "graphql": "^16.10.0",
+    "graphql": "^17.0.2",
     "is-retry-allowed": "^2.2.0",
     "json-to-graphql-query": "^2.3.0",
     "lodash": "^4.17.21",
