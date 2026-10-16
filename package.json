@@ -14,6 +14,7 @@
   "repository": "https://github.com/faros-ai/faros-js-client",
   "scripts": {
     "build": "tsc -p src",
+    "check:lockfile": "node scripts/check-chainguard-lockfile.mjs",
     "clean": "rm -rf lib node_modules out",
     "fix": "npm run lint -- --fix",
     "lint": "eslint 'src/**/*.ts' 'test/**/*.ts'",
@@ -31,6 +32,9 @@
   "engines": {
     "node": ">=22",
     "npm": ">=11.10.0"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
     "axios": "^1.8.3",
